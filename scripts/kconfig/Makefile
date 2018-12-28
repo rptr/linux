@@ -4,7 +4,7 @@
 # These targets are used from top-level makefile
 
 PHONY += xconfig gconfig menuconfig config localmodconfig localyesconfig \
-	build_menuconfig build_nconfig build_gconfig build_xconfig
+	build_menuconfig build_nconfig build_gconfig build_xconfig satconfig
 
 ifdef KBUILD_KCONFIG
 Kconfig := $(KBUILD_KCONFIG)
@@ -55,6 +55,9 @@ localyesconfig localmodconfig: $(obj)/conf
 			$< $(silent) --oldconfig $(Kconfig);		\
 	fi
 	$(Q)rm -f .tmp.config
+	
+satconfig: $(obj)/satconfig
+	$< $(silent) $(Kconfig)
 
 # These targets map 1:1 to the commandline options of 'conf'
 #
@@ -123,6 +126,7 @@ help:
 	@echo  '  menuconfig	  - Update current config utilising a menu based program'
 	@echo  '  xconfig	  - Update current config utilising a Qt based front-end'
 	@echo  '  gconfig	  - Update current config utilising a GTK+ based front-end'
+	@echo  '  satconfig	  - Update current config to a valid config'
 	@echo  '  oldconfig	  - Update current config utilising a provided .config as base'
 	@echo  '  localmodconfig  - Update current config disabling modules not loaded'
 	@echo  '  localyesconfig  - Update current config converting local mods to core'
@@ -204,6 +208,10 @@ HOSTCFLAGS_gconf.o  = $(shell . $(obj)/.gconf-cfg && echo $$cflags)
 $(obj)/gconf.o: $(obj)/.gconf-cfg
 
 $(obj)/zconf.tab.o: $(obj)/zconf.lex.c
+
+# satconfig
+hostprogs-y	+= satconfig
+satconfig-objs	:= satconfig.o zconf.tab.o
 
 # check if necessary packages are available, and configure build flags
 define filechk_conf_cfg
