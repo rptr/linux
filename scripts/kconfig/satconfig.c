@@ -165,6 +165,40 @@ void print_expr(struct expr* e, int prevtoken)
 		print_expr(e->right.expr, E_OR);
 		printf(")");
 		break;
+	case E_EQUAL:
+	case E_UNEQUAL:
+		if (e->left.sym->name)
+			printf("%s", e->left.sym->name);
+		else
+			printf("left was null\n");
+		printf("%s", e->type == E_EQUAL ? "=" : "!=");
+		printf("%s", e->right.sym->name);
+		break;
+	case E_LEQ:
+	case E_LTH:
+		if (e->left.sym->name)
+			printf("%s", e->left.sym->name);
+		else
+			printf("left was null\n");
+		printf("%s", e->type == E_LEQ ? "<=" : "<");
+		printf("%s", e->right.sym->name);
+		break;
+	case E_GEQ:
+	case E_GTH:
+		if (e->left.sym->name)
+			printf("%s", e->left.sym->name);
+		else
+			printf("left was null\n");
+		printf("%s", e->type == E_GEQ ? ">=" : ">");
+		printf("%s", e->right.sym->name);
+		break;
+	case E_RANGE:
+		printf("[");
+		printf("%s", e->left.sym->name);
+		printf(" ");
+		printf("%s", e->right.sym->name);
+		printf("]");
+		break;
 	default:
 		break;
 	}

@@ -4,7 +4,7 @@ mainmenu "Kconfig example 2 - simple selects"
 
 config A
 	bool "CONFIG A"
-	default y if B || C
+	default y if B=y || C
 	depends on D && F
 
 config B
@@ -25,4 +25,8 @@ config E
 
 config F
 	bool "CONFIG F"
+	default y if H!=m
 	select C
+
+config H
+	tristate "CONFIG H"
