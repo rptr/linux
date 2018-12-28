@@ -1,0 +1,14 @@
+# Kconfig example 1
+
+mainmenu "Kconfig example 1"
+
+config A
+	bool "CONFIG A"
+
+config B
+	bool "CONFIG B"
+
+config C
+	bool "CONFIG C"
+
+

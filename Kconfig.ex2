@@ -1,0 +1,20 @@
+# Kconfig example 2
+
+mainmenu "Kconfig example 2 - simple selects"
+
+config A
+	bool "CONFIG A"
+
+config B
+	bool "CONFIG B"
+
+config C
+	bool "CONFIG C"
+	select A if B || !D
+
+config D
+	bool "CONFIG D"
+	select E if A && B || !C
+
+config E
+	bool "CONFIG E"
