@@ -59,25 +59,38 @@ void print_symbol(struct symbol* sym)
 	printf("Symbol: ");
 	struct property *p;
 	
-	for_all_prompts(sym, p) {
-		printf("prompt %s\n", p->text);
-	}
+	printf("name %s, type %s\n", sym->name, symbol_type[sym->type]);
 	
-	printf("\tname %s, type %s\n", sym->name, symbol_type[sym->type]);
-	
-	int has_default = false;
 	for_all_defaults(sym, p) {
-		has_default = true;
 		print_default(sym, p);
 	}
-	if (!has_default)
-		printf("\tno default\n");
 	
 	for_all_properties(sym, p, P_SELECT)
 		print_select(sym, p);
 	
+	if (sym->rev_dep.expr) {
+		printf("\tselected if ");
+		print_expr(sym->rev_dep.expr, E_NONE);
+		printf("  (reverse dep.)\n");
+	}
+	
 	for_all_properties(sym, p, P_IMPLY)
 		print_imply(sym, p);
+	
+	if (sym->implied.expr) {
+		printf("\timplied if ");
+		print_expr(sym->implied.expr, E_NONE);
+		printf("  (weak reverse dep.)\n");
+	}
+	
+	if (sym->dir_dep.expr) {
+		printf("\tdepends on ");
+		print_expr(sym->dir_dep.expr, E_NONE);
+		printf("\n");
+	}
+	
+	printf("\n");
+
 }
 
 void print_default(struct symbol* sym, struct property* p)
