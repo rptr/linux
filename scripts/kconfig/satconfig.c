@@ -32,7 +32,9 @@ const char *symbol_type[] = {"S_UNKNOWN", "S_BOOLEAN", "S_TRISTATE", "S_INT", "S
 const char *tristate_type[] = {"no", "mod", "yes"};
 
 void print_symbol(struct symbol *sym);
+void print_default(struct symbol *sym, struct property *p);
 void print_select(struct symbol *sym, struct property *p);
+void print_imply(struct symbol *sym, struct property *p);
 void print_expr(struct expr *e, int prevtoken);
 
 int main(int argc, char *argv[])
@@ -54,16 +56,43 @@ int main(int argc, char *argv[])
 
 void print_symbol(struct symbol* sym)
 {
-	printf("Symbol: %s, type %s\n", sym->name, symbol_type[sym->type]);
-	struct property *p = sym->prop;
-	while (p != NULL) {
-		if (p->type == P_SELECT) {
-			print_select(sym, p);
-		}
-		
-		p = p->next;
+	printf("Symbol: ");
+	struct property *p;
+	
+	for_all_prompts(sym, p) {
+		printf("prompt %s\n", p->text);
 	}
+	
+	printf("\tname %s, type %s\n", sym->name, symbol_type[sym->type]);
+	
+	int has_default = false;
+	for_all_defaults(sym, p) {
+		has_default = true;
+		print_default(sym, p);
+	}
+	if (!has_default)
+		printf("\tno default\n");
+	
+	for_all_properties(sym, p, P_SELECT)
+		print_select(sym, p);
+	
+	for_all_properties(sym, p, P_IMPLY)
+		print_imply(sym, p);
 }
+
+void print_default(struct symbol* sym, struct property* p)
+{
+	assert(p->type == P_DEFAULT);
+	struct expr *e = p->expr;
+	printf("\tdefault ");
+	print_expr(e, E_NONE);
+	if (p->visible.expr) {
+		printf(" if ");
+		print_expr(p->visible.expr, E_NONE);
+	}
+	printf("\n");
+}
+
 
 void print_select(struct symbol* sym, struct property* p)
 {
@@ -71,6 +100,20 @@ void print_select(struct symbol* sym, struct property* p)
 	struct expr *e = p->expr;
 	
 	printf("\tselect ");
+	print_expr(e, E_NONE);
+	if (p->visible.expr) {
+		printf(" if ");
+		print_expr(p->visible.expr, E_NONE);
+	}
+	printf("\n");
+}
+
+void print_imply(struct symbol* sym, struct property* p)
+{
+	assert(p->type == P_IMPLY);
+	struct expr *e = p->expr;
+	
+	printf("\timply ");
 	print_expr(e, E_NONE);
 	if (p->visible.expr) {
 		printf(" if ");

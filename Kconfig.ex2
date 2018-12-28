@@ -4,13 +4,15 @@ mainmenu "Kconfig example 2 - simple selects"
 
 config A
 	bool "CONFIG A"
+	default y if B || C
 
 config B
 	bool "CONFIG B"
+	default n
 
 config C
 	bool "CONFIG C"
-	select A if B || !D
+	imply B
 
 config D
 	bool "CONFIG D"
