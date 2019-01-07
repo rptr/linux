@@ -27,6 +27,10 @@ config F
 	bool "CONFIG F"
 	default y if H!=m
 	select C
+	select I
 
 config H
 	tristate "CONFIG H"
+
+config I
+	bool "CONFIG I"

@@ -34,6 +34,7 @@ const char *tristate_type[] = {"no", "mod", "yes"};
 void print_symbol(struct symbol *sym);
 void print_default(struct symbol *sym, struct property *p);
 void print_select(struct symbol *sym, struct property *p);
+void print_cnf_select(struct symbol *sym, struct property *p);
 void print_imply(struct symbol *sym, struct property *p);
 void print_expr(struct expr *e, int prevtoken);
 
@@ -44,6 +45,7 @@ int main(int argc, char *argv[])
 	// parse Kconfig-file
 	const char *Kconfig_file = "Kconfig";
 	conf_parse(Kconfig_file);
+	conf_read(NULL);
 
 	unsigned int i;
 	struct symbol *sym;
@@ -54,7 +56,7 @@ int main(int argc, char *argv[])
 	return EXIT_SUCCESS;
 }
 
-void print_symbol(struct symbol* sym)
+void print_symbol(struct symbol *sym)
 {
 	printf("Symbol: ");
 	struct property *p;
@@ -89,11 +91,21 @@ void print_symbol(struct symbol* sym)
 		printf("\n");
 	}
 	
+	printf("CNF:");
+	int select = 0;
+	for_all_properties(sym, p, P_SELECT) {
+		print_cnf_select(sym, p);
+		printf("\n");
+		select = 1;
+	}
+	if (select == 0)
+		printf("\n");
+		
 	printf("\n");
 
 }
 
-void print_default(struct symbol* sym, struct property* p)
+void print_default(struct symbol *sym, struct property *p)
 {
 	assert(p->type == P_DEFAULT);
 	struct expr *e = p->expr;
@@ -107,7 +119,7 @@ void print_default(struct symbol* sym, struct property* p)
 }
 
 
-void print_select(struct symbol* sym, struct property* p)
+void print_select(struct symbol *sym, struct property *p)
 {
 	assert(p->type == P_SELECT);
 	struct expr *e = p->expr;
@@ -121,7 +133,16 @@ void print_select(struct symbol* sym, struct property* p)
 	printf("\n");
 }
 
-void print_imply(struct symbol* sym, struct property* p)
+void print_cnf_select(struct symbol *sym, struct property *p)
+{
+	assert(p->type == P_SELECT);
+	struct expr *e = p->expr;
+	
+	printf("\t-%s v %s (select)", sym->name, e->left.sym->name);
+}
+
+
+void print_imply(struct symbol *sym, struct property *p)
 {
 	assert(p->type == P_IMPLY);
 	struct expr *e = p->expr;
@@ -135,7 +156,7 @@ void print_imply(struct symbol* sym, struct property* p)
 	printf("\n");
 }
 
-void print_expr(struct expr* e, int prevtoken)
+void print_expr(struct expr *e, int prevtoken)
 {
 	if (!e)
 		return;
