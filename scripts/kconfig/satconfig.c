@@ -42,16 +42,15 @@ int main(int argc, char *argv[])
 {
 	printf("\nHello satconfig!\n\n");
 	
-	// parse Kconfig-file
+	// parse Kconfig-file & read .config
 	const char *Kconfig_file = "Kconfig";
 	conf_parse(Kconfig_file);
 	conf_read(NULL);
 
 	unsigned int i;
 	struct symbol *sym;
-	for_all_symbols(i, sym) {
+	for_all_symbols(i, sym)
 		print_symbol(sym);
-	}
 	
 	return EXIT_SUCCESS;
 }
@@ -63,44 +62,52 @@ void print_symbol(struct symbol *sym)
 	
 	printf("name %s, type %s\n", sym->name, symbol_type[sym->type]);
 	
-	for_all_defaults(sym, p) {
-		print_default(sym, p);
-	}
+	printf("\t.config: %s\n", sym_get_string_value(sym));
 	
+	// print default value
+	for_all_defaults(sym, p)
+		print_default(sym, p);
+	
+	// print select statements
 	for_all_properties(sym, p, P_SELECT)
 		print_select(sym, p);
 	
+	// print reverse dependencies
 	if (sym->rev_dep.expr) {
 		printf("\tselected if ");
 		print_expr(sym->rev_dep.expr, E_NONE);
 		printf("  (reverse dep.)\n");
 	}
 	
+	// print imply statements
 	for_all_properties(sym, p, P_IMPLY)
 		print_imply(sym, p);
 	
+	// print weak reverse denpencies
 	if (sym->implied.expr) {
 		printf("\timplied if ");
 		print_expr(sym->implied.expr, E_NONE);
 		printf("  (weak reverse dep.)\n");
 	}
 	
+	// print dependencies
 	if (sym->dir_dep.expr) {
 		printf("\tdepends on ");
 		print_expr(sym->dir_dep.expr, E_NONE);
 		printf("\n");
 	}
 	
-	printf("CNF:");
+	// print CNF associated with this module
 	int select = 0;
 	for_all_properties(sym, p, P_SELECT) {
+		if (select == 0)
+			printf("CNF:");
+		
 		print_cnf_select(sym, p);
 		printf("\n");
 		select = 1;
 	}
-	if (select == 0)
-		printf("\n");
-		
+	
 	printf("\n");
 
 }
@@ -108,9 +115,7 @@ void print_symbol(struct symbol *sym)
 void print_default(struct symbol *sym, struct property *p)
 {
 	assert(p->type == P_DEFAULT);
-	struct expr *e = p->expr;
-	printf("\tdefault ");
-	print_expr(e, E_NONE);
+	printf("\tdefault %s", sym_get_string_default(sym));
 	if (p->visible.expr) {
 		printf(" if ");
 		print_expr(p->visible.expr, E_NONE);
