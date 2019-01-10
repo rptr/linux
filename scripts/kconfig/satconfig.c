@@ -11,6 +11,17 @@
 
 #define LKC_DIRECT_LINK
 #include "lkc.h"
+#include "satconfig.h"
+
+static void print_symbol(struct symbol *sym);
+static void print_default(struct symbol *sym, struct property *p);
+
+static void print_select(struct symbol *sym, struct property *p);
+static void build_cnf_select(struct symbol *sym, struct property *p);
+
+static void print_imply(struct symbol *sym, struct property *p);
+static void print_expr(struct expr *e, int prevtoken);
+
 
 const char *expr_type[] = {
 	"E_NONE", "E_OR", "E_AND", "E_NOT",
@@ -31,13 +42,6 @@ const char *prop_type[] = { "P_UNKNOWN",
 const char *symbol_type[] = {"S_UNKNOWN", "S_BOOLEAN", "S_TRISTATE", "S_INT", "S_HEX", "S_STRING", "S_OTHER"};
 const char *tristate_type[] = {"no", "mod", "yes"};
 
-void print_symbol(struct symbol *sym);
-void print_default(struct symbol *sym, struct property *p);
-void print_select(struct symbol *sym, struct property *p);
-void print_cnf_select(struct symbol *sym, struct property *p);
-void print_imply(struct symbol *sym, struct property *p);
-void print_expr(struct expr *e, int prevtoken);
-
 int main(int argc, char *argv[])
 {
 	printf("\nHello satconfig!\n\n");
@@ -55,7 +59,8 @@ int main(int argc, char *argv[])
 	return EXIT_SUCCESS;
 }
 
-void print_symbol(struct symbol *sym)
+
+static void print_symbol(struct symbol *sym)
 {
 	printf("Symbol: ");
 	struct property *p;
@@ -97,22 +102,24 @@ void print_symbol(struct symbol *sym)
 		printf("\n");
 	}
 	
-	// print CNF associated with this module
-	int select = 0;
-	for_all_properties(sym, p, P_SELECT) {
-		if (select == 0)
-			printf("CNF:");
-		
-		print_cnf_select(sym, p);
-		printf("\n");
-		select = 1;
-	}
+	// build CNF clauses for select statements
+	for_all_properties(sym, p, P_SELECT)
+		build_cnf_select(sym, p);
 	
+	// print CNF-clauses
+	if (sym->clauses) {
+		printf("CNF:");
+		struct cnf_clause *c = sym->clauses;
+		while (c != NULL) {
+			printf("\t%s\n", c->clause);
+			c = c->next;
+		}
+	}
 	printf("\n");
 
 }
 
-void print_default(struct symbol *sym, struct property *p)
+static void print_default(struct symbol *sym, struct property *p)
 {
 	assert(p->type == P_DEFAULT);
 	printf("\tdefault %s", sym_get_string_default(sym));
@@ -123,8 +130,7 @@ void print_default(struct symbol *sym, struct property *p)
 	printf("\n");
 }
 
-
-void print_select(struct symbol *sym, struct property *p)
+static void print_select(struct symbol *sym, struct property *p)
 {
 	assert(p->type == P_SELECT);
 	struct expr *e = p->expr;
@@ -138,16 +144,24 @@ void print_select(struct symbol *sym, struct property *p)
 	printf("\n");
 }
 
-void print_cnf_select(struct symbol *sym, struct property *p)
+static void build_cnf_select(struct symbol *sym, struct property *p)
 {
 	assert(p->type == P_SELECT);
 	struct expr *e = p->expr;
 	
-	printf("\t-%s v %s (select)", sym->name, e->left.sym->name);
+	struct cnf_clause *cl = malloc(sizeof(struct cnf_clause));
+	strcpy(cl->clause, "-");
+	strcat(cl->clause, sym->name);
+	strcat(cl->clause, " v ");
+	strcat(cl->clause, e->left.sym->name);
+	strcat(cl->clause, " (select)");
+	cl->next = sym->clauses;
+
+	sym->clauses = cl;
 }
 
 
-void print_imply(struct symbol *sym, struct property *p)
+static void print_imply(struct symbol *sym, struct property *p)
 {
 	assert(p->type == P_IMPLY);
 	struct expr *e = p->expr;
@@ -161,7 +175,7 @@ void print_imply(struct symbol *sym, struct property *p)
 	printf("\n");
 }
 
-void print_expr(struct expr *e, int prevtoken)
+static void print_expr(struct expr *e, int prevtoken)
 {
 	if (!e)
 		return;

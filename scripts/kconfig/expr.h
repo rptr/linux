@@ -15,6 +15,7 @@ extern "C" {
 #include "list.h"
 #ifndef __cplusplus
 #include <stdbool.h>
+#include "satconfig.h"
 #endif
 
 struct file {
@@ -129,6 +130,11 @@ struct symbol {
 	 * "Weak" reverse dependencies through being implied by other symbols
 	 */
 	struct expr_value implied;
+	
+	/*
+	 * kconfig-sat
+	 */
+	struct cnf_clause *clauses;
 };
 
 #define for_all_symbols(i, sym) for (i = 0; i < SYMBOL_HASHSIZE; i++) for (sym = symbol_hash[i]; sym; sym = sym->next) if (sym->type != S_OTHER)
