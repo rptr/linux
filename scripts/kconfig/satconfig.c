@@ -13,6 +13,11 @@
 #include "lkc.h"
 #include "satconfig.h"
 
+static int sat_variable_nr = 1;
+static struct symbol *sat_map;
+
+static void create_sat_variables(struct symbol *sym);
+
 static void print_symbol(struct symbol *sym);
 static void print_default(struct symbol *sym, struct property *p);
 
@@ -47,25 +52,50 @@ int main(int argc, char *argv[])
 	printf("\nHello satconfig!\n\n");
 	
 	// parse Kconfig-file & read .config
-	const char *Kconfig_file = "Kconfig";
+	const char *Kconfig_file = argv[1];
 	conf_parse(Kconfig_file);
 	conf_read(NULL);
 
 	unsigned int i;
 	struct symbol *sym;
+	
+	// create sat_map
+	for_all_symbols(i, sym)
+		create_sat_variables(sym);
+	
+	sat_map = calloc(sat_variable_nr, sizeof(struct symbol));
+	for_all_symbols(i, sym)
+		sat_map[sym->sat_variable_nr] = *sym;
+
+	// print all symbols
 	for_all_symbols(i, sym)
 		print_symbol(sym);
 	
 	return EXIT_SUCCESS;
 }
 
+static void create_sat_variables(struct symbol *sym)
+{
+	switch (sym->type) {
+	case S_BOOLEAN:
+		sym->sat_variable_nr = sat_variable_nr;
+		sat_variable_nr += 1;
+		break;
+	case S_TRISTATE:
+		sym->sat_variable_nr = sat_variable_nr;
+		sat_variable_nr += 2;
+		break;
+	default:
+		break;
+	}
+}
 
 static void print_symbol(struct symbol *sym)
 {
 	printf("Symbol: ");
 	struct property *p;
 	
-	printf("name %s, type %s\n", sym->name, symbol_type[sym->type]);
+	printf("name %s, type %s, sat variable %d\n", sym->name, symbol_type[sym->type], sym->sat_variable_nr);
 	
 	printf("\t.config: %s\n", sym_get_string_value(sym));
 	

@@ -134,6 +134,7 @@ struct symbol {
 	/*
 	 * kconfig-sat
 	 */
+	int sat_variable_nr;
 	struct cnf_clause *clauses;
 };
 
