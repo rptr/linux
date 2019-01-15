@@ -141,10 +141,20 @@ static void print_symbol(struct symbol *sym)
 		printf("CNF:");
 		struct cnf_clause *c = sym->clauses;
 		while (c != NULL) {
-			printf("\t%s\n", c->clause);
+			struct cnf_literal *lit = c->lit;
+			printf("\t");
+			while (lit != NULL) {
+				printf("%s", lit->sval);
+				if (lit->next)
+					printf(" v ");
+				lit = lit->next;
+			}
+			printf("\n");
+			
 			c = c->next;
 		}
 	}
+
 	printf("\n");
 
 }
@@ -180,11 +190,19 @@ static void build_cnf_select(struct symbol *sym, struct property *p)
 	struct expr *e = p->expr;
 	
 	struct cnf_clause *cl = malloc(sizeof(struct cnf_clause));
-	strcpy(cl->clause, "-");
-	strcat(cl->clause, sym->name);
-	strcat(cl->clause, " v ");
-	strcat(cl->clause, e->left.sym->name);
-	strcat(cl->clause, " (select)");
+	
+	struct cnf_literal *lit1 = malloc(sizeof(struct cnf_literal));
+	lit1->val = -(sym->sat_variable_nr);
+	strcpy(lit1->sval, "-");
+	strcat(lit1->sval, sym->name);
+	
+	struct cnf_literal *lit2 = malloc(sizeof(struct cnf_literal));
+	lit2->val = e->left.sym->sat_variable_nr;
+	strcpy(lit2->sval, e->left.sym->name);
+	
+	lit1->next = lit2;
+	cl->lit = lit1;
+	
 	cl->next = sym->clauses;
 
 	sym->clauses = cl;
