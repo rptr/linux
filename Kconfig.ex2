@@ -4,12 +4,12 @@ mainmenu "Kconfig example 2 - simple selects"
 
 config A
 	bool "CONFIG A"
-	default y if B=y || C
+	default n if B=y || C
 	depends on D && F
 
 config B
 	bool "CONFIG B"
-	default n
+	default y
 
 config C
 	bool "CONFIG C"

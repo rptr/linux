@@ -27,6 +27,8 @@ static void build_cnf_select(struct symbol *sym, struct property *p);
 static void print_imply(struct symbol *sym, struct property *p);
 static void print_expr(struct expr *e, int prevtoken);
 
+static void print_cnf(struct symbol *sym);
+
 
 const char *expr_type[] = {
 	"E_NONE", "E_OR", "E_AND", "E_NOT",
@@ -64,12 +66,17 @@ int main(int argc, char *argv[])
 		create_sat_variables(sym);
 	
 	sat_map = calloc(sat_variable_nr, sizeof(struct symbol));
-	for_all_symbols(i, sym)
-		sat_map[sym->sat_variable_nr] = *sym;
 
 	// print all symbols
-	for_all_symbols(i, sym)
+	for_all_symbols(i, sym) {
+		sat_map[sym->sat_variable_nr] = *sym;
 		print_symbol(sym);
+	}
+	
+	// print all CNFs
+	printf("All CNFs:\n");
+	for_all_symbols(i, sym)
+		print_cnf(sym);
 	
 	return EXIT_SUCCESS;
 }
@@ -139,20 +146,7 @@ static void print_symbol(struct symbol *sym)
 	// print CNF-clauses
 	if (sym->clauses) {
 		printf("CNF:");
-		struct cnf_clause *c = sym->clauses;
-		while (c != NULL) {
-			struct cnf_literal *lit = c->lit;
-			printf("\t");
-			while (lit != NULL) {
-				printf("%s", lit->sval);
-				if (lit->next)
-					printf(" v ");
-				lit = lit->next;
-			}
-			printf("\n");
-			
-			c = c->next;
-		}
+		print_cnf(sym);
 	}
 
 	printf("\n");
@@ -292,3 +286,22 @@ static void print_expr(struct expr *e, int prevtoken)
 	}
 	
 }
+
+static void print_cnf(struct symbol *sym)
+{
+	struct cnf_clause *c = sym->clauses;
+	while (c != NULL) {
+		struct cnf_literal *lit = c->lit;
+		printf("\t");
+		while (lit != NULL) {
+			printf("%s", lit->sval);
+			if (lit->next)
+				printf(" v ");
+			lit = lit->next;
+		}
+		printf("\n");
+		
+		c = c->next;
+	}
+}
+
