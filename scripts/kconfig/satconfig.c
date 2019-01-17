@@ -27,7 +27,7 @@ static void build_cnf_select(struct symbol *sym, struct property *p);
 static void print_imply(struct symbol *sym, struct property *p);
 static void print_expr(struct expr *e, int prevtoken);
 
-static void print_cnf(struct symbol *sym);
+static void print_cnf_clause(struct symbol *sym);
 
 
 const char *expr_type[] = {
@@ -53,7 +53,7 @@ int main(int argc, char *argv[])
 {
 	printf("\nHello satconfig!\n\n");
 	
-	// parse Kconfig-file & read .config
+	/* parse Kconfig-file & read .config */
 	const char *Kconfig_file = argv[1];
 	conf_parse(Kconfig_file);
 	conf_read(NULL);
@@ -61,22 +61,22 @@ int main(int argc, char *argv[])
 	unsigned int i;
 	struct symbol *sym;
 	
-	// create sat_map
+	/* create sat_map */
 	for_all_symbols(i, sym)
 		create_sat_variables(sym);
 	
 	sat_map = calloc(sat_variable_nr, sizeof(struct symbol));
 
-	// print all symbols
+	/* print all symbols */
 	for_all_symbols(i, sym) {
 		sat_map[sym->sat_variable_nr] = *sym;
 		print_symbol(sym);
 	}
 	
-	// print all CNFs
+	/* print all CNFs */
 	printf("All CNFs:\n");
 	for_all_symbols(i, sym)
-		print_cnf(sym);
+		print_cnf_clause(sym);
 	
 	return EXIT_SUCCESS;
 }
@@ -106,47 +106,47 @@ static void print_symbol(struct symbol *sym)
 	
 	printf("\t.config: %s\n", sym_get_string_value(sym));
 	
-	// print default value
+	/* print default value */
 	for_all_defaults(sym, p)
 		print_default(sym, p);
 	
-	// print select statements
+	/* print select statements */
 	for_all_properties(sym, p, P_SELECT)
 		print_select(sym, p);
 	
-	// print reverse dependencies
+	/* print reverse dependencies */
 	if (sym->rev_dep.expr) {
 		printf("\tselected if ");
 		print_expr(sym->rev_dep.expr, E_NONE);
 		printf("  (reverse dep.)\n");
 	}
 	
-	// print imply statements
+	/* print imply statements */
 	for_all_properties(sym, p, P_IMPLY)
 		print_imply(sym, p);
 	
-	// print weak reverse denpencies
+	/* print weak reverse denpencies */
 	if (sym->implied.expr) {
 		printf("\timplied if ");
 		print_expr(sym->implied.expr, E_NONE);
 		printf("  (weak reverse dep.)\n");
 	}
 	
-	// print dependencies
+	/* print dependencies */
 	if (sym->dir_dep.expr) {
 		printf("\tdepends on ");
 		print_expr(sym->dir_dep.expr, E_NONE);
 		printf("\n");
 	}
 	
-	// build CNF clauses for select statements
+	/* build CNF clauses for select statements */
 	for_all_properties(sym, p, P_SELECT)
 		build_cnf_select(sym, p);
 	
-	// print CNF-clauses
+	/* print CNF-clauses */
 	if (sym->clauses) {
 		printf("CNF:");
-		print_cnf(sym);
+		print_cnf_clause(sym);
 	}
 
 	printf("\n");
@@ -178,6 +178,12 @@ static void print_select(struct symbol *sym, struct property *p)
 	printf("\n");
 }
 
+/*
+ * Encode the select statement as CNF
+ * "A select B" translates to (-A v B)
+ * A -> lit1
+ * B -> lit2
+ */
 static void build_cnf_select(struct symbol *sym, struct property *p)
 {
 	assert(p->type == P_SELECT);
@@ -287,11 +293,11 @@ static void print_expr(struct expr *e, int prevtoken)
 	
 }
 
-static void print_cnf(struct symbol *sym)
+static void print_cnf_clause(struct symbol *sym)
 {
-	struct cnf_clause *c = sym->clauses;
-	while (c != NULL) {
-		struct cnf_literal *lit = c->lit;
+	struct cnf_clause *cl = sym->clauses;
+	while (cl != NULL) {
+		struct cnf_literal *lit = cl->lit;
 		printf("\t");
 		while (lit != NULL) {
 			printf("%s", lit->sval);
@@ -301,7 +307,7 @@ static void print_cnf(struct symbol *sym)
 		}
 		printf("\n");
 		
-		c = c->next;
+		cl = cl->next;
 	}
 }
 
