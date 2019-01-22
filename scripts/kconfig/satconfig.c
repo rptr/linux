@@ -108,6 +108,7 @@ static void create_sat_variables(struct symbol *sym)
  * y -> (1,0)
  * m -> (0,1)
  * (1,1) is not allowed
+ * this translates to (-X v -X_m)
  */
 static void create_tristate_constraint_clause(struct symbol *sym)
 {
@@ -217,6 +218,75 @@ static void print_select(struct symbol *sym, struct property *p)
 }
 
 /*
+ * A_bool select B_tri translates to
+ * (-A v B) -- already done
+ * (-B v -B_m) -- already done
+ * (-A v B v B_m)
+ * if mod == 1, then it's the module part of a
+ */
+static void build_cnf_select_bool_tri(struct symbol *a, struct symbol *b, int mod)
+{
+	assert((a->type == S_BOOLEAN && mod == 0) || a->type == S_TRISTATE);
+	assert(b->type == S_TRISTATE);
+	
+	struct cnf_clause *cl = malloc(sizeof(struct cnf_clause));
+	
+	struct cnf_literal *lit1 = malloc(sizeof(struct cnf_literal));
+	lit1->val = mod == 0 ? -(a->sat_variable_nr) : -(a->sat_variable_nr + 1);
+	strcpy(lit1->sval, "-");
+	strcat(lit1->sval, a->name);
+	if (mod == 1)
+		strcat(lit1->sval, "_m");
+	
+	struct cnf_literal *lit2 = malloc(sizeof(struct cnf_literal));
+	lit2->val = b->sat_variable_nr;
+	strcpy(lit2->sval, b->name);
+	
+	struct cnf_literal *lit3 = malloc(sizeof(struct cnf_literal));
+	lit3->val = b->sat_variable_nr + 1;
+	strcpy(lit3->sval, b->name);
+	strcat(lit3->sval, "_m");
+	
+	lit2->next = lit3;
+	lit1->next = lit2;
+	cl->lit = lit1;
+	
+	cl->next = a->clauses;
+	a->clauses = cl;
+}
+
+/*
+ * A_tri select B_bool translates to
+ * (-A v B) -- already done
+ * (-A v -A_m) -- already done
+ * (-A_m v B)
+ */
+static void build_cnf_select_tri_bool(struct symbol *a, struct symbol *b)
+{
+	assert(a->type == S_TRISTATE);
+	assert(b->type == S_BOOLEAN);
+	
+	struct cnf_clause *cl = malloc(sizeof(struct cnf_clause));
+	
+	struct cnf_literal *lit1 = malloc(sizeof(struct cnf_literal));
+	lit1->val = -(a->sat_variable_nr + 1);
+	strcpy(lit1->sval, "-");
+	strcat(lit1->sval, a->name);
+	strcat(lit1->sval, "_m");
+	
+	struct cnf_literal *lit2 = malloc(sizeof(struct cnf_literal));
+	lit2->val = b->sat_variable_nr;
+	strcpy(lit2->sval, b->name);
+
+	lit1->next = lit2;
+	cl->lit = lit1;
+	
+	cl->next = a->clauses;
+	a->clauses = cl;
+}
+
+
+/*
  * Encode the select statement as CNF
  * "A select B" translates to (-A v B)
  * A -> lit1
@@ -244,6 +314,15 @@ static void build_cnf_select(struct symbol *sym, struct property *p)
 	cl->next = sym->clauses;
 
 	sym->clauses = cl;
+	
+	if (sym->type == S_BOOLEAN && e->left.sym->type == S_TRISTATE)
+		build_cnf_select_bool_tri(sym, e->left.sym, 0);
+	if (sym->type == S_TRISTATE && e->left.sym->type == S_BOOLEAN)
+		build_cnf_select_tri_bool(sym, e->left.sym);
+	if (sym->type == S_TRISTATE && e->left.sym->type == S_TRISTATE) {
+		build_cnf_select_bool_tri(sym, e->left.sym, 0);
+		build_cnf_select_bool_tri(sym, e->left.sym, 1);
+	}
 }
 
 
