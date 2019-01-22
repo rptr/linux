@@ -106,8 +106,8 @@ static void create_sat_variables(struct symbol *sym)
  * Enforce tristate constraints
  * n -> (0,0)
  * y -> (1,0)
- * m -> (1,1)
- * (0,1) is not allowed
+ * m -> (0,1)
+ * (1,1) is not allowed
  */
 static void create_tristate_constraint_clause(struct symbol *sym)
 {
@@ -116,14 +116,15 @@ static void create_tristate_constraint_clause(struct symbol *sym)
 	struct cnf_clause *cl = malloc(sizeof(struct cnf_clause));
 	
 	struct cnf_literal *lit1 = malloc(sizeof(struct cnf_literal));
-	lit1->val = -(sym->sat_variable_nr + 1);
+	lit1->val = -(sym->sat_variable_nr );
 	strcpy(lit1->sval, "-");
 	strcat(lit1->sval, sym->name);
-	strcat(lit1->sval, "_m");
 	
 	struct cnf_literal *lit2 = malloc(sizeof(struct cnf_literal));
-	lit2->val = sym->sat_variable_nr;
-	strcpy(lit2->sval, sym->name);
+	lit2->val = -(sym->sat_variable_nr + 1);
+	strcpy(lit2->sval, "-");
+	strcat(lit2->sval, sym->name);
+	strcat(lit2->sval, "_m");
 	
 	lit1->next = lit2;
 	cl->lit = lit1;
