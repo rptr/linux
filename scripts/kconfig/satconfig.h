@@ -5,7 +5,7 @@ struct cnf_clause {
 	/* first literal in the CNF clause */
 	struct cnf_literal *lit;
 	
-	/* next clause for this symbol - null if last */
+	/* next clause - null if last */
 	struct cnf_clause *next;
 };
 

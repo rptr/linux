@@ -211,7 +211,7 @@ $(obj)/zconf.tab.o: $(obj)/zconf.lex.c
 
 # satconfig
 hostprogs-y	+= satconfig
-satconfig-objs	:= satconfig.o zconf.tab.o
+satconfig-objs	:= satconfig.o satprint.o zconf.tab.o
 
 # check if necessary packages are available, and configure build flags
 define filechk_conf_cfg
