@@ -1,0 +1,19 @@
+mainmenu "Kconfig"
+
+config A
+	bool "Config A"
+
+config B
+	bool "Config B"
+	select A
+	select D
+
+config D
+	bool "Config D"
+
+config E
+	tristate "Config E"
+
+config F
+	tristate "Config F"
+	select E

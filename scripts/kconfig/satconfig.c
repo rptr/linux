@@ -13,8 +13,11 @@
 #include "lkc.h"
 #include "satconfig.h"
 
+#define OUTFILE_DIMACS "out_cnf.dimacs"
+
 static int sat_variable_nr = 1;
 static struct symbol *sat_map;
+static int nr_of_clauses = 0;
 
 static void create_sat_variables(struct symbol *sym);
 static void create_tristate_constraint_clause(struct symbol *sym);
@@ -29,6 +32,8 @@ static void print_imply(struct symbol *sym, struct property *p);
 static void print_expr(struct expr *e, int prevtoken);
 
 static void print_cnf_clause(struct symbol *sym);
+
+static void write_to_file(void);
 
 
 const char *expr_type[] = {
@@ -83,6 +88,8 @@ int main(int argc, char *argv[])
 	for_all_symbols(i, sym)
 		print_cnf_clause(sym);
 	
+	write_to_file();
+	
 	return EXIT_SUCCESS;
 }
 
@@ -107,8 +114,7 @@ static void create_sat_variables(struct symbol *sym)
  * n -> (0,0)
  * y -> (1,0)
  * m -> (0,1)
- * (1,1) is not allowed
- * this translates to (-X v -X_m)
+ * (1,1) is not allowed, which translates to (-X v -X_m)
  */
 static void create_tristate_constraint_clause(struct symbol *sym)
 {
@@ -133,6 +139,8 @@ static void create_tristate_constraint_clause(struct symbol *sym)
 	cl->next = sym->clauses;
 
 	sym->clauses = cl;
+	
+	nr_of_clauses++;
 }
 
 
@@ -222,7 +230,7 @@ static void print_select(struct symbol *sym, struct property *p)
  * (-A v B) -- already done
  * (-B v -B_m) -- already done
  * (-A v B v B_m)
- * if mod == 1, then it's the module part of a
+ * if mod == 1, then it's the module variable of a
  */
 static void build_cnf_select_bool_tri(struct symbol *a, struct symbol *b, int mod)
 {
@@ -253,6 +261,8 @@ static void build_cnf_select_bool_tri(struct symbol *a, struct symbol *b, int mo
 	
 	cl->next = a->clauses;
 	a->clauses = cl;
+	
+	nr_of_clauses++;
 }
 
 /*
@@ -283,6 +293,8 @@ static void build_cnf_select_tri_bool(struct symbol *a, struct symbol *b)
 	
 	cl->next = a->clauses;
 	a->clauses = cl;
+	
+	nr_of_clauses++;
 }
 
 
@@ -315,6 +327,9 @@ static void build_cnf_select(struct symbol *sym, struct property *p)
 
 	sym->clauses = cl;
 	
+	nr_of_clauses++;
+	
+	// take care of tristate modules
 	if (sym->type == S_BOOLEAN && e->left.sym->type == S_TRISTATE)
 		build_cnf_select_bool_tri(sym, e->left.sym, 0);
 	if (sym->type == S_TRISTATE && e->left.sym->type == S_BOOLEAN)
@@ -427,4 +442,34 @@ static void print_cnf_clause(struct symbol *sym)
 		cl = cl->next;
 	}
 }
+
+static void write_to_file(void)
+{
+	FILE *fd = fopen(OUTFILE_DIMACS, "w");
+	int i;
+	struct symbol *sym;
+	for (i = 1; i < sat_variable_nr; i++) {
+		sym = &sat_map[i];
+		fprintf(fd, "c %d %s\n", i, sym->name);
+		if (sym->type == S_TRISTATE)
+			fprintf(fd, "c %d %s_MODULE\n", ++i, sym->name);
+	}
+	fprintf(fd, "p CNF %d %d\n", sat_variable_nr - 1, nr_of_clauses);
+	
+	for_all_symbols(i, sym) {
+		struct cnf_clause *cl = sym->clauses;
+		while (cl != NULL) {
+			struct cnf_literal *lit = cl->lit;
+			while (lit != NULL) {
+				fprintf(fd, "%d ", lit->val);
+				if (!lit->next)
+					fprintf(fd, "0\n");
+				lit = lit->next;
+			}
+			cl = cl->next;
+		}
+	}
+	fclose(fd);
+}
+
 

@@ -1,0 +1,7 @@
+# Kconfig example 1
+
+mainmenu "Kconfig example 3"
+
+config A
+	tristate "CONFIG A"
+	default m
