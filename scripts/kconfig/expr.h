@@ -135,7 +135,6 @@ struct symbol {
 	 * kconfig-sat
 	 */
 	int sat_variable_nr;
-	struct cnf_clause *clauses;
 };
 
 #define for_all_symbols(i, sym) for (i = 0; i < SYMBOL_HASHSIZE; i++) for (sym = symbol_hash[i]; sym; sym = sym->next) if (sym->type != S_OTHER)

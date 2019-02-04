@@ -2,18 +2,20 @@ mainmenu "Kconfig"
 
 config A
 	bool "Config A"
+	depends on B && (C || D)
 
 config B
 	bool "Config B"
-	select A
-	select D
+
+config C
+	bool "Config C"
 
 config D
 	bool "Config D"
+	select E
 
 config E
-	tristate "Config E"
+	bool "Config E"
 
 config F
 	tristate "Config F"
-	select E

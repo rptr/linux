@@ -17,6 +17,7 @@
 
 static int sat_variable_nr = 1;
 static struct symbol *sat_map;
+static struct cnf_clause *cnf_clauses;
 static int nr_of_clauses = 0;
 
 static void create_sat_variables(struct symbol *sym);
@@ -26,12 +27,13 @@ static void print_symbol(struct symbol *sym);
 static void print_default(struct symbol *sym, struct property *p);
 
 static void print_select(struct symbol *sym, struct property *p);
+
 static void build_cnf_select(struct symbol *sym, struct property *p);
 
 static void print_imply(struct symbol *sym, struct property *p);
 static void print_expr(struct expr *e, int prevtoken);
 
-static void print_cnf_clause(struct symbol *sym);
+static void print_cnf_clauses(void);
 
 static void write_to_file(void);
 
@@ -85,8 +87,7 @@ int main(int argc, char *argv[])
 	
 	/* print all CNFs */
 	printf("All CNFs:\n");
-	for_all_symbols(i, sym)
-		print_cnf_clause(sym);
+	print_cnf_clauses();
 	
 	write_to_file();
 	
@@ -136,9 +137,8 @@ static void create_tristate_constraint_clause(struct symbol *sym)
 	lit1->next = lit2;
 	cl->lit = lit1;
 	
-	cl->next = sym->clauses;
-
-	sym->clauses = cl;
+	cl->next = cnf_clauses;
+	cnf_clauses = cl;
 	
 	nr_of_clauses++;
 }
@@ -191,10 +191,10 @@ static void print_symbol(struct symbol *sym)
 		build_cnf_select(sym, p);
 	
 	/* print CNF-clauses */
-	if (sym->clauses) {
-		printf("CNF:");
-		print_cnf_clause(sym);
-	}
+// 	if (sym->clauses) {
+// 		printf("CNF:");
+// 		print_cnf_clause(sym);
+// 	}
 
 	printf("\n");
 
@@ -259,8 +259,8 @@ static void build_cnf_select_bool_tri(struct symbol *a, struct symbol *b, int mo
 	lit1->next = lit2;
 	cl->lit = lit1;
 	
-	cl->next = a->clauses;
-	a->clauses = cl;
+	cl->next = cnf_clauses;
+	cnf_clauses = cl;
 	
 	nr_of_clauses++;
 }
@@ -291,8 +291,8 @@ static void build_cnf_select_tri_bool(struct symbol *a, struct symbol *b)
 	lit1->next = lit2;
 	cl->lit = lit1;
 	
-	cl->next = a->clauses;
-	a->clauses = cl;
+	cl->next = cnf_clauses;
+	cnf_clauses = cl;
 	
 	nr_of_clauses++;
 }
@@ -323,9 +323,8 @@ static void build_cnf_select(struct symbol *sym, struct property *p)
 	lit1->next = lit2;
 	cl->lit = lit1;
 	
-	cl->next = sym->clauses;
-
-	sym->clauses = cl;
+	cl->next = cnf_clauses;
+	cnf_clauses = cl;
 	
 	nr_of_clauses++;
 	
@@ -339,7 +338,6 @@ static void build_cnf_select(struct symbol *sym, struct property *p)
 		build_cnf_select_bool_tri(sym, e->left.sym, 1);
 	}
 }
-
 
 static void print_imply(struct symbol *sym, struct property *p)
 {
@@ -425,9 +423,9 @@ static void print_expr(struct expr *e, int prevtoken)
 	
 }
 
-static void print_cnf_clause(struct symbol *sym)
+static void print_cnf_clauses(void)
 {
-	struct cnf_clause *cl = sym->clauses;
+	struct cnf_clause *cl = cnf_clauses;
 	while (cl != NULL) {
 		struct cnf_literal *lit = cl->lit;
 		printf("\t");
@@ -455,20 +453,19 @@ static void write_to_file(void)
 			fprintf(fd, "c %d %s_MODULE\n", ++i, sym->name);
 	}
 	fprintf(fd, "p CNF %d %d\n", sat_variable_nr - 1, nr_of_clauses);
-	
-	for_all_symbols(i, sym) {
-		struct cnf_clause *cl = sym->clauses;
-		while (cl != NULL) {
-			struct cnf_literal *lit = cl->lit;
-			while (lit != NULL) {
-				fprintf(fd, "%d ", lit->val);
-				if (!lit->next)
-					fprintf(fd, "0\n");
-				lit = lit->next;
-			}
-			cl = cl->next;
+
+	struct cnf_clause *cl = cnf_clauses;
+	while (cl != NULL) {
+		struct cnf_literal *lit = cl->lit;
+		while (lit != NULL) {
+			fprintf(fd, "%d ", lit->val);
+			if (!lit->next)
+				fprintf(fd, "0\n");
+			lit = lit->next;
 		}
+		cl = cl->next;
 	}
+
 	fclose(fd);
 }
 
