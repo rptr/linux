@@ -18,13 +18,22 @@
 
 static int sat_variable_nr = 1;
 static struct symbol *sat_map;
-static struct cnf_clause *cnf_clauses;
-static int nr_of_clauses = 0;
+static struct cnf_clause *cnf_clauses; /* linked list with all CNF-clauses */
+static int nr_of_clauses = 0; /* number of CNF-clauses */
+
 
 static void create_sat_variables(struct symbol *sym);
 static void create_tristate_constraint_clause(struct symbol *sym);
 
 static void build_cnf_select(struct symbol *sym, struct property *p);
+static void build_cnf_dependencies(struct symbol *sym);
+
+static void build_cnf_simple_dependency(struct symbol *sym, struct expr *e);
+static void build_cnf_expr(struct symbol *sym, struct expr *e, int prevtoken);
+
+static void add_literal_to_clause(struct cnf_clause *cl, struct symbol *sym, int sign, int mod);
+
+static struct cnf_clause * create_cnf_clause(void);
 
 static void write_to_file(void);
 
@@ -45,8 +54,8 @@ const char *prop_type[] = { "P_UNKNOWN",
 	"P_RANGE",    /* range 7..100 (for a symbol) */
 	"P_SYMBOL"    /* where a symbol is defined */
 };
-
 const char *tristate_type[] = {"no", "mod", "yes"};
+
 
 int main(int argc, char *argv[])
 {
@@ -80,6 +89,11 @@ int main(int argc, char *argv[])
 		struct property *p;
 		for_all_properties(sym, p, P_SELECT)
 			build_cnf_select(sym, p);
+		
+		/* build CNF clauses for dependencies */
+		if (sym->dir_dep.expr)
+			build_cnf_dependencies(sym);
+			
 	}
 		
 	/* print all CNFs */
@@ -118,21 +132,10 @@ static void create_tristate_constraint_clause(struct symbol *sym)
 {
 	assert(sym->type == S_TRISTATE);
 	
-	struct cnf_clause *cl = malloc(sizeof(struct cnf_clause));
+	struct cnf_clause *cl = create_cnf_clause();
 	
-	struct cnf_literal *lit1 = malloc(sizeof(struct cnf_literal));
-	lit1->val = -(sym->sat_variable_nr );
-	strcpy(lit1->sval, "-");
-	strcat(lit1->sval, sym->name);
-	
-	struct cnf_literal *lit2 = malloc(sizeof(struct cnf_literal));
-	lit2->val = -(sym->sat_variable_nr + 1);
-	strcpy(lit2->sval, "-");
-	strcat(lit2->sval, sym->name);
-	strcat(lit2->sval, "_m");
-	
-	lit1->next = lit2;
-	cl->lit = lit1;
+	add_literal_to_clause(cl, sym, 1, 0);
+	add_literal_to_clause(cl, sym, 1, 1);
 	
 	cl->next = cnf_clauses;
 	cnf_clauses = cl;
@@ -146,34 +149,18 @@ static void create_tristate_constraint_clause(struct symbol *sym)
  * (-A v B) -- already done
  * (-B v -B_m) -- already done
  * (-A v B v B_m)
- * if mod == 1, then it's the module variable of a
+ * if mod == 1, then it's A_m instead of A (needed if A_tri select B_tri)
  */
-static void build_cnf_select_bool_tri(struct symbol *a, struct symbol *b, int mod)
+static void build_cnf_bool_dep_tri(struct symbol *a, struct symbol *b, int mod)
 {
 	assert((a->type == S_BOOLEAN && mod == 0) || a->type == S_TRISTATE);
 	assert(b->type == S_TRISTATE);
 	
-	struct cnf_clause *cl = malloc(sizeof(struct cnf_clause));
+	struct cnf_clause *cl = create_cnf_clause();
 	
-	struct cnf_literal *lit1 = malloc(sizeof(struct cnf_literal));
-	lit1->val = mod == 0 ? -(a->sat_variable_nr) : -(a->sat_variable_nr + 1);
-	strcpy(lit1->sval, "-");
-	strcat(lit1->sval, a->name);
-	if (mod == 1)
-		strcat(lit1->sval, "_m");
-	
-	struct cnf_literal *lit2 = malloc(sizeof(struct cnf_literal));
-	lit2->val = b->sat_variable_nr;
-	strcpy(lit2->sval, b->name);
-	
-	struct cnf_literal *lit3 = malloc(sizeof(struct cnf_literal));
-	lit3->val = b->sat_variable_nr + 1;
-	strcpy(lit3->sval, b->name);
-	strcat(lit3->sval, "_m");
-	
-	lit2->next = lit3;
-	lit1->next = lit2;
-	cl->lit = lit1;
+	add_literal_to_clause(cl, a, -1, mod);
+	add_literal_to_clause(cl, b, 0, 0);
+	add_literal_to_clause(cl, b, 0, 1);
 	
 	cl->next = cnf_clauses;
 	cnf_clauses = cl;
@@ -187,25 +174,15 @@ static void build_cnf_select_bool_tri(struct symbol *a, struct symbol *b, int mo
  * (-A v -A_m) -- already done
  * (-A_m v B)
  */
-static void build_cnf_select_tri_bool(struct symbol *a, struct symbol *b)
+static void build_cnf_tri_dep_bool(struct symbol *a, struct symbol *b)
 {
 	assert(a->type == S_TRISTATE);
 	assert(b->type == S_BOOLEAN);
 	
-	struct cnf_clause *cl = malloc(sizeof(struct cnf_clause));
+	struct cnf_clause *cl = create_cnf_clause();
 	
-	struct cnf_literal *lit1 = malloc(sizeof(struct cnf_literal));
-	lit1->val = -(a->sat_variable_nr + 1);
-	strcpy(lit1->sval, "-");
-	strcat(lit1->sval, a->name);
-	strcat(lit1->sval, "_m");
-	
-	struct cnf_literal *lit2 = malloc(sizeof(struct cnf_literal));
-	lit2->val = b->sat_variable_nr;
-	strcpy(lit2->sval, b->name);
-
-	lit1->next = lit2;
-	cl->lit = lit1;
+	add_literal_to_clause(cl, a, -1, 1);
+	add_literal_to_clause(cl, b, 0, 0);
 	
 	cl->next = cnf_clauses;
 	cnf_clauses = cl;
@@ -225,36 +202,188 @@ static void build_cnf_select(struct symbol *sym, struct property *p)
 	assert(p->type == P_SELECT);
 	struct expr *e = p->expr;
 	
-	struct cnf_clause *cl = malloc(sizeof(struct cnf_clause));
+	struct cnf_clause *cl = create_cnf_clause();
 	
-	struct cnf_literal *lit1 = malloc(sizeof(struct cnf_literal));
-	lit1->val = -(sym->sat_variable_nr);
-	strcpy(lit1->sval, "-");
-	strcat(lit1->sval, sym->name);
-	
-	struct cnf_literal *lit2 = malloc(sizeof(struct cnf_literal));
-	lit2->val = e->left.sym->sat_variable_nr;
-	strcpy(lit2->sval, e->left.sym->name);
-	
-	lit1->next = lit2;
-	cl->lit = lit1;
+	add_literal_to_clause(cl, sym, -1, 0);
+	add_literal_to_clause(cl, e->left.sym, 0, 0);
 	
 	cl->next = cnf_clauses;
 	cnf_clauses = cl;
 	
 	nr_of_clauses++;
 	
-	// take care of tristate modules
+	/* take care of tristate modules */
 	if (sym->type == S_BOOLEAN && e->left.sym->type == S_TRISTATE)
-		build_cnf_select_bool_tri(sym, e->left.sym, 0);
+		      build_cnf_bool_dep_tri(sym, e->left.sym, 0);
 	if (sym->type == S_TRISTATE && e->left.sym->type == S_BOOLEAN)
-		build_cnf_select_tri_bool(sym, e->left.sym);
+		      build_cnf_tri_dep_bool(sym, e->left.sym);
 	if (sym->type == S_TRISTATE && e->left.sym->type == S_TRISTATE) {
-		build_cnf_select_bool_tri(sym, e->left.sym, 0);
-		build_cnf_select_bool_tri(sym, e->left.sym, 1);
+		      build_cnf_bool_dep_tri(sym, e->left.sym, 0);
+		      build_cnf_bool_dep_tri(sym, e->left.sym, 1);
 	}
 }
 
+/*
+ * Encode "A implies B" with A and B being tristate
+ * (-A v -A_m) -- already done
+ * (-B v -B_m) -- already done
+ * (-A v B) -- already done
+ * (-A v B v -B_m)
+ * (-A_m v B v B_m)
+ */
+static void build_cnf_tri_dep_tri(struct symbol *a, struct symbol *b) 
+{
+	struct cnf_clause *cl = create_cnf_clause();
+	
+	add_literal_to_clause(cl, a, -1, 0);
+	add_literal_to_clause(cl, b, 0, 0);
+	add_literal_to_clause(cl, b, -1, 1);
+	
+	cl->next = cnf_clauses;
+	cnf_clauses = cl;
+	
+	
+	struct cnf_clause *cl2 = create_cnf_clause();
+	
+	add_literal_to_clause(cl2, a, -1, 1);
+	add_literal_to_clause(cl2, b, 0, 0);
+	add_literal_to_clause(cl2, b, 0, 1);
+	
+	cl2->next = cnf_clauses;
+	cnf_clauses = cl2;
+	
+	nr_of_clauses += 2;
+}
+
+/*
+ * Encode a dependency as CNF
+ * "A depends on B" translates to A implies B => (-A v B)
+ * A -> lit1
+ * B -> lit2
+ */
+static void build_cnf_simple_dependency(struct symbol *sym, struct expr *e)
+{
+	/* take care of tristate modules */
+	if (sym->type == S_BOOLEAN && e->left.sym->type == S_TRISTATE) {
+		build_cnf_bool_dep_tri(sym, e->left.sym, 0);
+		return;
+	}
+		
+	if (sym->type == S_TRISTATE && e->left.sym->type == S_BOOLEAN)
+		build_cnf_tri_dep_bool(sym, e->left.sym);
+	if (sym->type == S_TRISTATE && e->left.sym->type == S_TRISTATE)
+		build_cnf_tri_dep_tri(sym, e->left.sym);
+	
+	struct cnf_clause *cl = create_cnf_clause();
+	
+	add_literal_to_clause(cl, sym, -1, 0);
+	add_literal_to_clause(cl, e->left.sym, 0, 0);
+	
+	cl->next = cnf_clauses;
+	cnf_clauses = cl;
+	
+	nr_of_clauses++;
+}
+
+/*
+ * Encode A implies (B or C) => (-A v B v C)
+ * A -> lit1
+ * B -> lit2
+ * C -> lit3
+ */
+static void build_cnf_simple_or(struct symbol *sym, struct expr *e1, struct expr *e2)
+{
+	struct cnf_clause *cl = create_cnf_clause();
+	
+	add_literal_to_clause(cl, sym, -1, 0);
+	add_literal_to_clause(cl, e1->left.sym, 0, 0);
+	add_literal_to_clause(cl, e2->left.sym, 0, 0);
+	
+	cl->next = cnf_clauses;
+	cnf_clauses = cl;
+	
+	nr_of_clauses++;
+}
+
+/*
+ * Encode A implies !B ==> (-A v -B)
+ * A -> lit1
+ * B -> lit2
+ */
+static void build_cnf_simple_not(struct symbol *sym, struct expr *e)
+{
+	struct cnf_clause *cl = create_cnf_clause();
+	
+	add_literal_to_clause(cl, sym, -1, 0);
+	add_literal_to_clause(cl, e->left.sym, -1, 0);
+	
+	cl->next = cnf_clauses;
+	cnf_clauses = cl;
+	
+	nr_of_clauses++;
+	
+}
+
+static void build_cnf_expr(struct symbol *sym, struct expr *e, int prevtoken)
+{
+	if (!e)
+		return;
+	
+	//printf("e-type: %s, prevtoken %s\n", expr_type[e->type], expr_type[prevtoken]);
+	
+	switch (e->type) {
+	case E_SYMBOL:
+		if (prevtoken == E_NONE || prevtoken == E_AND)
+			build_cnf_simple_dependency(sym, e);
+		break;
+	case E_AND:
+		if (prevtoken == E_NONE || prevtoken == E_AND) {
+			build_cnf_expr(sym, e->left.expr, E_AND);
+			build_cnf_expr(sym, e->right.expr, E_AND);
+		}
+		break;
+	case E_OR:
+		if (prevtoken == E_NONE)
+			build_cnf_simple_or(sym, e->left.expr, e->right.expr);
+		break;
+	case E_NOT:
+		if (prevtoken == E_NONE || prevtoken == E_AND)
+			build_cnf_simple_not(sym, e->left.expr);
+			
+	default:
+		break;
+	}
+}
+
+static void build_cnf_dependencies(struct symbol* sym)
+{
+	assert(sym->dir_dep.expr);
+	
+	build_cnf_expr(sym, sym->dir_dep.expr, E_NONE);
+}
+
+static void add_literal_to_clause(struct cnf_clause *cl, struct symbol *sym, int sign, int mod)
+{
+	struct cnf_literal *lit = malloc(sizeof(struct cnf_literal));
+
+	lit->val = mod == 0 ? sym->sat_variable_nr : (sym->sat_variable_nr + 1);
+	lit->val *= (sign == 0 ? 1 : -1);
+	strcpy(lit->sval, sign == 0 ? "" : "-");
+	strcat(lit->sval, sym->name);
+	if (mod != 0)
+		strcat(lit->sval, "_m");
+	
+	lit->next = cl->lit ? cl->lit : NULL;
+	cl->lit = lit;
+}
+
+static struct cnf_clause * create_cnf_clause(void)
+{
+	struct cnf_clause *cl = malloc(sizeof(struct cnf_clause));
+	cl->lit = NULL;
+	cl->next = NULL;
+	return cl;
+}
 
 static void write_to_file(void)
 {
