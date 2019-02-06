@@ -134,15 +134,14 @@ static void create_tristate_constraint_clause(struct symbol *sym)
 	
 	struct cnf_clause *cl = create_cnf_clause();
 	
-	add_literal_to_clause(cl, sym, 1, 0);
-	add_literal_to_clause(cl, sym, 1, 1);
+	add_literal_to_clause(cl, sym, -1, 0);
+	add_literal_to_clause(cl, sym, -1, 1);
 	
 	cl->next = cnf_clauses;
 	cnf_clauses = cl;
 	
 	nr_of_clauses++;
 }
-
 
 /*
  * A_bool select B_tri translates to
@@ -189,7 +188,6 @@ static void build_cnf_tri_dep_bool(struct symbol *a, struct symbol *b)
 	
 	nr_of_clauses++;
 }
-
 
 /*
  * Encode the select statement as CNF
@@ -268,7 +266,6 @@ static void build_cnf_simple_dependency(struct symbol *sym, struct expr *e)
 		build_cnf_bool_dep_tri(sym, e->left.sym, 0);
 		return;
 	}
-		
 	if (sym->type == S_TRISTATE && e->left.sym->type == S_BOOLEAN)
 		build_cnf_tri_dep_bool(sym, e->left.sym);
 	if (sym->type == S_TRISTATE && e->left.sym->type == S_TRISTATE)
@@ -324,6 +321,9 @@ static void build_cnf_simple_not(struct symbol *sym, struct expr *e)
 	
 }
 
+/*
+ * build the CNF-clauses for an expression
+ */
 static void build_cnf_expr(struct symbol *sym, struct expr *e, int prevtoken)
 {
 	if (!e)
@@ -355,6 +355,9 @@ static void build_cnf_expr(struct symbol *sym, struct expr *e, int prevtoken)
 	}
 }
 
+/*
+ * build the CNF-clauses for a dependency
+ */
 static void build_cnf_dependencies(struct symbol* sym)
 {
 	assert(sym->dir_dep.expr);
@@ -362,6 +365,13 @@ static void build_cnf_dependencies(struct symbol* sym)
 	build_cnf_expr(sym, sym->dir_dep.expr, E_NONE);
 }
 
+/*
+ * adds a literal to a CNF-clause
+ * sign 0, mod 0 -> X
+ * sign -1, mod 0 -> -X
+ * sign 0, mod 1 -> X_m
+ * sign -1, mod 1 -> -X_m
+ */
 static void add_literal_to_clause(struct cnf_clause *cl, struct symbol *sym, int sign, int mod)
 {
 	struct cnf_literal *lit = malloc(sizeof(struct cnf_literal));
@@ -385,6 +395,9 @@ static struct cnf_clause * create_cnf_clause(void)
 	return cl;
 }
 
+/*
+ * writes the CNF-clauses into a file in DIMACS-format
+ */
 static void write_to_file(void)
 {
 	FILE *fd = fopen(OUTFILE_DIMACS, "w");
