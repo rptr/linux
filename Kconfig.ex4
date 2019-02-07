@@ -1,11 +1,11 @@
 mainmenu "Kconfig"
 
 config A
-	tristate "Config A"
-	depends on B
+	bool "Config A"
+	depends on (B || C) && (D || E) && (F || G)
 
 config B
-	tristate "Config B"
+	bool "Config B"
 
 config C
 	bool "Config C"
@@ -18,3 +18,6 @@ config E
 
 config F
 	bool "Config F"
+
+config G
+	bool "Config G"

@@ -171,6 +171,37 @@ void print_expr(struct expr *e, int prevtoken)
 	
 }
 
+void print_kexpr(struct k_expr *e)
+{
+	if (!e)
+		return;
+	
+	switch (e->type) {
+	case KET_SYMBOL:
+		printf("%s", e->sym->name);
+		break;
+	case KET_AND:
+		printf("(");
+		print_kexpr(e->left);
+		printf(" && ");
+		print_kexpr(e->right);
+		printf(")");
+		break;
+	case KET_OR:
+		printf("(");
+		print_kexpr(e->left);
+		printf(" || ");
+		print_kexpr(e->right);
+		printf(")");
+		break;
+	case KET_NOT:
+		printf("!");
+		print_kexpr(e->child);
+		break;
+	}
+}
+
+
 void print_cnf_clauses(struct cnf_clause *cnf_clauses)
 {
 	struct cnf_clause *cl = cnf_clauses;
