@@ -15,6 +15,7 @@
 #include <QCheckBox>
 #include <QDialog>
 #include <QListWidget>
+#include <QTableWidget>
 #include "expr.h"
 
 class ConfigView;
@@ -304,6 +305,7 @@ protected:
 	// QPushButton* searchButton;
 	// QSplitter* split;
 	QListWidget* conflictList;
+	QTableWidget* conflictsTable;
 	// ConfigInfoView* info;
 
 	// struct symbol **result;
