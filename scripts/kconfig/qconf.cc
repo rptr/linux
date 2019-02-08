@@ -5,6 +5,7 @@
  */
 
 #include <qglobal.h>
+#include <typeinfo>
 
 #include <QMainWindow>
 #include <QList>
@@ -1045,6 +1046,7 @@ void ConfigInfoView::setShowDebug(bool b)
 
 void ConfigInfoView::setInfo(struct menu *m)
 {
+	std::cerr << "setinfo ><<>><>> " << std::endl;
 	if (_menu == m)
 		return;
 	_menu = m;
@@ -1327,6 +1329,8 @@ ConfigConflictsWindow::ConfigConflictsWindow(ConfigMainWindow* parent, const cha
 	conflictsTable->setItem(1,2,new QTableWidgetItem("tristate example"));
 
 	conflictsTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
+
+	connect(conflictsTable, SIGNAL(cellClicked(int, int)), SLOT(cellClicked(int,int)));
 	layout1->addWidget(conflictsTable);
 
 
@@ -1365,6 +1369,24 @@ ConfigConflictsWindow::ConfigConflictsWindow(ConfigMainWindow* parent, const cha
 	// 	connect(configApp, SIGNAL(aboutToQuit()), SLOT(saveSettings()));
 	// }
 	// connect(conflictList, SIGNAL(itemSelectionChanged()), SLOT(showConfig()));
+}
+void ConfigConflictsWindow::cellClicked(int row, int column)
+{
+
+	std::cerr << "clicked :: " << row << ", column:: " << column << std::endl;
+	std::cerr << "parents type:: " <<  typeid(parent()).name() << std::endl;
+	//sym_find("CONFIG_HYPERVISOR_GUEST");
+	struct symbol* sym = sym_find("HYPERVISOR_GUEST");
+	if (sym == NULL)
+	{
+		std::cerr << "symbol is nullptr: " << std::endl;
+		return;
+	}
+	struct property* prop = sym->prop;
+	struct menu* men = prop->menu;
+	std::cerr << "help:::: " <<  men->help << std::endl;
+	 emit(conflictSelected(men));
+
 }
 void ConfigConflictsWindow::showConfig(void)
 {
@@ -1453,6 +1475,9 @@ ConfigMainWindow::ConfigMainWindow(void)
 	menu = menuBar();
 	toolBar = new QToolBar("Tools", this);
 	addToolBar(toolBar);
+
+	conflictsWindow = new ConfigConflictsWindow(this,"conflicts");
+	connect(conflictsWindow,SIGNAL(conflictSelected(struct menu *)),SLOT(setMenuLink(struct menu *)));
 
 	backAction = new QAction(QPixmap(xpm_back), "Back", this);
 	  connect(backAction, SIGNAL(triggered(bool)), SLOT(goBack()));

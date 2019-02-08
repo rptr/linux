@@ -299,6 +299,10 @@ public:
  public slots:
  	//void saveSettings(void);
  	void showConfig(void);
+	void cellClicked(int row, int column);
+
+signals:
+	void conflictSelected(struct menu *);
 
 protected:
 	// QLineEdit* editField;
