@@ -14,6 +14,7 @@
 #include <QSplitter>
 #include <QCheckBox>
 #include <QDialog>
+#include <QListWidget>
 #include "expr.h"
 
 class ConfigView;
@@ -288,22 +289,22 @@ protected:
 	struct symbol **result;
 };
 
-class ConfigConflictWindow : public QDialog {
+class ConfigConflictsWindow : public QDialog {
 	Q_OBJECT
 	typedef class QDialog Parent;
 public:
-	ConfigConflictWindow(ConfigMainWindow* parent, const char *name = 0);
+	ConfigConflictsWindow(ConfigMainWindow* parent, const char *name = 0);
 
-// public slots:
-// 	void saveSettings(void);
-// 	void search(void);
+ public slots:
+ 	//void saveSettings(void);
+ 	void showConfig(void);
 
 protected:
-	QLineEdit* editField;
-	QPushButton* searchButton;
-	QSplitter* split;
-	ConfigView* list;
-	ConfigInfoView* info;
+	// QLineEdit* editField;
+	// QPushButton* searchButton;
+	// QSplitter* split;
+	QListWidget* conflictList;
+	// ConfigInfoView* info;
 
 	// struct symbol **result;
 };
@@ -337,6 +338,7 @@ protected:
 	void closeEvent(QCloseEvent *e);
 
 	ConfigSearchWindow *searchWindow;
+	ConfigConflictsWindow *conflictsWindow;
 	ConfigView *menuView;
 	ConfigList *menuList;
 	ConfigView *configView;

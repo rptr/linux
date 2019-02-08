@@ -12,6 +12,7 @@
 #include <QAction>
 #include <QFileDialog>
 #include <QMenu>
+#include <QListWidget>
 
 #include <qapplication.h>
 #include <qdesktopwidget.h>
@@ -33,6 +34,7 @@
 
 #include "qconf.moc"
 #include "images.h"
+#include <iostream>
 
 
 static QApplication *configApp;
@@ -1294,6 +1296,62 @@ ConfigSearchWindow::ConfigSearchWindow(ConfigMainWindow* parent, const char *nam
 	}
 }
 
+ConfigConflictsWindow::ConfigConflictsWindow(ConfigMainWindow* parent, const char *name )
+	: Parent(parent)
+{
+	setObjectName(name);
+	setWindowTitle("Conflicts");
+
+	QVBoxLayout* layout1 = new QVBoxLayout(this);
+	layout1->setContentsMargins(11, 11, 11, 11);
+	layout1->setSpacing(6);
+
+	conflictList = new QListWidget();
+	QString item = "boolean example - linux guest support";
+	QString item2 = "tristate example - PCCard support";
+	conflictList->addItem(item);
+	conflictList->addItem(item2);
+	layout1->addWidget(conflictList);
+	this->setLayout(layout1);
+
+	// split = new QSplitter(this);
+	// split->setOrientation(Qt::Vertical);
+	// list = new ConfigView(split, name);
+	// list->list->mode = listMode;
+	// info = new ConfigInfoView(split, name);
+	// connect(list->list, SIGNAL(menuChanged(struct menu *)),
+	// 	info, SLOT(setInfo(struct menu *)));
+	// connect(list->list, SIGNAL(menuChanged(struct menu *)),
+	// 	parent, SLOT(setMenuLink(struct menu *)));
+
+	// layout1->addWidget(split);
+
+	// if (name) {
+	// 	QVariant x, y;
+	// 	int width, height;
+	// 	bool ok;
+
+	// 	configSettings->beginGroup(name);
+	// 	width = configSettings->value("/window width", parent->width() / 2).toInt();
+	// 	height = configSettings->value("/window height", parent->height() / 2).toInt();
+	// 	resize(width, height);
+	// 	x = configSettings->value("/window x");
+	// 	y = configSettings->value("/window y");
+	// 	if ((x.isValid())&&(y.isValid()))
+	// 		move(x.toInt(), y.toInt());
+	// 	QList<int> sizes = configSettings->readSizes("/split", &ok);
+	// 	if (ok)
+	// 		split->setSizes(sizes);
+	// 	configSettings->endGroup();
+	// 	connect(configApp, SIGNAL(aboutToQuit()), SLOT(saveSettings()));
+	// }
+	// connect(conflictList, SIGNAL(itemSelectionChanged()), SLOT(showConfig()));
+}
+void ConfigConflictsWindow::showConfig(void)
+{
+
+}
+
 void ConfigSearchWindow::saveSettings(void)
 {
 	if (!objectName().isEmpty()) {
@@ -1331,7 +1389,7 @@ void ConfigSearchWindow::search(void)
  * Construct the complete config widget
  */
 ConfigMainWindow::ConfigMainWindow(void)
-	: searchWindow(0)
+	: searchWindow(0),conflictsWindow(0)
 {
 	QMenuBar* menu;
 	bool ok = true;
@@ -1723,11 +1781,9 @@ void ConfigMainWindow::showSplitView(void)
 
 void ConfigMainWindow::showConflicts(void)
 {
-
-QMessageBox::information(
-    this,
-    tr("Application Name"),
-    tr("An information message.") );
+	if (!conflictsWindow)
+		conflictsWindow = new ConfigConflictsWindow(this, "conflicts");
+	conflictsWindow->show();
 }
 void ConfigMainWindow::showFullView(void)
 {
