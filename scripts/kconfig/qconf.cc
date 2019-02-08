@@ -13,6 +13,7 @@
 #include <QFileDialog>
 #include <QMenu>
 #include <QListWidget>
+#include <QTableWidget>
 
 #include <qapplication.h>
 #include <qdesktopwidget.h>
@@ -1311,7 +1312,25 @@ ConfigConflictsWindow::ConfigConflictsWindow(ConfigMainWindow* parent, const cha
 	QString item2 = "tristate example - PCCard support";
 	conflictList->addItem(item);
 	conflictList->addItem(item2);
-	layout1->addWidget(conflictList);
+	// layout1->addWidget(conflictList);
+
+	conflictsTable = new QTableWidget();
+	conflictsTable->setRowCount(2);
+	conflictsTable->setColumnCount(3);
+
+	conflictsTable->setHorizontalHeaderLabels(QStringList()  << "Item" << "Conflict" << "Description");
+	conflictsTable->setItem(0,0,new QTableWidgetItem("CONFIG_HYPERVISOR_GUEST"));
+	conflictsTable->setItem(0,1,new QTableWidgetItem("unsatisfied"));
+	conflictsTable->setItem(0,2,new QTableWidgetItem("boolean example"));
+	conflictsTable->setItem(1,0,new QTableWidgetItem("CONFIG_BXT_WC_PMIC_OPREGION"));
+	conflictsTable->setItem(1,1,new QTableWidgetItem("unsatisfied"));
+	conflictsTable->setItem(1,2,new QTableWidgetItem("tristate example"));
+
+	conflictsTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
+	layout1->addWidget(conflictsTable);
+
+
+
 	this->setLayout(layout1);
 
 	// split = new QSplitter(this);
