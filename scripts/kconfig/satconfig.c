@@ -217,6 +217,19 @@ static void build_cnf_simple_or(struct symbol *sym, struct k_expr *e1, struct k_
  */
 static void build_cnf_simple_not(struct symbol *sym, struct k_expr *e)
 {
+	/* take care of tristate modules */
+	if (sym->type == S_BOOLEAN && e->sym->type == S_TRISTATE) {
+		build_cnf_clause(3, -(sym->sat_variable_nr), -(e->sym->sat_variable_nr), e->sym->sat_variable_nr + 1);
+		return;
+	}
+	if (sym->type == S_TRISTATE && e->sym->type == S_BOOLEAN)
+		build_cnf_clause(2, -(sym->sat_variable_nr + 1), -(e->sym->sat_variable_nr));
+	if (sym->type == S_TRISTATE && e->sym->type == S_TRISTATE) {
+		build_cnf_clause(2, -(sym->sat_variable_nr), -(e->sym->sat_variable_nr + 1));
+		build_cnf_clause(3, -(sym->sat_variable_nr + 1), -(e->sym->sat_variable_nr), e->sym->sat_variable_nr + 1);
+		build_cnf_clause(3, -(sym->sat_variable_nr), -(e->sym->sat_variable_nr), -(e->sym->sat_variable_nr + 1));
+		build_cnf_clause(3, -(sym->sat_variable_nr), e->sym->sat_variable_nr, -(e->sym->sat_variable_nr + 1));
+	}
 	build_cnf_clause(2, -(sym->sat_variable_nr), -(e->sym->sat_variable_nr));
 }
 

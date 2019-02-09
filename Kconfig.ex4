@@ -2,7 +2,7 @@ mainmenu "Kconfig"
 
 config A
 	tristate "Config A"
-	depends on B
+	depends on !B
 
 config B
 	tristate "Config B"
