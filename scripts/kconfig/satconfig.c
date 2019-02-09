@@ -386,7 +386,7 @@ static void build_cnf_clause(int num, ...)
 			// is tristate
 			sym = &sat_map[abs(symbolnr)-1];
 
-		add_literal_to_clause(cl, sym, symbolnr >= 0 ? 0 : -1, 1-ind);
+		add_literal_to_clause(cl, sym, symbolnr >= 0 ? 1 : -1, 1-ind);
 	}
 	
 	cl->next = cnf_clauses;
@@ -400,18 +400,21 @@ static void build_cnf_clause(int num, ...)
 
 /*
  * adds a literal to a CNF-clause
- * sign 0, mod 0 -> X
+ * sign 0+, mod 0 -> X
  * sign -1, mod 0 -> -X
- * sign 0, mod 1 -> X_m
+ * sign 0+, mod 1 -> X_m
  * sign -1, mod 1 -> -X_m
  */
 static void add_literal_to_clause(struct cnf_clause *cl, struct symbol *sym, int sign, int mod)
 {
+	if (mod != 0)
+		assert(sym->type == S_TRISTATE);
+	
 	struct cnf_literal *lit = malloc(sizeof(struct cnf_literal));
 
 	lit->val = mod == 0 ? sym->sat_variable_nr : (sym->sat_variable_nr + 1);
-	lit->val *= (sign == 0 ? 1 : -1);
-	strcpy(lit->sval, sign == 0 ? "" : "-");
+	lit->val *= (sign >= 0 ? 1 : -1);
+	strcpy(lit->sval, sign >= 0 ? "" : "-");
 	strcat(lit->sval, sym->name);
 	if (mod != 0)
 		strcat(lit->sval, "_m");
