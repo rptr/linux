@@ -177,24 +177,24 @@ void print_kexpr(struct k_expr *e)
 		return;
 	
 	switch (e->type) {
-	case KET_SYMBOL:
+	case KE_SYMBOL:
 		printf("%s", e->sym->name);
 		break;
-	case KET_AND:
+	case KE_AND:
 		printf("(");
 		print_kexpr(e->left);
 		printf(" && ");
 		print_kexpr(e->right);
 		printf(")");
 		break;
-	case KET_OR:
+	case KE_OR:
 		printf("(");
 		print_kexpr(e->left);
 		printf(" || ");
 		print_kexpr(e->right);
 		printf(")");
 		break;
-	case KET_NOT:
+	case KE_NOT:
 		printf("!");
 		print_kexpr(e->child);
 		break;

@@ -31,9 +31,10 @@ static void build_cnf_dependencies(struct symbol *sym);
 static void build_cnf_simple_dependency(struct symbol *sym, struct k_expr *e);
 static void build_cnf_expr(struct symbol *sym, struct k_expr *e);
 
+static void build_cnf_clause(int num, ...);
 static void add_literal_to_clause(struct cnf_clause *cl, struct symbol *sym, int sign, int mod);
 
-static struct cnf_clause * create_cnf_clause(void);
+static struct cnf_clause * create_cnf_clause_struct(void);
 
 static void write_cnf_to_file(void);
 
@@ -143,7 +144,7 @@ static void create_tristate_constraint_clause(struct symbol *sym)
 {
 	assert(sym->type == S_TRISTATE);
 	
-	struct cnf_clause *cl = create_cnf_clause();
+	struct cnf_clause *cl = create_cnf_clause_struct();
 	
 	add_literal_to_clause(cl, sym, -1, 0);
 	add_literal_to_clause(cl, sym, -1, 1);
@@ -166,7 +167,9 @@ static void build_cnf_bool_dep_tri(struct symbol *a, struct symbol *b, int mod)
 	assert((a->type == S_BOOLEAN && mod == 0) || a->type == S_TRISTATE);
 	assert(b->type == S_TRISTATE);
 	
-	struct cnf_clause *cl = create_cnf_clause();
+	//build_cnf_clause(3, -(a->sat_variable_nr), b->sat_variable_nr, (b->sat_variable_nr)+1);
+	
+	struct cnf_clause *cl = create_cnf_clause_struct();
 	
 	add_literal_to_clause(cl, a, -1, mod);
 	add_literal_to_clause(cl, b, 0, 0);
@@ -189,7 +192,7 @@ static void build_cnf_tri_dep_bool(struct symbol *a, struct symbol *b)
 	assert(a->type == S_TRISTATE);
 	assert(b->type == S_BOOLEAN);
 	
-	struct cnf_clause *cl = create_cnf_clause();
+	struct cnf_clause *cl = create_cnf_clause_struct();
 	
 	add_literal_to_clause(cl, a, -1, 1);
 	add_literal_to_clause(cl, b, 0, 0);
@@ -211,15 +214,7 @@ static void build_cnf_select(struct symbol *sym, struct property *p)
 	assert(p->type == P_SELECT);
 	struct expr *e = p->expr;
 	
-	struct cnf_clause *cl = create_cnf_clause();
-	
-	add_literal_to_clause(cl, sym, -1, 0);
-	add_literal_to_clause(cl, e->left.sym, 0, 0);
-	
-	cl->next = cnf_clauses;
-	cnf_clauses = cl;
-	
-	nr_of_clauses++;
+	build_cnf_clause(2, -(sym->sat_variable_nr), e->left.sym->sat_variable_nr);
 	
 	/* take care of tristate modules */
 	if (sym->type == S_BOOLEAN && e->left.sym->type == S_TRISTATE)
@@ -242,7 +237,7 @@ static void build_cnf_select(struct symbol *sym, struct property *p)
  */
 static void build_cnf_tri_dep_tri(struct symbol *a, struct symbol *b) 
 {
-	struct cnf_clause *cl = create_cnf_clause();
+	struct cnf_clause *cl = create_cnf_clause_struct();
 	
 	add_literal_to_clause(cl, a, -1, 0);
 	add_literal_to_clause(cl, b, 0, 0);
@@ -252,7 +247,7 @@ static void build_cnf_tri_dep_tri(struct symbol *a, struct symbol *b)
 	cnf_clauses = cl;
 	
 	
-	struct cnf_clause *cl2 = create_cnf_clause();
+	struct cnf_clause *cl2 = create_cnf_clause_struct();
 	
 	add_literal_to_clause(cl2, a, -1, 1);
 	add_literal_to_clause(cl2, b, 0, 0);
@@ -282,15 +277,7 @@ static void build_cnf_simple_dependency(struct symbol *sym, struct k_expr *e)
 	if (sym->type == S_TRISTATE && e->sym->type == S_TRISTATE)
 		build_cnf_tri_dep_tri(sym, e->sym);
 	
-	struct cnf_clause *cl = create_cnf_clause();
-	
-	add_literal_to_clause(cl, sym, -1, 0);
-	add_literal_to_clause(cl, e->sym, 0, 0);
-	
-	cl->next = cnf_clauses;
-	cnf_clauses = cl;
-	
-	nr_of_clauses++;
+	build_cnf_clause(2, -(sym->sat_variable_nr), e->sym->sat_variable_nr);
 }
 
 /*
@@ -301,16 +288,7 @@ static void build_cnf_simple_dependency(struct symbol *sym, struct k_expr *e)
  */
 static void build_cnf_simple_or(struct symbol *sym, struct k_expr *e1, struct k_expr *e2)
 {
-	struct cnf_clause *cl = create_cnf_clause();
-	
-	add_literal_to_clause(cl, sym, -1, 0);
-	add_literal_to_clause(cl, e1->sym, 0, 0);
-	add_literal_to_clause(cl, e2->sym, 0, 0);
-	
-	cl->next = cnf_clauses;
-	cnf_clauses = cl;
-	
-	nr_of_clauses++;
+	build_cnf_clause(3, -(sym->sat_variable_nr), e1->sym->sat_variable_nr, e2->sym->sat_variable_nr);
 }
 
 /*
@@ -320,15 +298,7 @@ static void build_cnf_simple_or(struct symbol *sym, struct k_expr *e1, struct k_
  */
 static void build_cnf_simple_not(struct symbol *sym, struct k_expr *e)
 {
-	struct cnf_clause *cl = create_cnf_clause();
-	
-	add_literal_to_clause(cl, sym, -1, 0);
-	add_literal_to_clause(cl, e->sym, -1, 0);
-	
-	cl->next = cnf_clauses;
-	cnf_clauses = cl;
-	
-	nr_of_clauses++;
+	build_cnf_clause(2, -(sym->sat_variable_nr), -(e->sym->sat_variable_nr));
 }
 
 /*
@@ -344,17 +314,17 @@ static void debug_print_kexpr(struct k_expr *e)
 		printf(", parent %s", kexpr_type[e->parent->type]);
 	printf("\n");
 	switch (e->type) {
-	case KET_SYMBOL:
+	case KE_SYMBOL:
 		printf("name %s\n", e->sym->name);
 		break;
-	case KET_AND:
-	case KET_OR:
+	case KE_AND:
+	case KE_OR:
 		printf("left child: %s\n", kexpr_type[e->left->type]);
 		printf("right child: %s\n", kexpr_type[e->right->type]);
 		debug_print_kexpr(e->left);
 		debug_print_kexpr(e->right);
 		break;
-	case KET_NOT:
+	case KE_NOT:
 	default:
 		printf("child: %s\n", kexpr_type[e->child->type]);
 		debug_print_kexpr(e->child);
@@ -367,18 +337,18 @@ static void debug_print_kexpr(struct k_expr *e)
  */ 
 static void build_cnf_imply(struct symbol *sym, struct k_expr *e)
 {
-	if (e->type == KET_SYMBOL) {
+	if (e->type == KE_SYMBOL) {
 		build_cnf_simple_dependency(sym, e);
 		return;
 	}
-	if (e->type == KET_AND) {
+	if (e->type == KE_AND && e->parent->type == KE_AND) {
 		build_cnf_imply(sym, e->left);
 		build_cnf_imply(sym, e->right);
 		return;
 	}
-	if (e->type == KET_OR) {
+	if (e->type == KE_OR) {
 		/* base case */
-		if (e->left->type == KET_SYMBOL && e->right->type == KET_SYMBOL)
+		if (e->left->type == KE_SYMBOL && e->right->type == KE_SYMBOL)
 			build_cnf_simple_or(sym, e->left, e->right);
 		return;
 	}
@@ -397,26 +367,26 @@ static void build_cnf_expr(struct symbol *sym, struct k_expr *e)
 	//printf("\n");
 	
 	switch (e->type) {
-	case KET_SYMBOL:
+	case KE_SYMBOL:
 		/* base case */
 		if (!e->parent)
 			build_cnf_simple_dependency(sym, e);
 		break;
-	case KET_AND:
+	case KE_AND:
 		/* base case */
 		if (!e->parent) {
 			build_cnf_imply(sym, e->left);
 			build_cnf_imply(sym, e->right);
 		}
 		break;
-	case KET_OR:
+	case KE_OR:
 		/* base case */
-		if (!e->parent && e->left->type == KET_SYMBOL && e->right->type == KET_SYMBOL)
+		if (!e->parent && e->left->type == KE_SYMBOL && e->right->type == KE_SYMBOL)
 			build_cnf_simple_or(sym, e->left, e->right);
 		break;
-	case KET_NOT:
+	case KE_NOT:
 		/* base case */
-		if (!e->parent && e->child->type == KET_SYMBOL)
+		if (!e->parent && e->child->type == KE_SYMBOL)
 			build_cnf_simple_not(sym, e->child);
 		break;
 	}
@@ -432,21 +402,21 @@ static struct k_expr * parse_expr(struct expr *e, struct k_expr *parent)
 
 	switch (e->type) {
 	case E_SYMBOL:
-		ke->type = KET_SYMBOL;
+		ke->type = KE_SYMBOL;
 		ke->sym = e->left.sym;
 		return ke;
 	case E_AND:
-		ke->type = KET_AND;
+		ke->type = KE_AND;
 		ke->left = parse_expr(e->left.expr, ke);
 		ke->right = parse_expr(e->right.expr, ke);
 		return ke;
 	case E_OR:
-		ke->type = KET_OR;
+		ke->type = KE_OR;
 		ke->left = parse_expr(e->left.expr, ke);
 		ke->right = parse_expr(e->right.expr, ke);
 		return ke;
 	case E_NOT:
-		ke->type = KET_NOT;
+		ke->type = KE_NOT;
 		ke->child = parse_expr(e->left.expr, ke);
 		return ke;
 	default:
@@ -464,6 +434,29 @@ static void build_cnf_dependencies(struct symbol* sym)
 	struct k_expr *e = parse_expr(sym->dir_dep.expr, NULL);
 	build_cnf_expr(sym, e);
 }
+
+static void build_cnf_clause(int num, ...)
+{
+	va_list valist;
+	va_start(valist, num);
+	int i;
+	
+	struct cnf_clause *cl = create_cnf_clause_struct();
+	
+	for (i = 0; i < num; i++) {
+		int symbolnr = va_arg(valist, int);
+		struct symbol *sym = &sat_map[abs(symbolnr)];
+		add_literal_to_clause(cl, sym, symbolnr >= 0 ? 0 : -1, 0);
+	}
+	
+	cl->next = cnf_clauses;
+	cnf_clauses = cl;
+	
+	nr_of_clauses++;
+	
+	va_end(valist);
+}
+
 
 /*
  * adds a literal to a CNF-clause
@@ -487,7 +480,7 @@ static void add_literal_to_clause(struct cnf_clause *cl, struct symbol *sym, int
 	cl->lit = lit;
 }
 
-static struct cnf_clause * create_cnf_clause(void)
+static struct cnf_clause * create_cnf_clause_struct(void)
 {
 	struct cnf_clause *cl = malloc(sizeof(struct cnf_clause));
 	cl->lit = NULL;

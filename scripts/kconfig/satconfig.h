@@ -22,12 +22,12 @@ struct cnf_literal {
 	struct cnf_literal *next;
 };
 
-/* different types for pl_expr */
+/* different types for k_expr */
 enum kexpr_type {
-	KET_SYMBOL,
-	KET_AND,
-	KET_OR,
-	KET_NOT
+	KE_SYMBOL,
+	KE_AND,
+	KE_OR,
+	KE_NOT
 };
 
 /* struct for an expression, built like a tree structure */

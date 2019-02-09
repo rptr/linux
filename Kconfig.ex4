@@ -2,7 +2,8 @@ mainmenu "Kconfig"
 
 config A
 	bool "Config A"
-	depends on (B || C) && (D || E) && (F || G)
+	select B
+	depends on C && (D || E)
 
 config B
 	bool "Config B"
