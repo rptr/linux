@@ -18,6 +18,7 @@
 
 static int sat_variable_nr = 1;
 static struct symbol *sat_map;
+static int *sat_map_ind;
 static struct cnf_clause *cnf_clauses; /* linked list with all CNF-clauses */
 static int nr_of_clauses = 0; /* number of CNF-clauses */
 
@@ -81,9 +82,13 @@ int main(int argc, char *argv[])
 		create_sat_variables(sym);
 	
 	sat_map = calloc(sat_variable_nr, sizeof(struct symbol));
+	sat_map_ind = (int*) calloc(sat_variable_nr, sizeof(int));
+	for (i = 1; i < sat_variable_nr; i++)
+		sat_map_ind[i] = 0;
 
 	for_all_symbols(i, sym) {
 		sat_map[sym->sat_variable_nr] = *sym;
+		sat_map_ind[sym->sat_variable_nr] = 1;
 		if (sym->type == S_TRISTATE)
 			create_tristate_constraint_clause(sym);
 	}
@@ -167,18 +172,7 @@ static void build_cnf_bool_dep_tri(struct symbol *a, struct symbol *b, int mod)
 	assert((a->type == S_BOOLEAN && mod == 0) || a->type == S_TRISTATE);
 	assert(b->type == S_TRISTATE);
 	
-	//build_cnf_clause(3, -(a->sat_variable_nr), b->sat_variable_nr, (b->sat_variable_nr)+1);
-	
-	struct cnf_clause *cl = create_cnf_clause_struct();
-	
-	add_literal_to_clause(cl, a, -1, mod);
-	add_literal_to_clause(cl, b, 0, 0);
-	add_literal_to_clause(cl, b, 0, 1);
-	
-	cl->next = cnf_clauses;
-	cnf_clauses = cl;
-	
-	nr_of_clauses++;
+	build_cnf_clause(3, -(a->sat_variable_nr), b->sat_variable_nr, (b->sat_variable_nr)+1);
 }
 
 /*
@@ -192,15 +186,7 @@ static void build_cnf_tri_dep_bool(struct symbol *a, struct symbol *b)
 	assert(a->type == S_TRISTATE);
 	assert(b->type == S_BOOLEAN);
 	
-	struct cnf_clause *cl = create_cnf_clause_struct();
-	
-	add_literal_to_clause(cl, a, -1, 1);
-	add_literal_to_clause(cl, b, 0, 0);
-	
-	cl->next = cnf_clauses;
-	cnf_clauses = cl;
-	
-	nr_of_clauses++;
+	build_cnf_clause(2, -(a->sat_variable_nr + 1), b->sat_variable_nr);
 }
 
 /*
@@ -218,12 +204,14 @@ static void build_cnf_select(struct symbol *sym, struct property *p)
 	
 	/* take care of tristate modules */
 	if (sym->type == S_BOOLEAN && e->left.sym->type == S_TRISTATE)
-		      build_cnf_bool_dep_tri(sym, e->left.sym, 0);
+		build_cnf_clause(3, -(sym->sat_variable_nr), e->left.sym->sat_variable_nr, e->left.sym->sat_variable_nr + 1);
 	if (sym->type == S_TRISTATE && e->left.sym->type == S_BOOLEAN)
-		      build_cnf_tri_dep_bool(sym, e->left.sym);
+		build_cnf_clause(2, -(sym->sat_variable_nr + 1), e->left.sym->sat_variable_nr);
 	if (sym->type == S_TRISTATE && e->left.sym->type == S_TRISTATE) {
-		      build_cnf_bool_dep_tri(sym, e->left.sym, 0);
-		      build_cnf_bool_dep_tri(sym, e->left.sym, 1);
+		build_cnf_clause(3, -(sym->sat_variable_nr), e->left.sym->sat_variable_nr, e->left.sym->sat_variable_nr + 1);
+		build_cnf_clause(3, -(sym->sat_variable_nr + 1), e->left.sym->sat_variable_nr, e->left.sym->sat_variable_nr + 1);
+// 		      build_cnf_bool_dep_tri(sym, e->left.sym, 0);
+// 		      build_cnf_bool_dep_tri(sym, e->left.sym, 1);
 	}
 }
 
@@ -445,8 +433,16 @@ static void build_cnf_clause(int num, ...)
 	
 	for (i = 0; i < num; i++) {
 		int symbolnr = va_arg(valist, int);
-		struct symbol *sym = &sat_map[abs(symbolnr)];
-		add_literal_to_clause(cl, sym, symbolnr >= 0 ? 0 : -1, 0);
+		struct symbol *sym;
+		int ind = sat_map_ind[abs(symbolnr)];
+		if (ind == 1)
+			// is boolean
+			sym = &sat_map[abs(symbolnr)];
+		else
+			// is tristate
+			sym = &sat_map[abs(symbolnr)-1];
+
+		add_literal_to_clause(cl, sym, symbolnr >= 0 ? 0 : -1, 1-ind);
 	}
 	
 	cl->next = cnf_clauses;
