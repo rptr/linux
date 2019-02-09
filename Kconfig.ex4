@@ -2,13 +2,13 @@ mainmenu "Kconfig"
 
 config A
 	tristate "Config A"
-	select C
+	depends on B
 
 config B
-	bool "Config B"
+	tristate "Config B"
 
 config C
-	tristate "Config C"
+	bool "Config C"
 
 config D
 	bool "Config D"

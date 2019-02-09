@@ -149,44 +149,7 @@ static void create_tristate_constraint_clause(struct symbol *sym)
 {
 	assert(sym->type == S_TRISTATE);
 	
-	struct cnf_clause *cl = create_cnf_clause_struct();
-	
-	add_literal_to_clause(cl, sym, -1, 0);
-	add_literal_to_clause(cl, sym, -1, 1);
-	
-	cl->next = cnf_clauses;
-	cnf_clauses = cl;
-	
-	nr_of_clauses++;
-}
-
-/*
- * A_bool select B_tri translates to
- * (-A v B) -- already done
- * (-B v -B_m) -- already done
- * (-A v B v B_m)
- * if mod == 1, then it's A_m instead of A (needed if A_tri select B_tri)
- */
-static void build_cnf_bool_dep_tri(struct symbol *a, struct symbol *b, int mod)
-{
-	assert((a->type == S_BOOLEAN && mod == 0) || a->type == S_TRISTATE);
-	assert(b->type == S_TRISTATE);
-	
-	build_cnf_clause(3, -(a->sat_variable_nr), b->sat_variable_nr, (b->sat_variable_nr)+1);
-}
-
-/*
- * A_tri select B_bool translates to
- * (-A v B) -- already done
- * (-A v -A_m) -- already done
- * (-A_m v B)
- */
-static void build_cnf_tri_dep_bool(struct symbol *a, struct symbol *b)
-{
-	assert(a->type == S_TRISTATE);
-	assert(b->type == S_BOOLEAN);
-	
-	build_cnf_clause(2, -(a->sat_variable_nr + 1), b->sat_variable_nr);
+	build_cnf_clause(2, -sym->sat_variable_nr, -(sym->sat_variable_nr + 1));
 }
 
 /*
@@ -210,41 +173,7 @@ static void build_cnf_select(struct symbol *sym, struct property *p)
 	if (sym->type == S_TRISTATE && e->left.sym->type == S_TRISTATE) {
 		build_cnf_clause(3, -(sym->sat_variable_nr), e->left.sym->sat_variable_nr, e->left.sym->sat_variable_nr + 1);
 		build_cnf_clause(3, -(sym->sat_variable_nr + 1), e->left.sym->sat_variable_nr, e->left.sym->sat_variable_nr + 1);
-// 		      build_cnf_bool_dep_tri(sym, e->left.sym, 0);
-// 		      build_cnf_bool_dep_tri(sym, e->left.sym, 1);
 	}
-}
-
-/*
- * Encode "A implies B" with A and B being tristate
- * (-A v -A_m) -- already done
- * (-B v -B_m) -- already done
- * (-A v B) -- already done
- * (-A v B v -B_m)
- * (-A_m v B v B_m)
- */
-static void build_cnf_tri_dep_tri(struct symbol *a, struct symbol *b) 
-{
-	struct cnf_clause *cl = create_cnf_clause_struct();
-	
-	add_literal_to_clause(cl, a, -1, 0);
-	add_literal_to_clause(cl, b, 0, 0);
-	add_literal_to_clause(cl, b, -1, 1);
-	
-	cl->next = cnf_clauses;
-	cnf_clauses = cl;
-	
-	
-	struct cnf_clause *cl2 = create_cnf_clause_struct();
-	
-	add_literal_to_clause(cl2, a, -1, 1);
-	add_literal_to_clause(cl2, b, 0, 0);
-	add_literal_to_clause(cl2, b, 0, 1);
-	
-	cl2->next = cnf_clauses;
-	cnf_clauses = cl2;
-	
-	nr_of_clauses += 2;
 }
 
 /*
@@ -257,13 +186,15 @@ static void build_cnf_simple_dependency(struct symbol *sym, struct k_expr *e)
 {
 	/* take care of tristate modules */
 	if (sym->type == S_BOOLEAN && e->sym->type == S_TRISTATE) {
-		build_cnf_bool_dep_tri(sym, e->sym, 0);
+		build_cnf_clause(3, -(sym->sat_variable_nr), e->sym->sat_variable_nr, e->sym->sat_variable_nr + 1);
 		return;
 	}
 	if (sym->type == S_TRISTATE && e->sym->type == S_BOOLEAN)
-		build_cnf_tri_dep_bool(sym, e->sym);
-	if (sym->type == S_TRISTATE && e->sym->type == S_TRISTATE)
-		build_cnf_tri_dep_tri(sym, e->sym);
+		build_cnf_clause(2, -(sym->sat_variable_nr + 1), e->sym->sat_variable_nr);
+	if (sym->type == S_TRISTATE && e->sym->type == S_TRISTATE) {
+		build_cnf_clause(3, -sym->sat_variable_nr, e->sym->sat_variable_nr, -(e->sym->sat_variable_nr + 1));
+		build_cnf_clause(3, -(sym->sat_variable_nr + 1), e->sym->sat_variable_nr, e->sym->sat_variable_nr + 1);
+	}
 	
 	build_cnf_clause(2, -(sym->sat_variable_nr), e->sym->sat_variable_nr);
 }
