@@ -1321,10 +1321,10 @@ ConfigConflictsWindow::ConfigConflictsWindow(ConfigMainWindow* parent, const cha
 	conflictsTable->setColumnCount(3);
 
 	conflictsTable->setHorizontalHeaderLabels(QStringList()  << "Item" << "Conflict" << "Description");
-	conflictsTable->setItem(0,0,new QTableWidgetItem("CONFIG_HYPERVISOR_GUEST"));
+	conflictsTable->setItem(0,0,new QTableWidgetItem("HYPERVISOR_GUEST"));
 	conflictsTable->setItem(0,1,new QTableWidgetItem("unsatisfied"));
 	conflictsTable->setItem(0,2,new QTableWidgetItem("boolean example"));
-	conflictsTable->setItem(1,0,new QTableWidgetItem("CONFIG_BXT_WC_PMIC_OPREGION"));
+	conflictsTable->setItem(1,0,new QTableWidgetItem("BXT_WC_PMIC_OPREGION"));
 	conflictsTable->setItem(1,1,new QTableWidgetItem("unsatisfied"));
 	conflictsTable->setItem(1,2,new QTableWidgetItem("tristate example"));
 
@@ -1376,16 +1376,32 @@ void ConfigConflictsWindow::cellClicked(int row, int column)
 	std::cerr << "clicked :: " << row << ", column:: " << column << std::endl;
 	std::cerr << "parents type:: " <<  typeid(parent()).name() << std::endl;
 	//sym_find("CONFIG_HYPERVISOR_GUEST");
-	struct symbol* sym = sym_find("HYPERVISOR_GUEST");
-	if (sym == NULL)
+	if (row == 0)
 	{
-		std::cerr << "symbol is nullptr: " << std::endl;
-		return;
+		struct symbol* sym = sym_find("HYPERVISOR_GUEST");
+		if (sym == NULL)
+		{
+			std::cerr << "symbol is nullptr: " << std::endl;
+			return;
+		}
+		struct property* prop = sym->prop;
+		struct menu* men = prop->menu;
+		std::cerr << "help:::: " <<  men->help << std::endl;
+		emit(conflictSelected(men));
 	}
-	struct property* prop = sym->prop;
-	struct menu* men = prop->menu;
-	std::cerr << "help:::: " <<  men->help << std::endl;
-	 emit(conflictSelected(men));
+	else {
+		struct symbol* sym = sym_find("BXT_WC_PMIC_OPREGION");
+		if (sym == NULL)
+		{
+			std::cerr << "symbol is nullptr: " << std::endl;
+			return;
+		}
+		struct property* prop = sym->prop;
+		struct menu* men = prop->menu;
+		std::cerr << "help:::: " <<  men->help << std::endl;
+		emit(conflictSelected(men));
+
+	}
 
 }
 void ConfigConflictsWindow::showConfig(void)
