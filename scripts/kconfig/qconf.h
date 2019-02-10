@@ -338,6 +338,7 @@ public slots:
 	void showAbout(void);
 	void saveSettings(void);
 	void showConflicts(void);
+	void conflictSelected(struct menu *);
 
 protected:
 	void closeEvent(QCloseEvent *e);

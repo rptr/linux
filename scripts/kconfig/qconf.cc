@@ -1495,7 +1495,7 @@ ConfigMainWindow::ConfigMainWindow(void)
 	addToolBar(toolBar);
 
 	conflictsWindow = new ConfigConflictsWindow(this,"conflicts");
-	connect(conflictsWindow,SIGNAL(conflictSelected(struct menu *)),SLOT(setMenuLink(struct menu *)));
+	connect(conflictsWindow,SIGNAL(conflictSelected(struct menu *)),SLOT(conflictSelected(struct menu *)));
 
 	backAction = new QAction(QPixmap(xpm_back), _("Back"), this);
 	  connect(backAction, SIGNAL(triggered(bool)), SLOT(goBack()));
@@ -1808,6 +1808,13 @@ void ConfigMainWindow::showSplitView(void)
 	menuList->setAllOpen(true);
 	menuView->show();
 	menuList->setFocus();
+}
+
+void ConfigMainWindow::conflictSelected(struct menu * men)
+{
+	configList->clearSelection();
+	menuList->clearSelection();
+	emit(setMenuLink(men));
 }
 
 void ConfigMainWindow::showConflicts(void)
