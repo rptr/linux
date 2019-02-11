@@ -1,11 +1,16 @@
 #ifndef SATCONFIG_H
 #define SATCONFIG_H
+#define CNF_REASON_LENGTH 256
+#define PRINT_CNF_REASONS true
 
 /* struct for a CNF-clause */
 struct cnf_clause {
 	/* first literal in the CNF clause */
 	struct cnf_literal *lit;
-	
+
+	/* reason - string refers to a specific boolean law that produced this clause */
+	char reason[CNF_REASON_LENGTH];
+
 	/* next clause - null if last */
 	struct cnf_clause *next;
 };
@@ -14,10 +19,10 @@ struct cnf_clause {
 struct cnf_literal {
 	/* integer value needed by the SAT-solver */
 	int val;
-	
+
 	/* string representation for debugging */
 	char sval[100];
-	
+
 	/* next literal in the clause - null if last */
 	struct cnf_literal *next;
 };
@@ -34,7 +39,7 @@ enum kexpr_type {
 struct k_expr {
 	struct k_expr *parent;
 	enum kexpr_type type;
-	
+
 	union {
 		/* symbol */
 		struct symbol *sym;
@@ -48,7 +53,7 @@ struct k_expr {
 			struct k_expr *right;
 		};
 	};
-	
+
 };
 
 #endif
