@@ -32,7 +32,7 @@ static void build_cnf_dependencies(struct symbol *sym);
 static void build_cnf_simple_dependency(struct symbol *sym, struct k_expr *e);
 static void build_cnf_expr(struct symbol *sym, struct k_expr *e);
 
-static void build_cnf_clause(int num, ...);
+static void build_cnf_clause(char* reason, int num, ...);
 static void add_literal_to_clause(struct cnf_clause *cl, struct symbol *sym, int sign, int mod);
 
 static struct cnf_clause * create_cnf_clause_struct(void);
@@ -68,7 +68,7 @@ const char *tristate_type[] = {"no", "mod", "yes"};
 int main(int argc, char *argv[])
 {
 	printf("\nHello satconfig!\n\n");
-	
+
 	/* parse Kconfig-file & read .config */
 	const char *Kconfig_file = argv[1];
 	conf_parse(Kconfig_file);
@@ -76,7 +76,7 @@ int main(int argc, char *argv[])
 
 	unsigned int i;
 	struct symbol *sym;
-	
+
 	/* create sat_map & tristate clauses */
 	for_all_symbols(i, sym)
 		create_sat_variables(sym);
@@ -96,25 +96,25 @@ int main(int argc, char *argv[])
 	/* print all symbols and build CNF-clauses */
 	for_all_symbols(i, sym) {
 		print_symbol(sym);
-		
+
 		/* build CNF clauses for select statements */
 		struct property *p;
 		for_all_properties(sym, p, P_SELECT)
 			build_cnf_select(sym, p);
-		
+
 		/* build CNF clauses for dependencies */
 		if (sym->dir_dep.expr)
 			build_cnf_dependencies(sym);
-			
+
 	}
-		
+
 	/* print all CNFs */
 	printf("All CNFs:\n");
 	print_cnf_clauses(cnf_clauses);
-	
+
 	/* write CNF-clauses in DIMACS-format to file */
 	write_cnf_to_file();
-	
+
 	return EXIT_SUCCESS;
 }
 
@@ -148,8 +148,9 @@ static void create_sat_variables(struct symbol *sym)
 static void create_tristate_constraint_clause(struct symbol *sym)
 {
 	assert(sym->type == S_TRISTATE);
-	
-	build_cnf_clause(2, -sym->sat_variable_nr, -(sym->sat_variable_nr + 1));
+	char tristate_constraint_reason[] = "rule (#): create cnf for impossible tristate to not happen";
+
+	build_cnf_clause(tristate_constraint_reason, 2, -sym->sat_variable_nr, -(sym->sat_variable_nr + 1));
 }
 
 /*
@@ -162,17 +163,17 @@ static void build_cnf_select(struct symbol *sym, struct property *p)
 {
 	assert(p->type == P_SELECT);
 	struct expr *e = p->expr;
-	
-	build_cnf_clause(2, -(sym->sat_variable_nr), e->left.sym->sat_variable_nr);
-	
+
+	build_cnf_clause("rule x: test",2, -(sym->sat_variable_nr), e->left.sym->sat_variable_nr);
+
 	/* take care of tristate modules */
 	if (sym->type == S_BOOLEAN && e->left.sym->type == S_TRISTATE)
-		build_cnf_clause(3, -(sym->sat_variable_nr), e->left.sym->sat_variable_nr, e->left.sym->sat_variable_nr + 1);
+		build_cnf_clause("rule y: test2",3, -(sym->sat_variable_nr), e->left.sym->sat_variable_nr, e->left.sym->sat_variable_nr + 1);
 	if (sym->type == S_TRISTATE && e->left.sym->type == S_BOOLEAN)
-		build_cnf_clause(2, -(sym->sat_variable_nr + 1), e->left.sym->sat_variable_nr);
+		build_cnf_clause("rule z: test3",2, -(sym->sat_variable_nr + 1), e->left.sym->sat_variable_nr);
 	if (sym->type == S_TRISTATE && e->left.sym->type == S_TRISTATE) {
-		build_cnf_clause(3, -(sym->sat_variable_nr), e->left.sym->sat_variable_nr, e->left.sym->sat_variable_nr + 1);
-		build_cnf_clause(3, -(sym->sat_variable_nr + 1), e->left.sym->sat_variable_nr, e->left.sym->sat_variable_nr + 1);
+		build_cnf_clause("rule k: testn",3, -(sym->sat_variable_nr), e->left.sym->sat_variable_nr, e->left.sym->sat_variable_nr + 1);
+		build_cnf_clause("rule k: testn",3, -(sym->sat_variable_nr + 1), e->left.sym->sat_variable_nr, e->left.sym->sat_variable_nr + 1);
 	}
 }
 
@@ -186,17 +187,17 @@ static void build_cnf_simple_dependency(struct symbol *sym, struct k_expr *e)
 {
 	/* take care of tristate modules */
 	if (sym->type == S_BOOLEAN && e->sym->type == S_TRISTATE) {
-		build_cnf_clause(3, -(sym->sat_variable_nr), e->sym->sat_variable_nr, e->sym->sat_variable_nr + 1);
+		build_cnf_clause("rule j: test",3, -(sym->sat_variable_nr), e->sym->sat_variable_nr, e->sym->sat_variable_nr + 1);
 		return;
 	}
 	if (sym->type == S_TRISTATE && e->sym->type == S_BOOLEAN)
-		build_cnf_clause(2, -(sym->sat_variable_nr + 1), e->sym->sat_variable_nr);
+		build_cnf_clause("rule m: test", 2, -(sym->sat_variable_nr + 1), e->sym->sat_variable_nr);
 	if (sym->type == S_TRISTATE && e->sym->type == S_TRISTATE) {
-		build_cnf_clause(3, -sym->sat_variable_nr, e->sym->sat_variable_nr, -(e->sym->sat_variable_nr + 1));
-		build_cnf_clause(3, -(sym->sat_variable_nr + 1), e->sym->sat_variable_nr, e->sym->sat_variable_nr + 1);
+		build_cnf_clause("rule n: test",3, -sym->sat_variable_nr, e->sym->sat_variable_nr, -(e->sym->sat_variable_nr + 1));
+		build_cnf_clause("rule x : test23",3, -(sym->sat_variable_nr + 1), e->sym->sat_variable_nr, e->sym->sat_variable_nr + 1);
 	}
-	
-	build_cnf_clause(2, -(sym->sat_variable_nr), e->sym->sat_variable_nr);
+
+	build_cnf_clause("rule aa : test" , 2, -(sym->sat_variable_nr), e->sym->sat_variable_nr);
 }
 
 /*
@@ -207,7 +208,7 @@ static void build_cnf_simple_dependency(struct symbol *sym, struct k_expr *e)
  */
 static void build_cnf_simple_or(struct symbol *sym, struct k_expr *e1, struct k_expr *e2)
 {
-	build_cnf_clause(3, -(sym->sat_variable_nr), e1->sym->sat_variable_nr, e2->sym->sat_variable_nr);
+	build_cnf_clause("rule x : build simple or" , 3, -(sym->sat_variable_nr), e1->sym->sat_variable_nr, e2->sym->sat_variable_nr);
 }
 
 /*
@@ -219,28 +220,28 @@ static void build_cnf_simple_not(struct symbol *sym, struct k_expr *e)
 {
 	/* take care of tristate modules */
 	if (sym->type == S_BOOLEAN && e->sym->type == S_TRISTATE) {
-		build_cnf_clause(3, -(sym->sat_variable_nr), -(e->sym->sat_variable_nr), e->sym->sat_variable_nr + 1);
+		build_cnf_clause("rule x: xxxxx", 3, -(sym->sat_variable_nr), -(e->sym->sat_variable_nr), e->sym->sat_variable_nr + 1);
 		return;
 	}
 	if (sym->type == S_TRISTATE && e->sym->type == S_BOOLEAN)
-		build_cnf_clause(2, -(sym->sat_variable_nr + 1), -(e->sym->sat_variable_nr));
+		build_cnf_clause("rule 22: test", 2, -(sym->sat_variable_nr + 1), -(e->sym->sat_variable_nr));
 	if (sym->type == S_TRISTATE && e->sym->type == S_TRISTATE) {
-		build_cnf_clause(2, -(sym->sat_variable_nr), -(e->sym->sat_variable_nr + 1));
-		build_cnf_clause(3, -(sym->sat_variable_nr + 1), -(e->sym->sat_variable_nr), e->sym->sat_variable_nr + 1);
-		build_cnf_clause(3, -(sym->sat_variable_nr), -(e->sym->sat_variable_nr), -(e->sym->sat_variable_nr + 1));
-		build_cnf_clause(3, -(sym->sat_variable_nr), e->sym->sat_variable_nr, -(e->sym->sat_variable_nr + 1));
+		build_cnf_clause("rule uu: test", 2, -(sym->sat_variable_nr), -(e->sym->sat_variable_nr + 1));
+		build_cnf_clause("rule uu: test", 3, -(sym->sat_variable_nr + 1), -(e->sym->sat_variable_nr), e->sym->sat_variable_nr + 1);
+		build_cnf_clause("rule uu: test", 3, -(sym->sat_variable_nr), -(e->sym->sat_variable_nr), -(e->sym->sat_variable_nr + 1));
+		build_cnf_clause("rule uu: test", 3, -(sym->sat_variable_nr), e->sym->sat_variable_nr, -(e->sym->sat_variable_nr + 1));
 	}
-	build_cnf_clause(2, -(sym->sat_variable_nr), -(e->sym->sat_variable_nr));
+	build_cnf_clause("rule zzz: test", 2, -(sym->sat_variable_nr), -(e->sym->sat_variable_nr));
 }
 
 /*
- * print some debug info about the tree structure of k_expr 
+ * print some debug info about the tree structure of k_expr
  */
 static void debug_print_kexpr(struct k_expr *e)
 {
 	if (!e)
 		return;
-	
+
 	printf("e-type: %s", kexpr_type[e->type]);
 	if (e->parent)
 		printf(", parent %s", kexpr_type[e->parent->type]);
@@ -266,7 +267,7 @@ static void debug_print_kexpr(struct k_expr *e)
 
 /*
  * build the CNF-clauses for (SYM implies E)
- */ 
+ */
 static void build_cnf_imply(struct symbol *sym, struct k_expr *e)
 {
 	if (e->type == KE_SYMBOL) {
@@ -284,7 +285,7 @@ static void build_cnf_imply(struct symbol *sym, struct k_expr *e)
 			build_cnf_simple_or(sym, e->left, e->right);
 		return;
 	}
-	
+
 }
 
 /*
@@ -294,10 +295,10 @@ static void build_cnf_expr(struct symbol *sym, struct k_expr *e)
 {
 	if (!e)
 		return;
-	
+
 	//debug_print_kexpr(e);
 	//printf("\n");
-	
+
 	switch (e->type) {
 	case KE_SYMBOL:
 		/* base case */
@@ -325,7 +326,7 @@ static void build_cnf_expr(struct symbol *sym, struct k_expr *e)
 }
 
 /*
- * parse an expr as a k_expr 
+ * parse an expr as a k_expr
  */
 static struct k_expr * parse_expr(struct expr *e, struct k_expr *parent)
 {
@@ -362,19 +363,19 @@ static struct k_expr * parse_expr(struct expr *e, struct k_expr *parent)
 static void build_cnf_dependencies(struct symbol* sym)
 {
 	assert(sym->dir_dep.expr);
-	
+
 	struct k_expr *e = parse_expr(sym->dir_dep.expr, NULL);
 	build_cnf_expr(sym, e);
 }
 
-static void build_cnf_clause(int num, ...)
+static void build_cnf_clause(char *reason, int num, ...)
 {
 	va_list valist;
 	va_start(valist, num);
 	int i;
-	
+
 	struct cnf_clause *cl = create_cnf_clause_struct();
-	
+
 	for (i = 0; i < num; i++) {
 		int symbolnr = va_arg(valist, int);
 		struct symbol *sym;
@@ -388,12 +389,13 @@ static void build_cnf_clause(int num, ...)
 
 		add_literal_to_clause(cl, sym, symbolnr >= 0 ? 1 : -1, 1-ind);
 	}
-	
+	strncpy(cl->reason,reason, CNF_REASON_LENGTH-1);
+
 	cl->next = cnf_clauses;
 	cnf_clauses = cl;
-	
+
 	nr_of_clauses++;
-	
+
 	va_end(valist);
 }
 
@@ -409,7 +411,7 @@ static void add_literal_to_clause(struct cnf_clause *cl, struct symbol *sym, int
 {
 	if (mod != 0)
 		assert(sym->type == S_TRISTATE);
-	
+
 	struct cnf_literal *lit = malloc(sizeof(struct cnf_literal));
 
 	lit->val = mod == 0 ? sym->sat_variable_nr : (sym->sat_variable_nr + 1);
@@ -418,7 +420,7 @@ static void add_literal_to_clause(struct cnf_clause *cl, struct symbol *sym, int
 	strcat(lit->sval, sym->name);
 	if (mod != 0)
 		strcat(lit->sval, "_m");
-	
+
 	lit->next = cl->lit ? cl->lit : NULL;
 	cl->lit = lit;
 }

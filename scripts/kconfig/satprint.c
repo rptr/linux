@@ -20,43 +20,43 @@ void print_symbol(struct symbol *sym)
 {
 	printf("Symbol: ");
 	struct property *p;
-	
+
 	printf("name %s, type %s, sat variable %d\n", sym->name, symbol_type[sym->type], sym->sat_variable_nr);
-	
+
 	printf("\t.config: %s\n", sym_get_string_value(sym));
-	
+
 	/* print default value */
 	for_all_defaults(sym, p)
 		print_default(sym, p);
-	
+
 	/* print select statements */
 	for_all_properties(sym, p, P_SELECT)
 		print_select(sym, p);
-	
+
 	/* print reverse dependencies */
 	if (sym->rev_dep.expr) {
 		printf("\tselected if ");
 		print_expr(sym->rev_dep.expr, E_NONE);
 		printf("  (reverse dep.)\n");
 	}
-	
+
 	/* print imply statements */
 	for_all_properties(sym, p, P_IMPLY)
 		print_imply(sym, p);
-	
+
 	/* print weak reverse denpencies */
 	if (sym->implied.expr) {
 		printf("\timplied if ");
 		print_expr(sym->implied.expr, E_NONE);
 		printf("  (weak reverse dep.)\n");
 	}
-	
+
 	/* print dependencies */
 	if (sym->dir_dep.expr) {
 		printf("\tdepends on ");
 		print_expr(sym->dir_dep.expr, E_NONE);
 		printf("\n");
-	}	
+	}
 
 	printf("\n");
 
@@ -77,7 +77,7 @@ void print_select(struct symbol *sym, struct property *p)
 {
 	assert(p->type == P_SELECT);
 	struct expr *e = p->expr;
-	
+
 	printf("\tselect ");
 	print_expr(e, E_NONE);
 	if (p->visible.expr) {
@@ -91,7 +91,7 @@ void print_imply(struct symbol *sym, struct property *p)
 {
 	assert(p->type == P_IMPLY);
 	struct expr *e = p->expr;
-	
+
 	printf("\timply ");
 	print_expr(e, E_NONE);
 	if (p->visible.expr) {
@@ -105,7 +105,7 @@ void print_expr(struct expr *e, int prevtoken)
 {
 	if (!e)
 		return;
-	
+
 	switch (e->type) {
 	case E_SYMBOL:
 		if (e->left.sym->name)
@@ -168,14 +168,14 @@ void print_expr(struct expr *e, int prevtoken)
 	default:
 		break;
 	}
-	
+
 }
 
 void print_kexpr(struct k_expr *e)
 {
 	if (!e)
 		return;
-	
+
 	switch (e->type) {
 	case KE_SYMBOL:
 		printf("%s", e->sym->name);
@@ -214,8 +214,12 @@ void print_cnf_clauses(struct cnf_clause *cnf_clauses)
 				printf(" v ");
 			lit = lit->next;
 		}
+#if PRINT_CNF_REASONS
+		printf("\t");
+		printf(cl->reason);
+		printf(" ");
+#endif
 		printf("\n");
-		
 		cl = cl->next;
 	}
 }
