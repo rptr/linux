@@ -148,9 +148,11 @@ static void create_sat_variables(struct symbol *sym)
 static void create_tristate_constraint_clause(struct symbol *sym)
 {
 	assert(sym->type == S_TRISTATE);
-	char tristate_constraint_reason[] = "rule (#): create cnf for impossible tristate to not happen";
+	char reason[CNF_REASON_LENGTH];
+	strcpy(reason, "(#): enforce tristate constraint for symbol ");
+	strcat(reason, sym->name);
 
-	build_cnf_clause(tristate_constraint_reason, 2, -sym->sat_variable_nr, -(sym->sat_variable_nr + 1));
+	build_cnf_clause(reason, 2, -sym->sat_variable_nr, -(sym->sat_variable_nr + 1));
 }
 
 /*
@@ -163,17 +165,23 @@ static void build_cnf_select(struct symbol *sym, struct property *p)
 {
 	assert(p->type == P_SELECT);
 	struct expr *e = p->expr;
+	
+	char reason[CNF_REASON_LENGTH];
+	strcpy(reason, "(#): ");
+	strcat(reason, sym->name);
+	strcat(reason, " select ");
+	strcat(reason, e->left.sym->name);
 
-	build_cnf_clause("rule x: test",2, -(sym->sat_variable_nr), e->left.sym->sat_variable_nr);
+	build_cnf_clause(reason, 2, -(sym->sat_variable_nr), e->left.sym->sat_variable_nr);
 
 	/* take care of tristate modules */
 	if (sym->type == S_BOOLEAN && e->left.sym->type == S_TRISTATE)
-		build_cnf_clause("rule y: test2",3, -(sym->sat_variable_nr), e->left.sym->sat_variable_nr, e->left.sym->sat_variable_nr + 1);
+		build_cnf_clause(reason, 3, -(sym->sat_variable_nr), e->left.sym->sat_variable_nr, e->left.sym->sat_variable_nr + 1);
 	if (sym->type == S_TRISTATE && e->left.sym->type == S_BOOLEAN)
-		build_cnf_clause("rule z: test3",2, -(sym->sat_variable_nr + 1), e->left.sym->sat_variable_nr);
+		build_cnf_clause(reason, 2, -(sym->sat_variable_nr + 1), e->left.sym->sat_variable_nr);
 	if (sym->type == S_TRISTATE && e->left.sym->type == S_TRISTATE) {
-		build_cnf_clause("rule k: testn",3, -(sym->sat_variable_nr), e->left.sym->sat_variable_nr, e->left.sym->sat_variable_nr + 1);
-		build_cnf_clause("rule k: testn",3, -(sym->sat_variable_nr + 1), e->left.sym->sat_variable_nr, e->left.sym->sat_variable_nr + 1);
+		build_cnf_clause(reason, 3, -(sym->sat_variable_nr), e->left.sym->sat_variable_nr, e->left.sym->sat_variable_nr + 1);
+		build_cnf_clause(reason, 3, -(sym->sat_variable_nr + 1), e->left.sym->sat_variable_nr, e->left.sym->sat_variable_nr + 1);
 	}
 }
 
@@ -185,19 +193,25 @@ static void build_cnf_select(struct symbol *sym, struct property *p)
  */
 static void build_cnf_simple_dependency(struct symbol *sym, struct k_expr *e)
 {
+	char reason[CNF_REASON_LENGTH];
+	strcpy(reason, "(#): ");
+	strcat(reason, sym->name);
+	strcat(reason, " depends on ");
+	strcat(reason, e->sym->name);
+	
 	/* take care of tristate modules */
 	if (sym->type == S_BOOLEAN && e->sym->type == S_TRISTATE) {
-		build_cnf_clause("rule j: test",3, -(sym->sat_variable_nr), e->sym->sat_variable_nr, e->sym->sat_variable_nr + 1);
+		build_cnf_clause(reason, 3, -(sym->sat_variable_nr), e->sym->sat_variable_nr, e->sym->sat_variable_nr + 1);
 		return;
 	}
 	if (sym->type == S_TRISTATE && e->sym->type == S_BOOLEAN)
-		build_cnf_clause("rule m: test", 2, -(sym->sat_variable_nr + 1), e->sym->sat_variable_nr);
+		build_cnf_clause(reason, 2, -(sym->sat_variable_nr + 1), e->sym->sat_variable_nr);
 	if (sym->type == S_TRISTATE && e->sym->type == S_TRISTATE) {
-		build_cnf_clause("rule n: test",3, -sym->sat_variable_nr, e->sym->sat_variable_nr, -(e->sym->sat_variable_nr + 1));
-		build_cnf_clause("rule x : test23",3, -(sym->sat_variable_nr + 1), e->sym->sat_variable_nr, e->sym->sat_variable_nr + 1);
+		build_cnf_clause(reason, 3, -sym->sat_variable_nr, e->sym->sat_variable_nr, -(e->sym->sat_variable_nr + 1));
+		build_cnf_clause(reason, 3, -(sym->sat_variable_nr + 1), e->sym->sat_variable_nr, e->sym->sat_variable_nr + 1);
 	}
 
-	build_cnf_clause("rule aa : test" , 2, -(sym->sat_variable_nr), e->sym->sat_variable_nr);
+	build_cnf_clause(reason, 2, -(sym->sat_variable_nr), e->sym->sat_variable_nr);
 }
 
 /*
@@ -208,7 +222,15 @@ static void build_cnf_simple_dependency(struct symbol *sym, struct k_expr *e)
  */
 static void build_cnf_simple_or(struct symbol *sym, struct k_expr *e1, struct k_expr *e2)
 {
-	build_cnf_clause("rule x : build simple or" , 3, -(sym->sat_variable_nr), e1->sym->sat_variable_nr, e2->sym->sat_variable_nr);
+	char reason[CNF_REASON_LENGTH];
+	strcpy(reason, "(#): ");
+	strcat(reason, sym->name);
+	strcat(reason, " depends on ");
+	strcat(reason, e1->sym->name);
+	strcat(reason, " || ");
+	strcat(reason, e2->sym->name);
+	
+	build_cnf_clause(reason, 3, -(sym->sat_variable_nr), e1->sym->sat_variable_nr, e2->sym->sat_variable_nr);
 }
 
 /*
@@ -218,20 +240,26 @@ static void build_cnf_simple_or(struct symbol *sym, struct k_expr *e1, struct k_
  */
 static void build_cnf_simple_not(struct symbol *sym, struct k_expr *e)
 {
+	char reason[CNF_REASON_LENGTH];
+	strcpy(reason, "(#): ");
+	strcat(reason, sym->name);
+	strcat(reason, " depends on !");
+	strcat(reason, e->sym->name);
+	
 	/* take care of tristate modules */
 	if (sym->type == S_BOOLEAN && e->sym->type == S_TRISTATE) {
-		build_cnf_clause("rule x: xxxxx", 3, -(sym->sat_variable_nr), -(e->sym->sat_variable_nr), e->sym->sat_variable_nr + 1);
+		build_cnf_clause(reason, 3, -(sym->sat_variable_nr), -(e->sym->sat_variable_nr), e->sym->sat_variable_nr + 1);
 		return;
 	}
 	if (sym->type == S_TRISTATE && e->sym->type == S_BOOLEAN)
-		build_cnf_clause("rule 22: test", 2, -(sym->sat_variable_nr + 1), -(e->sym->sat_variable_nr));
+		build_cnf_clause(reason, 2, -(sym->sat_variable_nr + 1), -(e->sym->sat_variable_nr));
 	if (sym->type == S_TRISTATE && e->sym->type == S_TRISTATE) {
-		build_cnf_clause("rule uu: test", 2, -(sym->sat_variable_nr), -(e->sym->sat_variable_nr + 1));
-		build_cnf_clause("rule uu: test", 3, -(sym->sat_variable_nr + 1), -(e->sym->sat_variable_nr), e->sym->sat_variable_nr + 1);
-		build_cnf_clause("rule uu: test", 3, -(sym->sat_variable_nr), -(e->sym->sat_variable_nr), -(e->sym->sat_variable_nr + 1));
-		build_cnf_clause("rule uu: test", 3, -(sym->sat_variable_nr), e->sym->sat_variable_nr, -(e->sym->sat_variable_nr + 1));
+		build_cnf_clause(reason, 2, -(sym->sat_variable_nr), -(e->sym->sat_variable_nr + 1));
+		build_cnf_clause(reason, 3, -(sym->sat_variable_nr + 1), -(e->sym->sat_variable_nr), e->sym->sat_variable_nr + 1);
+		build_cnf_clause(reason, 3, -(sym->sat_variable_nr), -(e->sym->sat_variable_nr), -(e->sym->sat_variable_nr + 1));
+		build_cnf_clause(reason, 3, -(sym->sat_variable_nr), e->sym->sat_variable_nr, -(e->sym->sat_variable_nr + 1));
 	}
-	build_cnf_clause("rule zzz: test", 2, -(sym->sat_variable_nr), -(e->sym->sat_variable_nr));
+	build_cnf_clause(reason, 2, -(sym->sat_variable_nr), -(e->sym->sat_variable_nr));
 }
 
 /*
