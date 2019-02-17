@@ -1,6 +1,7 @@
 #ifndef SATCONFIG_H
 #define SATCONFIG_H
 #define CNF_REASON_LENGTH 256
+#define CNF_LITERAL_LENGTH 100
 #define PRINT_CNF_REASONS true
 
 /* struct for a CNF-clause */
@@ -21,7 +22,7 @@ struct cnf_literal {
 	int val;
 
 	/* string representation for debugging */
-	char sval[100];
+	char sval[CNF_LITERAL_LENGTH];
 
 	/* next literal in the clause - null if last */
 	struct cnf_literal *next;

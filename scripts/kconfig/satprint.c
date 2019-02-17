@@ -214,11 +214,11 @@ void print_cnf_clauses(struct cnf_clause *cnf_clauses)
 				printf(" v ");
 			lit = lit->next;
 		}
-#if PRINT_CNF_REASONS
-		printf("\t");
-		printf(cl->reason);
-		printf(" ");
-#endif
+		#if PRINT_CNF_REASONS
+			printf("\t");
+			printf("%s", cl->reason);
+			printf(" ");
+		#endif
 		printf("\n");
 		cl = cl->next;
 	}
