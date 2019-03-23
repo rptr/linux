@@ -297,7 +297,7 @@ public:
 	ConfigConflictsWindow(ConfigMainWindow* parent, const char *name = 0);
 
  public slots:
- 	//void saveSettings(void);
+ 	void saveSettings(void);
  	void showConfig(void);
 	void cellClicked(int row, int column);
 
