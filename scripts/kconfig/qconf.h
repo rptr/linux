@@ -288,6 +288,26 @@ protected:
 	struct symbol **result;
 };
 
+class ConfigConflictWindow : public QDialog {
+	Q_OBJECT
+	typedef class QDialog Parent;
+public:
+	ConfigConflictWindow(ConfigMainWindow* parent, const char *name = 0);
+
+// public slots:
+// 	void saveSettings(void);
+// 	void search(void);
+
+protected:
+	QLineEdit* editField;
+	QPushButton* searchButton;
+	QSplitter* split;
+	ConfigView* list;
+	ConfigInfoView* info;
+
+	// struct symbol **result;
+};
+
 class ConfigMainWindow : public QMainWindow {
 	Q_OBJECT
 
@@ -311,6 +331,7 @@ public slots:
 	void showIntro(void);
 	void showAbout(void);
 	void saveSettings(void);
+	void showConflicts(void);
 
 protected:
 	void closeEvent(QCloseEvent *e);
@@ -326,6 +347,7 @@ protected:
 	QAction *singleViewAction;
 	QAction *splitViewAction;
 	QAction *fullViewAction;
+	QAction *showConflictsAction;
 	QSplitter *split1;
 	QSplitter *split2;
 };
