@@ -1304,6 +1304,7 @@ ConfigConflictsWindow::ConfigConflictsWindow(ConfigMainWindow* parent, const cha
 {
 	setObjectName(name);
 	setWindowTitle("Conflicts");
+	setSizeGripEnabled(true);
 
 	QVBoxLayout* layout1 = new QVBoxLayout(this);
 	layout1->setContentsMargins(11, 11, 11, 11);
@@ -1349,25 +1350,21 @@ ConfigConflictsWindow::ConfigConflictsWindow(ConfigMainWindow* parent, const cha
 
 	// layout1->addWidget(split);
 
-	// if (name) {
-	// 	QVariant x, y;
-	// 	int width, height;
-	// 	bool ok;
+	if (name) {
+		QVariant x, y;
+		int width, height;
 
-	// 	configSettings->beginGroup(name);
-	// 	width = configSettings->value("/window width", parent->width() / 2).toInt();
-	// 	height = configSettings->value("/window height", parent->height() / 2).toInt();
-	// 	resize(width, height);
-	// 	x = configSettings->value("/window x");
-	// 	y = configSettings->value("/window y");
-	// 	if ((x.isValid())&&(y.isValid()))
-	// 		move(x.toInt(), y.toInt());
-	// 	QList<int> sizes = configSettings->readSizes("/split", &ok);
-	// 	if (ok)
-	// 		split->setSizes(sizes);
-	// 	configSettings->endGroup();
-	// 	connect(configApp, SIGNAL(aboutToQuit()), SLOT(saveSettings()));
-	// }
+		configSettings->beginGroup(name);
+		width = configSettings->value("/window width", parent->width() / 2).toInt();
+		height = configSettings->value("/window height", parent->height() / 2).toInt();
+		resize(width, height);
+		x = configSettings->value("/window x");
+		y = configSettings->value("/window y");
+		if ((x.isValid())&&(y.isValid()))
+			move(x.toInt(), y.toInt());
+		configSettings->endGroup();
+		connect(configApp, SIGNAL(aboutToQuit()), SLOT(saveSettings()));
+	}
 	// connect(conflictList, SIGNAL(itemSelectionChanged()), SLOT(showConfig()));
 }
 void ConfigConflictsWindow::cellClicked(int row, int column)
@@ -1408,7 +1405,17 @@ void ConfigConflictsWindow::showConfig(void)
 {
 
 }
-
+void ConfigConflictsWindow::saveSettings(void)
+{
+	if (!objectName().isEmpty()) {
+		configSettings->beginGroup(objectName());
+		configSettings->setValue("/window x", pos().x());
+		configSettings->setValue("/window y", pos().y());
+		configSettings->setValue("/window width", size().width());
+		configSettings->setValue("/window height", size().height());
+		configSettings->endGroup();
+	}
+}
 void ConfigSearchWindow::saveSettings(void)
 {
 	if (!objectName().isEmpty()) {
