@@ -1409,6 +1409,11 @@ ConfigMainWindow::ConfigMainWindow(void)
 	fullViewAction->setCheckable(true);
 	  connect(fullViewAction, SIGNAL(triggered(bool)), SLOT(showFullView()));
 
+	showConflictsAction = new QAction(QPixmap(xpm_conflict_show), "Show conflicts", this);
+	showConflictsAction->setCheckable(false);
+	  connect(showConflictsAction, SIGNAL(triggered(bool)), SLOT(showConflicts()));
+
+
 	QAction *showNameAction = new QAction("Show Name", this);
 	  showNameAction->setCheckable(true);
 	  connect(showNameAction, SIGNAL(toggled(bool)), configView, SLOT(setShowName(bool)));
@@ -1453,6 +1458,8 @@ ConfigMainWindow::ConfigMainWindow(void)
 	toolBar->addAction(singleViewAction);
 	toolBar->addAction(splitViewAction);
 	toolBar->addAction(fullViewAction);
+	toolBar->addSeparator();
+	toolBar->addAction(showConflictsAction);
 
 	// create config menu
 	QMenu* config = menu->addMenu("&File");
@@ -1714,6 +1721,14 @@ void ConfigMainWindow::showSplitView(void)
 	menuList->setFocus();
 }
 
+void ConfigMainWindow::showConflicts(void)
+{
+
+QMessageBox::information(
+    this,
+    tr("Application Name"),
+    tr("An information message.") );
+}
 void ConfigMainWindow::showFullView(void)
 {
 	singleViewAction->setEnabled(true);
