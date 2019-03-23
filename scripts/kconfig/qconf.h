@@ -300,6 +300,11 @@ public:
  	void saveSettings(void);
  	void showConfig(void);
 	void cellClicked(int row, int column);
+	void recheck(); // reruns the constraint checker
+	void changeAll(); // changes the config list such that constraint is satisfied
+	void save(); // saves config
+	void reset(); //
+	void close();
 
 signals:
 	void conflictSelected(struct menu *);
@@ -310,6 +315,11 @@ protected:
 	// QSplitter* split;
 	QListWidget* conflictList;
 	QTableWidget* conflictsTable;
+	QPushButton* recheckButton;
+	QPushButton* changeAllButton;
+	QPushButton* saveButton;
+	QPushButton* resetButton;
+	QPushButton* closeButton;
 	// ConfigInfoView* info;
 
 	// struct symbol **result;
