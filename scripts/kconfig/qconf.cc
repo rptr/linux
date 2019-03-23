@@ -1335,6 +1335,37 @@ ConfigConflictsWindow::ConfigConflictsWindow(ConfigMainWindow* parent, const cha
 	layout1->addWidget(conflictsTable);
 
 
+	/* add the buttons:
+	 * [recheck / refresh]
+	 * [Change All]
+	 * [Save]
+	 * [Reset]
+	 * [Close]
+	 */
+	recheckButton = new QPushButton(_("Recheck/Refresh"), this);
+	recheckButton->setAutoDefault(false);
+	connect(recheckButton, SIGNAL(clicked()), SLOT(recheck()));
+	layout1->addWidget(recheckButton);
+
+	changeAllButton = new QPushButton(_("Change All"), this);
+	changeAllButton->setAutoDefault(false);
+	connect(changeAllButton, SIGNAL(clicked()), SLOT(changeAll()));
+	layout1->addWidget(changeAllButton);
+
+	saveButton = new QPushButton(_("Save"), this);
+	saveButton->setAutoDefault(false);
+	connect(saveButton, SIGNAL(clicked()), SLOT(save()));
+	layout1->addWidget(saveButton);
+
+  resetButton = new QPushButton(_("Reset"), this);
+	resetButton->setAutoDefault(false);
+	connect(resetButton, SIGNAL(clicked()), SLOT(reset()));
+	layout1->addWidget(resetButton);
+
+	closeButton = new QPushButton(_("Close"), this);
+	closeButton->setAutoDefault(false);
+	connect(closeButton, SIGNAL(clicked()), SLOT(close()));
+	layout1->addWidget(closeButton);
 
 	this->setLayout(layout1);
 
@@ -1405,6 +1436,33 @@ void ConfigConflictsWindow::showConfig(void)
 {
 
 }
+
+void ConfigConflictsWindow::recheck(void)
+{
+	std::cerr << "recheck clicked" << std::endl;
+
+}
+void ConfigConflictsWindow::changeAll(void)
+{
+	std::cerr << "change all clicked" << std::endl;
+
+}
+void ConfigConflictsWindow::save(void)
+{
+	std::cerr << "save clicked" << std::endl;
+
+}
+void ConfigConflictsWindow::reset(void)
+{
+	std::cerr << "reset clicked" << std::endl;
+
+}
+void ConfigConflictsWindow::close(void)
+{
+	std::cerr << "close clicked" << std::endl;
+
+}
+
 void ConfigConflictsWindow::saveSettings(void)
 {
 	if (!objectName().isEmpty()) {
