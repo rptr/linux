@@ -1342,27 +1342,27 @@ ConfigConflictsWindow::ConfigConflictsWindow(ConfigMainWindow* parent, const cha
 	 * [Reset]
 	 * [Close]
 	 */
-	recheckButton = new QPushButton(_("Recheck/Refresh"), this);
+	recheckButton = new QPushButton("Recheck/Refresh", this);
 	recheckButton->setAutoDefault(false);
 	connect(recheckButton, SIGNAL(clicked()), SLOT(recheck()));
 	layout1->addWidget(recheckButton);
 
-	changeAllButton = new QPushButton(_("Change All"), this);
+	changeAllButton = new QPushButton("Change All", this);
 	changeAllButton->setAutoDefault(false);
 	connect(changeAllButton, SIGNAL(clicked()), SLOT(changeAll()));
 	layout1->addWidget(changeAllButton);
 
-	saveButton = new QPushButton(_("Save"), this);
+	saveButton = new QPushButton("Save", this);
 	saveButton->setAutoDefault(false);
 	connect(saveButton, SIGNAL(clicked()), SLOT(save()));
 	layout1->addWidget(saveButton);
 
-  resetButton = new QPushButton(_("Reset"), this);
+  resetButton = new QPushButton("Reset", this);
 	resetButton->setAutoDefault(false);
 	connect(resetButton, SIGNAL(clicked()), SLOT(reset()));
 	layout1->addWidget(resetButton);
 
-	closeButton = new QPushButton(_("Close"), this);
+	closeButton = new QPushButton("Close", this);
 	closeButton->setAutoDefault(false);
 	connect(closeButton, SIGNAL(clicked()), SLOT(close()));
 	layout1->addWidget(closeButton);
