@@ -304,7 +304,7 @@ public:
 	void changeAll(); // changes the config list such that constraint is satisfied
 	void save(); // saves config
 	void reset(); //
-	void close();
+	void closeDialog();
 
 signals:
 	void conflictSelected(struct menu *);
