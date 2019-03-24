@@ -38,6 +38,7 @@
 #include "images.h"
 #include <iostream>
 
+#include "conflict_resolver.h"
 
 static QApplication *configApp;
 static ConfigSettings *configSettings;
@@ -1364,7 +1365,7 @@ ConfigConflictsWindow::ConfigConflictsWindow(ConfigMainWindow* parent, const cha
 
 	closeButton = new QPushButton("Close", this);
 	closeButton->setAutoDefault(false);
-	connect(closeButton, SIGNAL(clicked()), SLOT(close()));
+	connect(closeButton, SIGNAL(clicked()), SLOT(closeDialog()));
 	layout1->addWidget(closeButton);
 
 	this->setLayout(layout1);
@@ -1440,6 +1441,8 @@ void ConfigConflictsWindow::showConfig(void)
 void ConfigConflictsWindow::recheck(void)
 {
 	std::cerr << "recheck clicked" << std::endl;
+	auto li = get_constraints();
+	std::cerr << "received " << li[0].symbol.toStdString() << std::endl;
 
 }
 void ConfigConflictsWindow::changeAll(void)
@@ -1457,9 +1460,10 @@ void ConfigConflictsWindow::reset(void)
 	std::cerr << "reset clicked" << std::endl;
 
 }
-void ConfigConflictsWindow::close(void)
+void ConfigConflictsWindow::closeDialog(void)
 {
 	std::cerr << "close clicked" << std::endl;
+	close();
 
 }
 

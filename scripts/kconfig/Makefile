@@ -24,8 +24,8 @@ endif
 unexport CONFIG_
 
 xconfig: $(obj)/qconf
-	$(Q)cd scripts/kconfig/picosat && ./configure.sh
-	$(Q)cd scripts/kconfig/picosat && make
+	# $(Q)cd scripts/kconfig/picosat && ./configure.sh
+	# $(Q)cd scripts/kconfig/picosat && make
 	$< $(silent) $(Kconfig)
 
 gconfig: $(obj)/gconf
@@ -180,11 +180,13 @@ $(addprefix $(obj)/lxdialog/, $(lxdialog)): $(obj)/mconf-cfg
 
 # qconf: Used for the xconfig target based on Qt
 hostprogs-y	+= qconf
-qconf-cxxobjs	:= qconf.o
+qconf-cxxobjs	:= qconf.o conflict_resolver.o
 qconf-objs	:= images.o $(common-objs)
 
 HOSTLDLIBS_qconf	= $(shell . $(obj)/qconf-cfg && echo $$libs)
+HOSTLDLIBS_conflict_resolver	= $(shell . $(obj)/qconf-cfg && echo $$libs)
 HOSTCXXFLAGS_qconf.o	= $(shell . $(obj)/qconf-cfg && echo $$cflags)
+HOSTCXXFLAGS_conflict_resolver.o	= $(shell . $(obj)/qconf-cfg && echo $$cflags)
 
 $(obj)/qconf.o: $(obj)/qconf-cfg $(obj)/qconf.moc
 
