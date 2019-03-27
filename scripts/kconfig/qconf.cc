@@ -1323,12 +1323,12 @@ ConfigConflictsWindow::ConfigConflictsWindow(ConfigMainWindow* parent, const cha
 	conflictsTable->setColumnCount(3);
 
 	conflictsTable->setHorizontalHeaderLabels(QStringList()  << "Item" << "Conflict" << "Description");
-	conflictsTable->setItem(0,0,new QTableWidgetItem("HYPERVISOR_GUEST"));
-	conflictsTable->setItem(0,1,new QTableWidgetItem("unsatisfied"));
-	conflictsTable->setItem(0,2,new QTableWidgetItem("boolean example"));
-	conflictsTable->setItem(1,0,new QTableWidgetItem("BXT_WC_PMIC_OPREGION"));
-	conflictsTable->setItem(1,1,new QTableWidgetItem("unsatisfied"));
-	conflictsTable->setItem(1,2,new QTableWidgetItem("tristate example"));
+	// conflictsTable->setItem(0,0,new QTableWidgetItem("HYPERVISOR_GUEST"));
+	// conflictsTable->setItem(0,1,new QTableWidgetItem("unsatisfied"));
+	// conflictsTable->setItem(0,2,new QTableWidgetItem("boolean example"));
+	// conflictsTable->setItem(1,0,new QTableWidgetItem("BXT_WC_PMIC_OPREGION"));
+	// conflictsTable->setItem(1,1,new QTableWidgetItem("unsatisfied"));
+	// conflictsTable->setItem(1,2,new QTableWidgetItem("tristate example"));
 
 	conflictsTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
 
@@ -1443,6 +1443,15 @@ void ConfigConflictsWindow::recheck(void)
 	std::cerr << "recheck clicked" << std::endl;
 	auto li = get_constraints();
 	std::cerr << "received " << li[0].symbol.toStdString() << std::endl;
+	conflictsTable->setRowCount(li.length());
+
+	for(int i = 0; i < 3; i++)
+	{
+		conflictsTable->setItem(i,0,new QTableWidgetItem(li[i].symbol));
+		conflictsTable->setItem(i,1,new QTableWidgetItem(li[i].change_needed));
+		conflictsTable->setItem(i,2,new QTableWidgetItem("example"));
+	}
+
 
 }
 void ConfigConflictsWindow::changeAll(void)

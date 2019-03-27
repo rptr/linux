@@ -8,11 +8,34 @@
 
 QList<Constraint> get_constraints()
 {
+    /*
+    	- Example candidate symbols:
+		  -DMI_SYSFS (tristate example)
+		  	- under Firmware drivers -> DMI table support in sysfs
+		  -DMIID (boolean example)
+		  	- under Firmware drivers -> Export DMI identification
+		  - EDD (tristate example with a hierarchy within )
+		  - NET_KEY_MIGRATE and XFRM_MIGRATE
+    */
     Constraint tc;
-    tc.symbol = "hello";
-    tc.change_needed = "hello";
+    tc.symbol = "DMI_SYSFS";
+    tc.change_needed = "change to yes";
     tc.status = UNSATISFIED;
-    QList<Constraint> x = {tc};
+    tc.req = YES;
+
+    Constraint tc2;
+    tc2.symbol = "DMIID";
+    tc2.change_needed = "change to no";
+    tc2.status = UNSATISFIED;
+    tc2.req = NO;
+
+    Constraint tc3;
+    tc3.symbol = "EDD";
+    tc3.change_needed = "change to module";
+    tc3.status = UNSATISFIED;
+    tc3.req = MODULE;
+
+    QList<Constraint> x = {tc, tc2, tc3};
     return x;
 
 }
