@@ -1405,32 +1405,20 @@ void ConfigConflictsWindow::cellClicked(int row, int column)
 	std::cerr << "clicked :: " << row << ", column:: " << column << std::endl;
 	std::cerr << "parents type:: " <<  typeid(parent()).name() << std::endl;
 	//sym_find("CONFIG_HYPERVISOR_GUEST");
-	if (row == 0)
-	{
-		struct symbol* sym = sym_find("HYPERVISOR_GUEST");
-		if (sym == NULL)
-		{
-			std::cerr << "symbol is nullptr: " << std::endl;
-			return;
-		}
-		struct property* prop = sym->prop;
-		struct menu* men = prop->menu;
-		std::cerr << "help:::: " <<  men->help << std::endl;
-		emit(conflictSelected(men));
-	}
-	else {
-		struct symbol* sym = sym_find("BXT_WC_PMIC_OPREGION");
-		if (sym == NULL)
-		{
-			std::cerr << "symbol is nullptr: " << std::endl;
-			return;
-		}
-		struct property* prop = sym->prop;
-		struct menu* men = prop->menu;
-		std::cerr << "help:::: " <<  men->help << std::endl;
-		emit(conflictSelected(men));
 
+	auto itemText = conflictsTable->item(row,0)->text().toStdString().c_str();
+
+
+	struct symbol* sym = sym_find(itemText);
+	if (sym == NULL)
+	{
+		std::cerr << "symbol is nullptr: " << std::endl;
+		return;
 	}
+	struct property* prop = sym->prop;
+	struct menu* men = prop->menu;
+	std::cerr << "help:::: " <<  men->help << std::endl;
+	emit(conflictSelected(men));
 
 }
 void ConfigConflictsWindow::showConfig(void)
