@@ -16,12 +16,18 @@ enum symbol_status {
     UNSATISFIED,
     SATISFIED
 };
+enum change_req {
+    NO,
+    YES,
+    MODULE,
+};
 
 typedef struct
 {
     QString symbol;
     QString change_needed;
     enum symbol_status status;
+    enum change_req req;
 } Constraint ;
 
 QList<Constraint> get_constraints();
