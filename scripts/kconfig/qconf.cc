@@ -1429,14 +1429,17 @@ void ConfigConflictsWindow::showConfig(void)
 void ConfigConflictsWindow::recheck(void)
 {
 	std::cerr << "recheck clicked" << std::endl;
-	auto li = get_constraints();
-	std::cerr << "received " << li[0].symbol.toStdString() << std::endl;
-	conflictsTable->setRowCount(li.length());
+	constraints = get_constraints();
+	if(constraints.length() == 0)
+		return;
+
+	std::cerr << "received " <<constraints[0].symbol.toStdString() << std::endl;
+	conflictsTable->setRowCount(constraints.length());
 
 	for(int i = 0; i < 3; i++)
 	{
-		conflictsTable->setItem(i,0,new QTableWidgetItem(li[i].symbol));
-		conflictsTable->setItem(i,1,new QTableWidgetItem(li[i].change_needed));
+		conflictsTable->setItem(i,0,new QTableWidgetItem(constraints[i].symbol));
+		conflictsTable->setItem(i,1,new QTableWidgetItem(constraints[i].change_needed));
 		conflictsTable->setItem(i,2,new QTableWidgetItem("example"));
 	}
 
@@ -1445,6 +1448,8 @@ void ConfigConflictsWindow::recheck(void)
 void ConfigConflictsWindow::changeAll(void)
 {
 	std::cerr << "change all clicked" << std::endl;
+	std::cerr << constraints[0].symbol.toStdString() << std::endl;
+
 
 }
 void ConfigConflictsWindow::save(void)
