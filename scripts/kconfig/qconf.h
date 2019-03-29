@@ -16,7 +16,10 @@
 #include <QDialog>
 #include <QListWidget>
 #include <QTableWidget>
+#include <QList>
 #include "expr.h"
+
+#include "conflict_resolver.h"
 
 class ConfigView;
 class ConfigList;
@@ -321,6 +324,7 @@ protected:
 	QPushButton* resetButton;
 	QPushButton* closeButton;
 	// ConfigInfoView* info;
+	QList<Constraint> constraints;
 
 	// struct symbol **result;
 };
