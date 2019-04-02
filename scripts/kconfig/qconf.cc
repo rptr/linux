@@ -1320,9 +1320,9 @@ ConfigConflictsWindow::ConfigConflictsWindow(ConfigMainWindow* parent, const cha
 
 	conflictsTable = new QTableWidget();
 	conflictsTable->setRowCount(2);
-	conflictsTable->setColumnCount(3);
+	conflictsTable->setColumnCount(4);
 
-	conflictsTable->setHorizontalHeaderLabels(QStringList()  << "Item" << "Conflict" << "Description");
+	conflictsTable->setHorizontalHeaderLabels(QStringList()  << "Item" << "Current value "<< "Change needed" << "Description");
 	// conflictsTable->setItem(0,0,new QTableWidgetItem("HYPERVISOR_GUEST"));
 	// conflictsTable->setItem(0,1,new QTableWidgetItem("unsatisfied"));
 	// conflictsTable->setItem(0,2,new QTableWidgetItem("boolean example"));
@@ -1381,6 +1381,7 @@ ConfigConflictsWindow::ConfigConflictsWindow(ConfigMainWindow* parent, const cha
 	// 	parent, SLOT(setMenuLink(struct menu *)));
 
 	// layout1->addWidget(split);
+	emit(recheck());
 
 	if (name) {
 		QVariant x, y;
@@ -1428,7 +1429,6 @@ void ConfigConflictsWindow::showConfig(void)
 
 void ConfigConflictsWindow::recheck(void)
 {
-	std::cerr << "recheck clicked" << std::endl;
 	constraints = get_constraints();
 	if(constraints.length() == 0) {
 	  std::cerr << "recheck clicked, got nothing" << std::endl;
@@ -1440,9 +1440,12 @@ void ConfigConflictsWindow::recheck(void)
 
 	for(int i = 0; i < 3; i++)
 	{
+		struct symbol* sym = sym_find(constraints[i].symbol.toStdString().c_str());
+		tristate currentval = sym_get_tristate_value(sym);
 		conflictsTable->setItem(i,0,new QTableWidgetItem(constraints[i].symbol));
-		conflictsTable->setItem(i,1,new QTableWidgetItem(constraints[i].change_needed));
-		conflictsTable->setItem(i,2,new QTableWidgetItem("example"));
+		conflictsTable->setItem(i,1,new QTableWidgetItem(tristate_value_to_string(currentval)));
+		conflictsTable->setItem(i,2,new QTableWidgetItem(constraints[i].change_needed));
+		conflictsTable->setItem(i,3,new QTableWidgetItem("example"));
 	}
 
 
@@ -1467,18 +1470,9 @@ void ConfigConflictsWindow::changeAll(void)
 		switch (type) {
 		case S_BOOLEAN:
 		case S_TRISTATE:
-			// tristate oldval = sym_get_tristate_value(sym);
 
-			switch(constraints[i].req){
-
-			}
 			if (!sym_set_tristate_value(sym, constraints[i].req))
 				return;
-			// parentWidget()->configList->updateListAll();
-			// parent()->confupdateListAll();
-			// if (oldval == no && item->menu->list)
-			// 	item->setExpanded(true);
-			// parent()->updateLis valt(item);
 			break;
 		}
 

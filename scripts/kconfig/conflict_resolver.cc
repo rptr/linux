@@ -39,3 +39,23 @@ QList<Constraint> get_constraints()
     return x;
 
 }
+
+QString tristate_value_to_string(tristate x)
+{
+    switch (x)
+    {
+        case no:
+            return  QString::fromStdString("NO");
+            break;
+        case yes:
+            return  QString::fromStdString("YES");
+            break;
+        case mod:
+            return  QString::fromStdString("MODULE");
+            break;
+
+        default:
+            break;
+    }
+
+}
