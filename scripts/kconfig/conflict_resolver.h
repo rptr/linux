@@ -7,6 +7,7 @@
 #define CONFLICT_RESOLVER_H
 
 #include <qstring.h>
+#include "expr.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -16,18 +17,13 @@ enum symbol_status {
     UNSATISFIED,
     SATISFIED
 };
-enum change_req {
-    NO,
-    YES,
-    MODULE,
-};
 
 typedef struct
 {
     QString symbol;
     QString change_needed;
     enum symbol_status status;
-    enum change_req req;
+    tristate req; // change requested
 } Constraint ;
 
 QList<Constraint> get_constraints();
