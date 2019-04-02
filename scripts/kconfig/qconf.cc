@@ -1430,8 +1430,10 @@ void ConfigConflictsWindow::recheck(void)
 {
 	std::cerr << "recheck clicked" << std::endl;
 	constraints = get_constraints();
-	if(constraints.length() == 0)
+	if(constraints.length() == 0) {
+	  std::cerr << "recheck clicked, got nothing" << std::endl;
 		return;
+	}
 
 	std::cerr << "received " <<constraints[0].symbol.toStdString() << std::endl;
 	conflictsTable->setRowCount(constraints.length());
@@ -1449,7 +1451,39 @@ void ConfigConflictsWindow::changeAll(void)
 {
 	std::cerr << "change all clicked" << std::endl;
 	std::cerr << constraints[0].symbol.toStdString() << std::endl;
+	if (constraints.length() == 0)
+		return;
 
+	// for each constraint in constraints,
+	// find the symbol* from kconfig,
+	// call sym_set_tristate_value() if it is tristate or boolean.
+	for (int i = 0; i < constraints.length() ; i++)
+	{
+		struct symbol* sym = sym_find(constraints[i].symbol.toStdString().c_str());
+		if(!sym)
+			return;
+
+		int type = sym_get_type(sym);
+		switch (type) {
+		case S_BOOLEAN:
+		case S_TRISTATE:
+			// tristate oldval = sym_get_tristate_value(sym);
+
+			switch(constraints[i].req){
+
+			}
+			if (!sym_set_tristate_value(sym, constraints[i].req))
+				return;
+			// parentWidget()->configList->updateListAll();
+			// parent()->confupdateListAll();
+			// if (oldval == no && item->menu->list)
+			// 	item->setExpanded(true);
+			// parent()->updateLis valt(item);
+			break;
+		}
+
+	}
+	emit(refreshAgain());
 
 }
 void ConfigConflictsWindow::save(void)
@@ -1565,6 +1599,7 @@ ConfigMainWindow::ConfigMainWindow(void)
 
 	conflictsWindow = new ConfigConflictsWindow(this,"conflicts");
 	connect(conflictsWindow,SIGNAL(conflictSelected(struct menu *)),SLOT(conflictSelected(struct menu *)));
+	connect(conflictsWindow,SIGNAL(refreshAgain()),SLOT(refreshMenu()));
 
 	backAction = new QAction(QPixmap(xpm_back), "Back", this);
 	  connect(backAction, SIGNAL(triggered(bool)), SLOT(goBack()));
@@ -2033,6 +2068,10 @@ void ConfigMainWindow::conf_changed(void)
 {
 	if (saveAction)
 		saveAction->setEnabled(conf_get_changed());
+}
+void ConfigMainWindow::refreshMenu(void)
+{
+	configList->updateListAll();
 }
 
 void fixup_rootmenu(struct menu *menu)
