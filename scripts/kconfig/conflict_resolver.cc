@@ -21,19 +21,19 @@ QList<Constraint> get_constraints()
     tc.symbol = "DMI_SYSFS";
     tc.change_needed = "change to yes";
     tc.status = UNSATISFIED;
-    tc.req = YES;
+    tc.req = yes;
 
     Constraint tc2;
     tc2.symbol = "DMIID";
     tc2.change_needed = "change to no";
     tc2.status = UNSATISFIED;
-    tc2.req = NO;
+    tc2.req = no;
 
     Constraint tc3;
     tc3.symbol = "EDD";
     tc3.change_needed = "change to module";
     tc3.status = UNSATISFIED;
-    tc3.req = MODULE;
+    tc3.req = mod;
 
     QList<Constraint> x = {tc, tc2, tc3};
     return x;
