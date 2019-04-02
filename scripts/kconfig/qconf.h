@@ -311,6 +311,7 @@ public:
 
 signals:
 	void conflictSelected(struct menu *);
+	void refreshAgain();
 
 protected:
 	// QLineEdit* editField;
@@ -354,6 +355,7 @@ public slots:
 	void saveSettings(void);
 	void showConflicts(void);
 	void conflictSelected(struct menu *);
+	void refreshMenu();
 
 protected:
 	void closeEvent(QCloseEvent *e);
