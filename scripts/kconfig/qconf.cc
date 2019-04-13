@@ -1356,12 +1356,12 @@ ConfigConflictsWindow::ConfigConflictsWindow(ConfigMainWindow* parent, const cha
 	saveButton = new QPushButton("Save", this);
 	saveButton->setAutoDefault(false);
 	connect(saveButton, SIGNAL(clicked()), SLOT(save()));
-	layout1->addWidget(saveButton);
+	// layout1->addWidget(saveButton);
 
   resetButton = new QPushButton("Reset", this);
 	resetButton->setAutoDefault(false);
 	connect(resetButton, SIGNAL(clicked()), SLOT(reset()));
-	layout1->addWidget(resetButton);
+	// layout1->addWidget(resetButton);
 
 	closeButton = new QPushButton("Close", this);
 	closeButton->setAutoDefault(false);
