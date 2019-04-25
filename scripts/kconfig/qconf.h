@@ -242,6 +242,38 @@ public:
 	static QAction *showAllAction;
 	static QAction *showPromptAction;
 };
+class ConflictsView : public QWidget {
+	ConfigLineEdit* lineEdit;
+	Q_OBJECT
+	typedef class QWidget Parent;
+public:
+	ConflictsView(QWidget* parent, const char *name = 0);
+	~ConflictsView(void);
+	//static void updateList(ConfigItem* item);
+	void dorecheck(void);
+
+public slots:
+	//void setShowName(bool);
+	//void setShowRange(bool);
+	//void setShowData(bool);
+	//void setOptionMode(QAction *);
+    void recheck();
+    void cellClicked();
+signals:
+	void showNameChanged(bool);
+	void showRangeChanged(bool);
+	void showDataChanged(bool);
+public:
+	QTableWidget* conflictsTable;
+	QList<Constraint> constraints;
+
+    //  static ConflictsView* viewList;
+	//  ConflictsView* nextView;
+
+	//static QAction *showNormalAction;
+	//static QAction *showAllAction;
+	//static QAction *showPromptAction;
+};
 
 class ConfigInfoView : public QTextBrowser {
 	Q_OBJECT
@@ -367,6 +399,7 @@ protected:
 	ConfigView *configView;
 	ConfigList *configList;
 	ConfigInfoView *helpText;
+    ConflictsView *conflictsView;
 	QToolBar *toolBar;
 	QAction *backAction;
 	QAction *singleViewAction;
@@ -375,4 +408,5 @@ protected:
 	QAction *showConflictsAction;
 	QSplitter *split1;
 	QSplitter *split2;
+	QSplitter *split3;
 };
