@@ -1009,6 +1009,56 @@ void ConfigView::updateListAll(void)
 	for (v = viewList; v; v = v->nextView)
 		v->list->updateListAll();
 }
+ConflictsView::ConflictsView(QWidget* parent, const char *name)
+	: Parent(parent)
+{
+	setObjectName(name);
+	QVBoxLayout *verticalLayout = new QVBoxLayout(this);
+	verticalLayout->setContentsMargins(0, 0, 0, 0);
+
+	conflictsTable = new QTableWidget(this);
+	conflictsTable->setRowCount(2);
+	conflictsTable->setColumnCount(3);
+
+	conflictsTable->setHorizontalHeaderLabels(QStringList()  << "Item" << "Conflict" << "Property" );
+	verticalLayout->addWidget(conflictsTable);
+
+	//conflictsTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
+
+	//connect(conflictsTable, SIGNAL(cellClicked(int, int)), SLOT(cellClicked(int,int)));
+	//layout1->addWidget(conflictsTable);
+
+}
+void ConflictsView::dorecheck()
+{
+    emit(recheck());
+}
+void ConflictsView::recheck()
+{
+	constraints = get_constraints();
+	if(constraints.length() == 0) {
+	  std::cerr << "recheck clicked, got nothing" << std::endl;
+		return;
+	}
+
+	std::cerr << "received " <<constraints[0].symbol.toStdString() << std::endl;
+	conflictsTable->setRowCount(constraints.length());
+
+	for(int i = 0; i < 3; i++)
+	{
+		struct symbol* sym = sym_find(constraints[i].symbol.toStdString().c_str());
+		tristate currentval = sym_get_tristate_value(sym);
+		conflictsTable->setItem(i,0,new QTableWidgetItem(constraints[i].symbol));
+		conflictsTable->setItem(i,1,new QTableWidgetItem(tristate_value_to_string(currentval)));
+		conflictsTable->setItem(i,2,new QTableWidgetItem(constraints[i].change_needed));
+		conflictsTable->setItem(i,3,new QTableWidgetItem("example"));
+	}
+}
+
+ConflictsView::~ConflictsView(void)
+{
+
+}
 
 ConfigInfoView::ConfigInfoView(QWidget* parent, const char *name)
 	: Parent(parent), sym(0), _menu(0)
@@ -1584,7 +1634,12 @@ ConfigMainWindow::ConfigMainWindow(void)
 
 	helpText = new ConfigInfoView(split2, "help");
 
+	split3 = new QSplitter(split2);
+	split3->setOrientation(Qt::Vertical);
+	conflictsView = new ConflictsView(split3, "help");
+
 	setTabOrder(configList, helpText);
+    
 	configList->setFocus();
 
 	menu = menuBar();
@@ -1629,7 +1684,7 @@ ConfigMainWindow::ConfigMainWindow(void)
 
 	showConflictsAction = new QAction(QPixmap(xpm_conflict_show), "Show conflicts", this);
 	showConflictsAction->setCheckable(false);
-	  connect(showConflictsAction, SIGNAL(triggered(bool)), SLOT(showConflicts()));
+	 connect(showConflictsAction, SIGNAL(triggered(bool)), SLOT(showConflicts()));
 
 
 	QAction *showNameAction = new QAction("Show Name", this);
@@ -1948,9 +2003,11 @@ void ConfigMainWindow::conflictSelected(struct menu * men)
 
 void ConfigMainWindow::showConflicts(void)
 {
-	if (!conflictsWindow)
-		conflictsWindow = new ConfigConflictsWindow(this, "conflicts");
-	conflictsWindow->show();
+    conflictsView->dorecheck();
+
+	//if (!conflictsWindow)
+	//	conflictsWindow = new ConfigConflictsWindow(this, "conflicts");
+	//conflictsWindow->show();
 }
 void ConfigMainWindow::showFullView(void)
 {
