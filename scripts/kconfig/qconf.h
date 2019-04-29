@@ -258,11 +258,12 @@ public slots:
 	//void setShowData(bool);
 	//void setOptionMode(QAction *);
     void recheck();
-    void cellClicked();
+    void cellClicked(int, int);
 signals:
 	void showNameChanged(bool);
 	void showRangeChanged(bool);
 	void showDataChanged(bool);
+	void conflictSelected(struct menu *);
 public:
 	QTableWidget* conflictsTable;
 	QList<Constraint> constraints;

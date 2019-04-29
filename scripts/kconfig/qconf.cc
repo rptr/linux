@@ -1025,10 +1025,41 @@ ConflictsView::ConflictsView(QWidget* parent, const char *name)
 
 	//conflictsTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
 
-	//connect(conflictsTable, SIGNAL(cellClicked(int, int)), SLOT(cellClicked(int,int)));
+	connect(conflictsTable, SIGNAL(cellClicked(int, int)), SLOT(cellClicked(int,int)));
 	//layout1->addWidget(conflictsTable);
 
 }
+void ConflictsView::cellClicked(int row, int column)
+{
+    //emit(recheck());
+	std::cerr << "clicked :: " << row << ", column:: " << column << std::endl;
+	std::cerr << "parents type:: " <<  typeid(parent()).name() << std::endl;
+	//sym_find("CONFIG_HYPERVISOR_GUEST");
+
+	auto itemText = conflictsTable->item(row,0)->text().toStdString().c_str();
+
+
+	struct symbol* sym = sym_find(itemText);
+	if (sym == NULL)
+	{
+		std::cerr << "symbol is nullptr: " << std::endl;
+		return;
+	}
+	struct property* prop = sym->prop;
+	struct menu* men = prop->menu;
+	std::cerr << "help:::: " <<  men->help << std::endl;
+	//emit(conflictSelected(men));
+}
+/*
+void ConflictsView::conflictSelected(struct menu * men)
+{
+	std::cerr << "help:::: " <<  men->help << std::endl;
+
+	//configList->clearSelection();
+	//menuList->clearSelection();
+	//emit(setMenuLink(men));
+}
+*/
 void ConflictsView::dorecheck()
 {
     emit(recheck());
