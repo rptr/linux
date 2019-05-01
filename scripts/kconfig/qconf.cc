@@ -1048,7 +1048,7 @@ void ConflictsView::cellClicked(int row, int column)
 	struct property* prop = sym->prop;
 	struct menu* men = prop->menu;
 	std::cerr << "help:::: " <<  men->help << std::endl;
-	//emit(conflictSelected(men));
+	emit(conflictSelected(men));
 }
 /*
 void ConflictsView::conflictSelected(struct menu * men)
@@ -1058,8 +1058,7 @@ void ConflictsView::conflictSelected(struct menu * men)
 	//configList->clearSelection();
 	//menuList->clearSelection();
 	//emit(setMenuLink(men));
-}
-*/
+}*/
 void ConflictsView::dorecheck()
 {
     emit(recheck());
@@ -1668,6 +1667,7 @@ ConfigMainWindow::ConfigMainWindow(void)
 	split3 = new QSplitter(split2);
 	split3->setOrientation(Qt::Vertical);
 	conflictsView = new ConflictsView(split3, "help");
+	connect(conflictsView,SIGNAL(conflictSelected(struct menu *)),SLOT(conflictSelected(struct menu *)));
 
 	setTabOrder(configList, helpText);
     
