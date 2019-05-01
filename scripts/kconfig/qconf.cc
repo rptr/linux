@@ -1380,6 +1380,7 @@ ConfigSearchWindow::ConfigSearchWindow(ConfigMainWindow* parent, const char *nam
 	}
 }
 
+/*
 ConfigConflictsWindow::ConfigConflictsWindow(ConfigMainWindow* parent, const char *name )
 	: Parent(parent)
 {
@@ -1416,13 +1417,13 @@ ConfigConflictsWindow::ConfigConflictsWindow(ConfigMainWindow* parent, const cha
 	layout1->addWidget(conflictsTable);
 
 
-	/* add the buttons:
-	 * [recheck / refresh]
-	 * [Change All]
-	 * [Save]
-	 * [Reset]
-	 * [Close]
-	 */
+	// * add the buttons:
+	// * [recheck / refresh]
+	// * [Change All]
+	// * [Save]
+	// * [Reset]
+	// * [Close]
+	 
 	recheckButton = new QPushButton("Recheck/Refresh", this);
 	recheckButton->setAutoDefault(false);
 	connect(recheckButton, SIGNAL(clicked()), SLOT(recheck()));
@@ -1480,6 +1481,8 @@ ConfigConflictsWindow::ConfigConflictsWindow(ConfigMainWindow* parent, const cha
 	}
 	// connect(conflictList, SIGNAL(itemSelectionChanged()), SLOT(showConfig()));
 }
+*/
+/*
 void ConfigConflictsWindow::cellClicked(int row, int column)
 {
 
@@ -1588,6 +1591,7 @@ void ConfigConflictsWindow::saveSettings(void)
 		configSettings->endGroup();
 	}
 }
+*/
 void ConfigSearchWindow::saveSettings(void)
 {
 	if (!objectName().isEmpty()) {
@@ -1625,7 +1629,7 @@ void ConfigSearchWindow::search(void)
  * Construct the complete config widget
  */
 ConfigMainWindow::ConfigMainWindow(void)
-	: searchWindow(0),conflictsWindow(0)
+	: searchWindow(0)
 {
 	QMenuBar* menu;
 	bool ok = true;
@@ -1677,9 +1681,9 @@ ConfigMainWindow::ConfigMainWindow(void)
 	toolBar = new QToolBar("Tools", this);
 	addToolBar(toolBar);
 
-	conflictsWindow = new ConfigConflictsWindow(this,"conflicts");
-	connect(conflictsWindow,SIGNAL(conflictSelected(struct menu *)),SLOT(conflictSelected(struct menu *)));
-	connect(conflictsWindow,SIGNAL(refreshAgain()),SLOT(refreshMenu()));
+	//conflictsWindow = new ConfigConflictsWindow(this,"conflicts");
+	//connect(conflictsWindow,SIGNAL(conflictSelected(struct menu *)),SLOT(conflictSelected(struct menu *)));
+	//connect(conflictsWindow,SIGNAL(refreshAgain()),SLOT(refreshMenu()));
 
 	backAction = new QAction(QPixmap(xpm_back), "Back", this);
 	  connect(backAction, SIGNAL(triggered(bool)), SLOT(goBack()));

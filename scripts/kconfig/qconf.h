@@ -326,6 +326,7 @@ protected:
 	struct symbol **result;
 };
 
+/*
 class ConfigConflictsWindow : public QDialog {
 	Q_OBJECT
 	typedef class QDialog Parent;
@@ -362,6 +363,7 @@ protected:
 
 	// struct symbol **result;
 };
+*/
 
 class ConfigMainWindow : public QMainWindow {
 	Q_OBJECT
@@ -394,7 +396,7 @@ protected:
 	void closeEvent(QCloseEvent *e);
 
 	ConfigSearchWindow *searchWindow;
-	ConfigConflictsWindow *conflictsWindow;
+	//ConfigConflictsWindow *conflictsWindow;
 	ConfigView *menuView;
 	ConfigList *menuList;
 	ConfigView *configView;
