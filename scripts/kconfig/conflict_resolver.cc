@@ -19,19 +19,19 @@ QList<Constraint> get_constraints()
     */
     Constraint tc;
     tc.symbol = "DMI_SYSFS";
-    tc.change_needed = "change to yes";
+    tc.change_needed = "Requries change to yes";
     tc.status = UNSATISFIED;
     tc.req = yes;
 
     Constraint tc2;
     tc2.symbol = "DMIID";
-    tc2.change_needed = "change to no";
+    tc2.change_needed = "Requires change to no";
     tc2.status = UNSATISFIED;
     tc2.req = no;
 
     Constraint tc3;
     tc3.symbol = "EDD";
-    tc3.change_needed = "change to module";
+    tc3.change_needed = "Requires change to module";
     tc3.status = UNSATISFIED;
     tc3.req = mod;
 
