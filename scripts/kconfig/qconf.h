@@ -326,44 +326,6 @@ protected:
 	struct symbol **result;
 };
 
-/*
-class ConfigConflictsWindow : public QDialog {
-	Q_OBJECT
-	typedef class QDialog Parent;
-public:
-	ConfigConflictsWindow(ConfigMainWindow* parent, const char *name = 0);
-
- public slots:
- 	void saveSettings(void);
- 	void showConfig(void);
-	void cellClicked(int row, int column);
-	void recheck(); // reruns the constraint checker
-	void changeAll(); // changes the config list such that constraint is satisfied
-	void save(); // saves config
-	void reset(); //
-	void closeDialog();
-
-signals:
-	void conflictSelected(struct menu *);
-	void refreshAgain();
-
-protected:
-	// QLineEdit* editField;
-	// QPushButton* searchButton;
-	// QSplitter* split;
-	QListWidget* conflictList;
-	QTableWidget* conflictsTable;
-	QPushButton* recheckButton;
-	QPushButton* changeAllButton;
-	QPushButton* saveButton;
-	QPushButton* resetButton;
-	QPushButton* closeButton;
-	// ConfigInfoView* info;
-	QList<Constraint> constraints;
-
-	// struct symbol **result;
-};
-*/
 
 class ConfigMainWindow : public QMainWindow {
 	Q_OBJECT
@@ -396,7 +358,6 @@ protected:
 	void closeEvent(QCloseEvent *e);
 
 	ConfigSearchWindow *searchWindow;
-	//ConfigConflictsWindow *conflictsWindow;
 	ConfigView *menuView;
 	ConfigList *menuList;
 	ConfigView *configView;
