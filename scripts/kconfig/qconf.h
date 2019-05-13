@@ -259,6 +259,7 @@ public slots:
 	//void setOptionMode(QAction *);
     void recheck();
     void cellClicked(int, int);
+	void changeAll();
 signals:
 	void showNameChanged(bool);
 	void showRangeChanged(bool);
@@ -267,6 +268,8 @@ signals:
 public:
 	QTableWidget* conflictsTable;
 	QList<Constraint> constraints;
+
+	QToolBar *conflictsToolBar;
 
     //  static ConflictsView* viewList;
 	//  ConflictsView* nextView;
@@ -365,6 +368,7 @@ protected:
 	ConfigInfoView *helpText;
     ConflictsView *conflictsView;
 	QToolBar *toolBar;
+	QToolBar *conflictsToolBar;
 	QAction *backAction;
 	QAction *singleViewAction;
 	QAction *splitViewAction;
