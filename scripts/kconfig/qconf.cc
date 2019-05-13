@@ -1023,7 +1023,7 @@ ConflictsView::ConflictsView(QWidget* parent, const char *name)
 
 	verticalLayout->addWidget(conflictsToolBar);
 
-	//connect(fixConflictsAction, SIGNAL(triggered(bool)), SLOT(showConflicts()));
+	connect(fixConflictsAction, SIGNAL(triggered(bool)), SLOT(changeAll()));
 
 	conflictsTable = new QTableWidget(this);
 	conflictsTable->setRowCount(2);
@@ -1082,7 +1082,8 @@ void ConflictsView::changeAll(void)
 			break;
 		}
 	}
-	//emit(refreshAgain());
+
+	emit(refreshMenu());
 }
 /*
 void ConflictsView::conflictSelected(struct menu * men)
@@ -1494,6 +1495,7 @@ ConfigMainWindow::ConfigMainWindow(void)
 	split3->setOrientation(Qt::Vertical);
 	conflictsView = new ConflictsView(split3, "help");
 	connect(conflictsView,SIGNAL(conflictSelected(struct menu *)),SLOT(conflictSelected(struct menu *)));
+	connect(conflictsView,SIGNAL(refreshMenu()),SLOT(refreshMenu()));
 	setTabOrder(configList, helpText);
 
 	configList->setFocus();
