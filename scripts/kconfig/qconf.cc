@@ -1009,12 +1009,21 @@ void ConfigView::updateListAll(void)
 	for (v = viewList; v; v = v->nextView)
 		v->list->updateListAll();
 }
+
 ConflictsView::ConflictsView(QWidget* parent, const char *name)
 	: Parent(parent)
 {
 	setObjectName(name);
 	QVBoxLayout *verticalLayout = new QVBoxLayout(this);
 	verticalLayout->setContentsMargins(0, 0, 0, 0);
+	conflictsToolBar = new QToolBar("ConflictTools", this);
+	QAction *fixConflictsAction = new QAction(QPixmap(xpm_conflict_show), "Fix conflicts", this);
+	fixConflictsAction->setCheckable(false);
+    conflictsToolBar->addAction(fixConflictsAction);
+
+	verticalLayout->addWidget(conflictsToolBar);
+
+	//connect(fixConflictsAction, SIGNAL(triggered(bool)), SLOT(showConflicts()));
 
 	conflictsTable = new QTableWidget(this);
 	conflictsTable->setRowCount(2);
@@ -1049,6 +1058,31 @@ void ConflictsView::cellClicked(int row, int column)
 	struct menu* men = prop->menu;
 	std::cerr << "help:::: " <<  men->help << std::endl;
 	emit(conflictSelected(men));
+}
+void ConflictsView::changeAll(void)
+{
+	std::cerr << "change all clicked" << std::endl;
+	std::cerr << constraints[0].symbol.toStdString() << std::endl;
+	if (constraints.length() == 0)
+		return;
+	// for each constraint in constraints,
+	// find the symbol* from kconfig,
+	// call sym_set_tristate_value() if it is tristate or boolean.
+	for (int i = 0; i < constraints.length() ; i++)
+	{
+		struct symbol* sym = sym_find(constraints[i].symbol.toStdString().c_str());
+		if(!sym)
+			return;
+		int type = sym_get_type(sym);
+		switch (type) {
+		case S_BOOLEAN:
+		case S_TRISTATE:
+			if (!sym_set_tristate_value(sym, constraints[i].req))
+				return;
+			break;
+		}
+	}
+	//emit(refreshAgain());
 }
 /*
 void ConflictsView::conflictSelected(struct menu * men)
@@ -1460,9 +1494,8 @@ ConfigMainWindow::ConfigMainWindow(void)
 	split3->setOrientation(Qt::Vertical);
 	conflictsView = new ConflictsView(split3, "help");
 	connect(conflictsView,SIGNAL(conflictSelected(struct menu *)),SLOT(conflictSelected(struct menu *)));
-
 	setTabOrder(configList, helpText);
-    
+
 	configList->setFocus();
 
 	menu = menuBar();
