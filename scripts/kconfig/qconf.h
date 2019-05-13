@@ -265,6 +265,7 @@ signals:
 	void showRangeChanged(bool);
 	void showDataChanged(bool);
     void conflictSelected(struct menu *);
+	void refreshMenu();
 public:
 	QTableWidget* conflictsTable;
 	QList<Constraint> constraints;
