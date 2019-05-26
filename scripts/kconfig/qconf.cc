@@ -328,6 +328,7 @@ ConfigList::ConfigList(ConfigView* p, const char *name)
 	connect(this, SIGNAL(itemSelectionChanged(void)),
 		SLOT(updateSelection(void)));
 
+	setDragEnabled(true);
 	if (name) {
 		configSettings->beginGroup(name);
 		showName = configSettings->value("/showName", false).toBool();
@@ -1017,19 +1018,32 @@ ConflictsView::ConflictsView(QWidget* parent, const char *name)
 	QVBoxLayout *verticalLayout = new QVBoxLayout(this);
 	verticalLayout->setContentsMargins(0, 0, 0, 0);
 	conflictsToolBar = new QToolBar("ConflictTools", this);
-	QAction *fixConflictsAction = new QAction(QPixmap(xpm_conflict_show), "Fix conflicts", this);
+	//QAction *fixConflictsAction = new QAction(QPixmap(xpm_conflict_show), "Fix conflicts", this);
+	// toolbar buttons [n] [m] [y] [calculate fixes] [remove]
+	QAction *setConfigSymbolAsNo = new QAction("N");
+	QAction *setConfigSymbolAsModule = new QAction("M");
+	QAction *setConfigSymbolAsYes = new QAction("Y");
+	QAction *fixConflictsAction = new QAction("Calculate Fixes");
+	QAction *removeSymbol = new QAction("Remove Symbol");
+
 	fixConflictsAction->setCheckable(false);
-    conflictsToolBar->addAction(fixConflictsAction);
+	conflictsToolBar->addAction(setConfigSymbolAsNo);
+	conflictsToolBar->addAction(setConfigSymbolAsModule);
+	conflictsToolBar->addAction(setConfigSymbolAsYes);
+	conflictsToolBar->addAction(fixConflictsAction);
+	conflictsToolBar->addAction(removeSymbol);
 
 	verticalLayout->addWidget(conflictsToolBar);
 
-	connect(fixConflictsAction, SIGNAL(triggered(bool)), SLOT(changeAll()));
+	//connect clicking 'calculate fixes' to 'change all symbol values to fix all conflicts'
+	// no longer used anymore for now.
+	//connect(fixConflictsAction, SIGNAL(triggered(bool)), SLOT(changeAll()));
 
 	conflictsTable = new QTableWidget(this);
 	conflictsTable->setRowCount(2);
 	conflictsTable->setColumnCount(3);
 
-	conflictsTable->setHorizontalHeaderLabels(QStringList()  << "Item" << "Conflict" << "Property" );
+	conflictsTable->setHorizontalHeaderLabels(QStringList()  << "Option" << "Want" << "Value" );
 	verticalLayout->addWidget(conflictsTable);
 
 	//conflictsTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
@@ -1040,7 +1054,6 @@ ConflictsView::ConflictsView(QWidget* parent, const char *name)
 }
 void ConflictsView::cellClicked(int row, int column)
 {
-    //emit(recheck());
 	std::cerr << "clicked :: " << row << ", column:: " << column << std::endl;
 	std::cerr << "parents type:: " <<  typeid(parent()).name() << std::endl;
 	//sym_find("CONFIG_HYPERVISOR_GUEST");
