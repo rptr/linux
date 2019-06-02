@@ -1015,6 +1015,7 @@ void ConfigView::updateListAll(void)
 ConflictsView::ConflictsView(QWidget* parent, const char *name)
 	: Parent(parent)
 {
+	currentSelectedMenu = nullptr;
 	setObjectName(name);
 	QVBoxLayout *verticalLayout = new QVBoxLayout(this);
 	verticalLayout->setContentsMargins(0, 0, 0, 0);
@@ -1062,10 +1063,40 @@ ConflictsView::ConflictsView(QWidget* parent, const char *name)
 void QTableWidget::dropEvent(QDropEvent *event)
 {
 }
+void ConflictsView::menuChanged1(struct menu * m)
+{
+
+	std::cerr << "menu changed 1" << std::endl;
+	currentSelectedMenu = m;
+}
 void ConflictsView::addSymbol()
 {
 
 	std::cerr <<" adding symobol " << std::endl;
+	if (currentSelectedMenu != nullptr){
+		if (currentSelectedMenu->sym != nullptr){
+			std::cerr << "adding symbol " << currentSelectedMenu->sym->name << std::endl;
+			struct symbol* sym = currentSelectedMenu->sym;
+			tristate currentval = sym_get_tristate_value(sym);
+			//if symbol is not added already:
+			//if (std::find(addedSymbolList.begin(),addedSymbolList.end(),sym->name) == addedSymbolList.end()){
+			if (addedSymbolList.find(sym->name) == addedSymbolList.end()){
+
+				conflictsTable->insertRow(conflictsTable->rowCount());
+				conflictsTable->setItem(conflictsTable->rowCount()-1,0,new QTableWidgetItem(sym->name));
+				conflictsTable->setItem(conflictsTable->rowCount()-1,1,new QTableWidgetItem(tristate_value_to_string(currentval)));
+				conflictsTable->setItem(conflictsTable->rowCount()-1,2,new QTableWidgetItem(tristate_value_to_string(currentval)));
+				addedSymbolList[sym->name] = conflictsTable->rowCount();
+				//conflictsTable->item(conflictsTable->rowCount()-1,2)->setText(tristate_value_to_string(currentval));
+
+			}else{
+				// if we find it, we update the value that was contained in the table against what was set by user:
+				std::cerr << "current value = " << tristate_value_to_string(currentval).toUtf8().constData() << std::endl;
+				conflictsTable->item(addedSymbolList[sym->name]-1,2)->setText(tristate_value_to_string(currentval));
+
+			}
+		}
+	}
 }
 void ConflictsView::removeSymbol()
 {
@@ -1527,6 +1558,10 @@ ConfigMainWindow::ConfigMainWindow(void)
 	split3 = new QSplitter(split2);
 	split3->setOrientation(Qt::Vertical);
 	conflictsView = new ConflictsView(split3, "help");
+	/* conflictsSelected signal in conflictsview triggers when a conflict is selected
+		 in the view. this line connects that event to conflictselected event in mainwindow
+		 which updates the selection to match (in the configlist) the symbol that was selected.
+	*/
 	connect(conflictsView,SIGNAL(conflictSelected(struct menu *)),SLOT(conflictSelected(struct menu *)));
 	connect(conflictsView,SIGNAL(refreshMenu()),SLOT(refreshMenu()));
 	setTabOrder(configList, helpText);
@@ -1661,6 +1696,8 @@ ConfigMainWindow::ConfigMainWindow(void)
 	connect(menuList, SIGNAL(menuSelected(struct menu *)),
 		SLOT(changeMenu(struct menu *)));
 
+	connect(configList, SIGNAL(menuChanged(struct menu *)),
+		conflictsView, SLOT(menuChanged1(struct menu *)));
 	connect(configList, SIGNAL(gotFocus(struct menu *)),
 		helpText, SLOT(setInfo(struct menu *)));
 	connect(menuList, SIGNAL(gotFocus(struct menu *)),
