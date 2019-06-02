@@ -1045,7 +1045,7 @@ ConflictsView::ConflictsView(QWidget* parent, const char *name)
 	//connect(fixConflictsAction, SIGNAL(triggered(bool)), SLOT(changeAll()));
 
 	conflictsTable = (QTableWidget*) new dropAbleView(this);
-	conflictsTable->setRowCount(2);
+	conflictsTable->setRowCount(0);
 	conflictsTable->setColumnCount(3);
 
 	conflictsTable->setHorizontalHeaderLabels(QStringList()  << "Option" << "Want" << "Value" );
