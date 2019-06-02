@@ -264,6 +264,9 @@ public slots:
 	void addSymbol();
 	void removeSymbol();
 	void menuChanged1(struct menu *);
+	void changeToNo();
+	void changeToYes();
+	void changeToModule();
 signals:
 	void showNameChanged(bool);
 	void showRangeChanged(bool);
@@ -277,7 +280,10 @@ public:
 	QToolBar *conflictsToolBar;
 	struct menu * currentSelectedMenu ;
 
+	// key: symbol name, value: index in the tablewidget +1;
 	std::map<char*, int> addedSymbolList;
+	// key: symbol name, value: tristate value that was wanted by user
+	std::map<char*, tristate> symbolWantList;
 
     //  static ConflictsView* viewList;
 	//  ConflictsView* nextView;
