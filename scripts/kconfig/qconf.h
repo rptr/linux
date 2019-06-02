@@ -260,6 +260,9 @@ public slots:
     void recheck();
     void cellClicked(int, int);
 	void changeAll();
+	//triggerd by Qactions on the tool bar that adds/remove symbol
+	void addSymbol();
+	void removeSymbol();
 signals:
 	void showNameChanged(bool);
 	void showRangeChanged(bool);
@@ -378,4 +381,14 @@ protected:
 	QSplitter *split1;
 	QSplitter *split2;
 	QSplitter *split3;
+};
+
+class dropAbleView : public QTableWidget
+{
+public:
+    dropAbleView(QWidget *parent = nullptr);
+    ~dropAbleView();
+
+protected:
+    void dropEvent(QDropEvent *event);
 };
