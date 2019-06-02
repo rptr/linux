@@ -263,6 +263,7 @@ public slots:
 	//triggerd by Qactions on the tool bar that adds/remove symbol
 	void addSymbol();
 	void removeSymbol();
+	void menuChanged1(struct menu *);
 signals:
 	void showNameChanged(bool);
 	void showRangeChanged(bool);
@@ -274,6 +275,9 @@ public:
 	QList<Constraint> constraints;
 
 	QToolBar *conflictsToolBar;
+	struct menu * currentSelectedMenu ;
+
+	std::map<char*, int> addedSymbolList;
 
     //  static ConflictsView* viewList;
 	//  ConflictsView* nextView;
