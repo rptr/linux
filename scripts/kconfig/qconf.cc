@@ -1040,6 +1040,9 @@ ConflictsView::ConflictsView(QWidget* parent, const char *name)
 	verticalLayout->addWidget(conflictsToolBar);
 
 	connect(addSymbol, SIGNAL(triggered(bool)), SLOT(addSymbol()));
+	connect(setConfigSymbolAsNo, SIGNAL(triggered(bool)), SLOT(changeToNo()));
+	connect(setConfigSymbolAsModule, SIGNAL(triggered(bool)), SLOT(changeToModule()));
+	connect(setConfigSymbolAsYes, SIGNAL(triggered(bool)), SLOT(changeToYes()));
 	connect(removeSymbol, SIGNAL(triggered(bool)), SLOT(removeSymbol()));
 	//connect clicking 'calculate fixes' to 'change all symbol values to fix all conflicts'
 	// no longer used anymore for now.
@@ -1048,6 +1051,7 @@ ConflictsView::ConflictsView(QWidget* parent, const char *name)
 	conflictsTable = (QTableWidget*) new dropAbleView(this);
 	conflictsTable->setRowCount(0);
 	conflictsTable->setColumnCount(3);
+	conflictsTable->setSelectionBehavior(QAbstractItemView::SelectRows);
 
 	conflictsTable->setHorizontalHeaderLabels(QStringList()  << "Option" << "Want" << "Value" );
 	verticalLayout->addWidget(conflictsTable);
@@ -1062,6 +1066,44 @@ ConflictsView::ConflictsView(QWidget* parent, const char *name)
 }
 void QTableWidget::dropEvent(QDropEvent *event)
 {
+}
+void ConflictsView::changeToNo(){
+	QItemSelectionModel *select = conflictsTable->selectionModel();
+	if (select->hasSelection()){
+		QModelIndexList rows = select->selectedRows();
+		std::cerr << " has rows selected" << std::endl;
+		for (int i = 0;i < rows.count(); i++)
+		{
+			conflictsTable->item(rows[i].row(),1)->setText("NO");
+			symbolWantList[conflictsTable->item(rows[i].row(),0)->text().toUtf8().data()] = tristate::no;
+		}
+	}
+}
+void ConflictsView::changeToYes(){
+	QItemSelectionModel *select = conflictsTable->selectionModel();
+	if (select->hasSelection()){
+		QModelIndexList rows = select->selectedRows();
+		std::cerr << " has rows selected" << std::endl;
+		for (int i = 0;i < rows.count(); i++)
+		{
+			conflictsTable->item(rows[i].row(),1)->setText("YES");
+			symbolWantList[conflictsTable->item(rows[i].row(),0)->text().toUtf8().data()] = tristate::yes;
+		}
+	}
+
+}
+void ConflictsView::changeToModule() {
+	QItemSelectionModel *select = conflictsTable->selectionModel();
+	if (select->hasSelection()){
+		QModelIndexList rows = select->selectedRows();
+		std::cerr << " has rows selected" << std::endl;
+		for (int i = 0;i < rows.count(); i++)
+		{
+			conflictsTable->item(rows[i].row(),1)->setText("MODULE");
+			symbolWantList[conflictsTable->item(rows[i].row(),0)->text().toUtf8().data()] = tristate::mod;
+		}
+	}
+
 }
 void ConflictsView::menuChanged1(struct menu * m)
 {
@@ -1087,10 +1129,12 @@ void ConflictsView::addSymbol()
 				conflictsTable->setItem(conflictsTable->rowCount()-1,1,new QTableWidgetItem(tristate_value_to_string(currentval)));
 				conflictsTable->setItem(conflictsTable->rowCount()-1,2,new QTableWidgetItem(tristate_value_to_string(currentval)));
 				addedSymbolList[sym->name] = conflictsTable->rowCount();
+
+				symbolWantList[sym->name] = currentval;
 				//conflictsTable->item(conflictsTable->rowCount()-1,2)->setText(tristate_value_to_string(currentval));
 
 			}else{
-				// if we find it, we update the value that was contained in the table against what was set by user:
+				// if we find it, we update the colum 'value' that was contained in the table against what was set by user:
 				std::cerr << "current value = " << tristate_value_to_string(currentval).toUtf8().constData() << std::endl;
 				conflictsTable->item(addedSymbolList[sym->name]-1,2)->setText(tristate_value_to_string(currentval));
 
