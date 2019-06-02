@@ -39,7 +39,8 @@
 #include <iostream>
 
 #include "conflict_resolver.h"
-
+#include <QAbstractItemView>
+#include <QMimeData>
 static QApplication *configApp;
 static ConfigSettings *configSettings;
 
@@ -1020,6 +1021,7 @@ ConflictsView::ConflictsView(QWidget* parent, const char *name)
 	conflictsToolBar = new QToolBar("ConflictTools", this);
 	//QAction *fixConflictsAction = new QAction(QPixmap(xpm_conflict_show), "Fix conflicts", this);
 	// toolbar buttons [n] [m] [y] [calculate fixes] [remove]
+	QAction *addSymbol = new QAction("Add Symbol");
 	QAction *setConfigSymbolAsNo = new QAction("N");
 	QAction *setConfigSymbolAsModule = new QAction("M");
 	QAction *setConfigSymbolAsYes = new QAction("Y");
@@ -1027,6 +1029,7 @@ ConflictsView::ConflictsView(QWidget* parent, const char *name)
 	QAction *removeSymbol = new QAction("Remove Symbol");
 
 	fixConflictsAction->setCheckable(false);
+	conflictsToolBar->addAction(addSymbol);
 	conflictsToolBar->addAction(setConfigSymbolAsNo);
 	conflictsToolBar->addAction(setConfigSymbolAsModule);
 	conflictsToolBar->addAction(setConfigSymbolAsYes);
@@ -1035,22 +1038,39 @@ ConflictsView::ConflictsView(QWidget* parent, const char *name)
 
 	verticalLayout->addWidget(conflictsToolBar);
 
+	connect(addSymbol, SIGNAL(triggered(bool)), SLOT(addSymbol()));
+	connect(removeSymbol, SIGNAL(triggered(bool)), SLOT(removeSymbol()));
 	//connect clicking 'calculate fixes' to 'change all symbol values to fix all conflicts'
 	// no longer used anymore for now.
 	//connect(fixConflictsAction, SIGNAL(triggered(bool)), SLOT(changeAll()));
 
-	conflictsTable = new QTableWidget(this);
+	conflictsTable = (QTableWidget*) new dropAbleView(this);
 	conflictsTable->setRowCount(2);
 	conflictsTable->setColumnCount(3);
 
 	conflictsTable->setHorizontalHeaderLabels(QStringList()  << "Option" << "Want" << "Value" );
 	verticalLayout->addWidget(conflictsTable);
 
+	conflictsTable->setDragDropMode(QAbstractItemView::DropOnly);
+	setAcceptDrops(true);
 	//conflictsTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
 
 	connect(conflictsTable, SIGNAL(cellClicked(int, int)), SLOT(cellClicked(int,int)));
 	//layout1->addWidget(conflictsTable);
 
+}
+void QTableWidget::dropEvent(QDropEvent *event)
+{
+}
+void ConflictsView::addSymbol()
+{
+
+	std::cerr <<" adding symobol " << std::endl;
+}
+void ConflictsView::removeSymbol()
+{
+
+	std::cerr <<" removing symobol " << std::endl;
 }
 void ConflictsView::cellClicked(int row, int column)
 {
@@ -2057,4 +2077,27 @@ int main(int ac, char** av)
 	delete configApp;
 
 	return 0;
+}
+
+dropAbleView::dropAbleView(QWidget *parent) :
+    QTableWidget(parent)
+{
+
+}
+
+dropAbleView::~dropAbleView()
+{
+
+}
+void dropAbleView::dropEvent(QDropEvent *event)
+{
+	std::cerr <<"dropped something" <<std::endl;
+		const QMimeData *d = event->mimeData();
+
+    if (event->mimeData()->hasText()) {
+	std::cerr <<"has text" <<std::endl;
+		}
+		std::cerr << d->text().toUtf8().constData() << std::endl;
+    event->acceptProposedAction();
+
 }
