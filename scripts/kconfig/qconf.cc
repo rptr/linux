@@ -1144,8 +1144,16 @@ void ConflictsView::addSymbol()
 }
 void ConflictsView::removeSymbol()
 {
+	QItemSelectionModel *select = conflictsTable->selectionModel();
+	if (select->hasSelection()){
+		QModelIndexList rows = select->selectedRows();
+		for (int i = 0;i < rows.count(); i++)
+		{
+			conflictsTable->removeRow(rows[i].row());
+			symbolWantList.erase(conflictsTable->item(rows[i].row(),0)->text().toUtf8().data());
+		}
+	}
 
-	std::cerr <<" removing symobol " << std::endl;
 }
 void ConflictsView::cellClicked(int row, int column)
 {
