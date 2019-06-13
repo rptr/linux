@@ -1149,8 +1149,8 @@ void ConflictsView::removeSymbol()
 		QModelIndexList rows = select->selectedRows();
 		for (int i = 0;i < rows.count(); i++)
 		{
-			conflictsTable->removeRow(rows[i].row());
 			symbolWantList.erase(conflictsTable->item(rows[i].row(),0)->text().toUtf8().data());
+			conflictsTable->removeRow(rows[i].row());
 		}
 	}
 
