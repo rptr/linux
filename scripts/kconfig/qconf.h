@@ -281,9 +281,9 @@ public:
 	struct menu * currentSelectedMenu ;
 
 	// key: symbol name, value: index in the tablewidget +1;
-	std::map<char*, int> addedSymbolList;
+	std::map<QString, int> addedSymbolList;
 	// key: symbol name, value: tristate value that was wanted by user
-	std::map<char*, tristate> symbolWantList;
+	std::map<QString, tristate> symbolWantList;
 
     //  static ConflictsView* viewList;
 	//  ConflictsView* nextView;
