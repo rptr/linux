@@ -1053,7 +1053,7 @@ ConflictsView::ConflictsView(QWidget* parent, const char *name)
 	conflictsTable->setColumnCount(3);
 	conflictsTable->setSelectionBehavior(QAbstractItemView::SelectRows);
 
-	conflictsTable->setHorizontalHeaderLabels(QStringList()  << "Option" << "Want" << "Value" );
+	conflictsTable->setHorizontalHeaderLabels(QStringList()  << "Option" << "Wanted value" << "Current value" );
 	verticalLayout->addWidget(conflictsTable);
 
 	conflictsTable->setDragDropMode(QAbstractItemView::DropOnly);
@@ -1113,15 +1113,12 @@ void ConflictsView::menuChanged1(struct menu * m)
 }
 void ConflictsView::addSymbol()
 {
-
-	std::cerr <<" adding symobol " << std::endl;
+	// adds a symbol to the conflict resolver list
 	if (currentSelectedMenu != nullptr){
 		if (currentSelectedMenu->sym != nullptr){
-			std::cerr << "adding symbol " << currentSelectedMenu->sym->name << std::endl;
 			struct symbol* sym = currentSelectedMenu->sym;
 			tristate currentval = sym_get_tristate_value(sym);
-			//if symbol is not added already:
-			//if (std::find(addedSymbolList.begin(),addedSymbolList.end(),sym->name) == addedSymbolList.end()){
+			//if symbol is not added yet:
 			if (addedSymbolList.find(sym->name) == addedSymbolList.end()){
 
 				conflictsTable->insertRow(conflictsTable->rowCount());
@@ -1129,15 +1126,11 @@ void ConflictsView::addSymbol()
 				conflictsTable->setItem(conflictsTable->rowCount()-1,1,new QTableWidgetItem(tristate_value_to_string(currentval)));
 				conflictsTable->setItem(conflictsTable->rowCount()-1,2,new QTableWidgetItem(tristate_value_to_string(currentval)));
 				addedSymbolList[sym->name] = conflictsTable->rowCount();
-
 				symbolWantList[sym->name] = currentval;
-				//conflictsTable->item(conflictsTable->rowCount()-1,2)->setText(tristate_value_to_string(currentval));
 
 			}else{
-				// if we find it, we update the colum 'value' that was contained in the table against what was set by user:
-				std::cerr << "current value = " << tristate_value_to_string(currentval).toUtf8().constData() << std::endl;
+				// if we find it, we update the colum 'Current value' that was contained in the table against what was set by user:
 				conflictsTable->item(addedSymbolList[sym->name]-1,2)->setText(tristate_value_to_string(currentval));
-
 			}
 		}
 	}
@@ -1149,11 +1142,11 @@ void ConflictsView::removeSymbol()
 		QModelIndexList rows = select->selectedRows();
 		for (int i = 0;i < rows.count(); i++)
 		{
-			symbolWantList.erase(conflictsTable->item(rows[i].row(),0)->text().toUtf8().data());
+			symbolWantList.erase(conflictsTable->item(rows[i].row(),0)->text());
+			addedSymbolList.erase(conflictsTable->item(rows[i].row(),0)->text());
 			conflictsTable->removeRow(rows[i].row());
 		}
 	}
-
 }
 void ConflictsView::cellClicked(int row, int column)
 {
@@ -1161,7 +1154,7 @@ void ConflictsView::cellClicked(int row, int column)
 	std::cerr << "parents type:: " <<  typeid(parent()).name() << std::endl;
 	//sym_find("CONFIG_HYPERVISOR_GUEST");
 
-	auto itemText = conflictsTable->item(row,0)->text().toStdString().c_str();
+	auto itemText = conflictsTable->item(row,0)->text().toUtf8().data();
 
 
 	struct symbol* sym = sym_find(itemText);
