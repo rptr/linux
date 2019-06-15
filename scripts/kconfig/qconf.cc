@@ -1119,18 +1119,18 @@ void ConflictsView::addSymbol()
 			struct symbol* sym = currentSelectedMenu->sym;
 			tristate currentval = sym_get_tristate_value(sym);
 			//if symbol is not added yet:
-			if (addedSymbolList.find(sym->name) == addedSymbolList.end()){
+			QAbstractItemModel* tableModel = conflictsTable->model();
+			QModelIndexList matches = tableModel->match(tableModel->index(0,0), Qt::DisplayRole, sym->name );
+			if (matches.isEmpty()){
 
 				conflictsTable->insertRow(conflictsTable->rowCount());
 				conflictsTable->setItem(conflictsTable->rowCount()-1,0,new QTableWidgetItem(sym->name));
 				conflictsTable->setItem(conflictsTable->rowCount()-1,1,new QTableWidgetItem(tristate_value_to_string(currentval)));
 				conflictsTable->setItem(conflictsTable->rowCount()-1,2,new QTableWidgetItem(tristate_value_to_string(currentval)));
-				addedSymbolList[sym->name] = conflictsTable->rowCount();
-				symbolWantList[sym->name] = currentval;
 
 			}else{
-				// if we find it, we update the colum 'Current value' that was contained in the table against what was set by user:
-				conflictsTable->item(addedSymbolList[sym->name]-1,2)->setText(tristate_value_to_string(currentval));
+				// std::cerr << "we have the symbol already at index " << unsigned(addedSymbolList[sym->name]-1 )<< std::endl;
+				conflictsTable->item(matches[0].row(),2)->setText(tristate_value_to_string(currentval));
 			}
 		}
 	}
@@ -1138,14 +1138,11 @@ void ConflictsView::addSymbol()
 void ConflictsView::removeSymbol()
 {
 	QItemSelectionModel *select = conflictsTable->selectionModel();
+	QAbstractItemModel *itemModel = select->model();
 	if (select->hasSelection()){
 		QModelIndexList rows = select->selectedRows();
-		for (int i = 0;i < rows.count(); i++)
-		{
-			symbolWantList.erase(conflictsTable->item(rows[i].row(),0)->text());
-			addedSymbolList.erase(conflictsTable->item(rows[i].row(),0)->text());
-			conflictsTable->removeRow(rows[i].row());
-		}
+		// std::cerr << "removing starting index = " << unsigned (rows[0].row()) << std::endl;
+		itemModel->removeRows(rows[0].row(),rows.size());
 	}
 }
 void ConflictsView::cellClicked(int row, int column)
