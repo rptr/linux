@@ -1194,31 +1194,6 @@ void ConflictsView::conflictSelected(struct menu * men)
 	//menuList->clearSelection();
 	//emit(setMenuLink(men));
 }*/
-void ConflictsView::dorecheck()
-{
-    emit(recheck());
-}
-void ConflictsView::recheck()
-{
-	constraints = get_constraints();
-	if(constraints.length() == 0) {
-	  std::cerr << "recheck clicked, got nothing" << std::endl;
-		return;
-	}
-
-	std::cerr << "received " <<constraints[0].symbol.toStdString() << std::endl;
-	conflictsTable->setRowCount(constraints.length());
-
-	for(int i = 0; i < 3; i++)
-	{
-		struct symbol* sym = sym_find(constraints[i].symbol.toStdString().c_str());
-		tristate currentval = sym_get_tristate_value(sym);
-		conflictsTable->setItem(i,0,new QTableWidgetItem(constraints[i].symbol));
-		conflictsTable->setItem(i,1,new QTableWidgetItem(tristate_value_to_string(currentval)));
-		conflictsTable->setItem(i,2,new QTableWidgetItem(constraints[i].change_needed));
-		conflictsTable->setItem(i,3,new QTableWidgetItem("example"));
-	}
-}
 
 ConflictsView::~ConflictsView(void)
 {
@@ -1640,9 +1615,6 @@ ConfigMainWindow::ConfigMainWindow(void)
 	fullViewAction->setCheckable(true);
 	  connect(fullViewAction, SIGNAL(triggered(bool)), SLOT(showFullView()));
 
-	showConflictsAction = new QAction(QPixmap(xpm_conflict_show), "Show conflicts", this);
-	showConflictsAction->setCheckable(false);
-	 connect(showConflictsAction, SIGNAL(triggered(bool)), SLOT(showConflicts()));
 
 
 	QAction *showNameAction = new QAction("Show Name", this);
@@ -1690,7 +1662,6 @@ ConfigMainWindow::ConfigMainWindow(void)
 	toolBar->addAction(splitViewAction);
 	toolBar->addAction(fullViewAction);
 	toolBar->addSeparator();
-	toolBar->addAction(showConflictsAction);
 
 	// create config menu
 	QMenu* config = menu->addMenu("&File");
@@ -1961,11 +1932,6 @@ void ConfigMainWindow::conflictSelected(struct menu * men)
 	emit(setMenuLink(men));
 }
 
-void ConfigMainWindow::showConflicts(void)
-{
-    conflictsView->dorecheck();
-
-}
 void ConfigMainWindow::showFullView(void)
 {
 	singleViewAction->setEnabled(true);
