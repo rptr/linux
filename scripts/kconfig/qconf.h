@@ -249,10 +249,8 @@ class ConflictsView : public QWidget {
 public:
 	ConflictsView(QWidget* parent, const char *name = 0);
 	~ConflictsView(void);
-	void dorecheck(void);
 
 public slots:
-    void recheck();
     void cellClicked(int, int);
 	void changeAll();
 	//triggerd by Qactions on the tool bar that adds/remove symbol
@@ -351,7 +349,6 @@ public slots:
 	void showIntro(void);
 	void showAbout(void);
 	void saveSettings(void);
-	void showConflicts(void);
 	void conflictSelected(struct menu *);
 	void refreshMenu();
 
@@ -371,7 +368,6 @@ protected:
 	QAction *singleViewAction;
 	QAction *splitViewAction;
 	QAction *fullViewAction;
-	QAction *showConflictsAction;
 	QSplitter *split1;
 	QSplitter *split2;
 	QSplitter *split3;
