@@ -249,14 +249,9 @@ class ConflictsView : public QWidget {
 public:
 	ConflictsView(QWidget* parent, const char *name = 0);
 	~ConflictsView(void);
-	//static void updateList(ConfigItem* item);
 	void dorecheck(void);
 
 public slots:
-	//void setShowName(bool);
-	//void setShowRange(bool);
-	//void setShowData(bool);
-	//void setOptionMode(QAction *);
     void recheck();
     void cellClicked(int, int);
 	void changeAll();
@@ -280,17 +275,6 @@ public:
 	QToolBar *conflictsToolBar;
 	struct menu * currentSelectedMenu ;
 
-	// key: symbol name, value: index in the tablewidget +1;
-	// std::map<QString, int> addedSymbolList;
-	// key: symbol name, value: tristate value that was wanted by user
-	// std::map<QString, tristate> symbolWantList;
-
-    //  static ConflictsView* viewList;
-	//  ConflictsView* nextView;
-
-	//static QAction *showNormalAction;
-	//static QAction *showAllAction;
-	//static QAction *showPromptAction;
 };
 
 class ConfigInfoView : public QTextBrowser {
