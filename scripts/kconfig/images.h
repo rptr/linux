@@ -15,7 +15,6 @@ extern const char *xpm_save[];
 extern const char *xpm_back[];
 extern const char *xpm_tree_view[];
 extern const char *xpm_single_view[];
-extern const char *xpm_conflict_show[];
 extern const char *xpm_split_view[];
 extern const char *xpm_symbol_no[];
 extern const char *xpm_symbol_mod[];
