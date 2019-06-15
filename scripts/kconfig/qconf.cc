@@ -1020,7 +1020,6 @@ ConflictsView::ConflictsView(QWidget* parent, const char *name)
 	QVBoxLayout *verticalLayout = new QVBoxLayout(this);
 	verticalLayout->setContentsMargins(0, 0, 0, 0);
 	conflictsToolBar = new QToolBar("ConflictTools", this);
-	//QAction *fixConflictsAction = new QAction(QPixmap(xpm_conflict_show), "Fix conflicts", this);
 	// toolbar buttons [n] [m] [y] [calculate fixes] [remove]
 	QAction *addSymbol = new QAction("Add Symbol");
 	QAction *setConfigSymbolAsNo = new QAction("N");
@@ -1061,7 +1060,6 @@ ConflictsView::ConflictsView(QWidget* parent, const char *name)
 	//conflictsTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
 
 	connect(conflictsTable, SIGNAL(cellClicked(int, int)), SLOT(cellClicked(int,int)));
-	//layout1->addWidget(conflictsTable);
 
 }
 void QTableWidget::dropEvent(QDropEvent *event)
@@ -1075,7 +1073,6 @@ void ConflictsView::changeToNo(){
 		for (int i = 0;i < rows.count(); i++)
 		{
 			conflictsTable->item(rows[i].row(),1)->setText("NO");
-			symbolWantList[conflictsTable->item(rows[i].row(),0)->text().toUtf8().data()] = tristate::no;
 		}
 	}
 }
@@ -1087,7 +1084,6 @@ void ConflictsView::changeToYes(){
 		for (int i = 0;i < rows.count(); i++)
 		{
 			conflictsTable->item(rows[i].row(),1)->setText("YES");
-			symbolWantList[conflictsTable->item(rows[i].row(),0)->text().toUtf8().data()] = tristate::yes;
 		}
 	}
 
@@ -1100,7 +1096,6 @@ void ConflictsView::changeToModule() {
 		for (int i = 0;i < rows.count(); i++)
 		{
 			conflictsTable->item(rows[i].row(),1)->setText("MODULE");
-			symbolWantList[conflictsTable->item(rows[i].row(),0)->text().toUtf8().data()] = tristate::mod;
 		}
 	}
 
@@ -1149,7 +1144,6 @@ void ConflictsView::cellClicked(int row, int column)
 {
 	std::cerr << "clicked :: " << row << ", column:: " << column << std::endl;
 	std::cerr << "parents type:: " <<  typeid(parent()).name() << std::endl;
-	//sym_find("CONFIG_HYPERVISOR_GUEST");
 
 	auto itemText = conflictsTable->item(row,0)->text().toUtf8().data();
 
@@ -1268,7 +1262,6 @@ void ConfigInfoView::setShowDebug(bool b)
 
 void ConfigInfoView::setInfo(struct menu *m)
 {
-	std::cerr << "setinfo ><<>><>> " << std::endl;
 	if (_menu == m)
 		return;
 	_menu = m;
