@@ -1,0 +1,11 @@
+config A
+	bool "A prompt"
+
+config B
+	bool "B prompt"
+	select A
+	default y
+
+config C
+	bool "C prompt"
+	depends on A && !B

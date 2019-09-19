@@ -1,0 +1,32 @@
+# Kconfig example 1
+
+mainmenu "Kconfig example 1"
+
+config A
+	bool "CONFIG A"
+	select B
+
+config B
+	bool "CONFIG B"
+
+config C
+	bool "CONFIG C"
+	select D
+
+config D
+	tristate "CONFIG D"
+
+config E
+	tristate "CONFIG E"
+	select F
+
+config F
+	bool "CONFIG F"
+
+config G
+	tristate "CONFIG G"
+	select H
+
+config H
+	tristate "CONFIG H"
+	

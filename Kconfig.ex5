@@ -1,0 +1,24 @@
+mainmenu "Simple example to demo kconfig select broken dependency issue"
+
+menuconfig MODULES
+	bool "Enable loadable module support"
+	option modules
+	default y
+
+config A
+	tristate "CONFIG A"
+	#depends on B
+
+config B
+	bool "CONFIG B"
+	depends on !A
+	#default m
+
+config C
+	bool "CONFIG C"
+	depends on A
+	select B
+
+#config D
+	#bool "D"
+	#depends on B

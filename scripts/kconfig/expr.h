@@ -129,6 +129,14 @@ struct symbol {
 	 * "Weak" reverse dependencies through being implied by other symbols
 	 */
 	struct expr_value implied;
+	
+	/*
+	 * kconfig-sat
+	 */
+	struct fexpr *fexpr_y;
+	struct fexpr *fexpr_m;
+	struct garray_wrapper *fexpr_nonbool; /* used for non-booleans */
+	struct garray_wrapper *constraints; /* list of constraints for symbol */
 };
 
 #define for_all_symbols(i, sym) for (i = 0; i < SYMBOL_HASHSIZE; i++) for (sym = symbol_hash[i]; sym; sym = sym->next)

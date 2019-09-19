@@ -1,0 +1,43 @@
+mainmenu "Kconfig"
+
+menuconfig MODULES
+        bool "Enable loadable module support"
+        option modules
+	default y
+
+config A
+	bool "Config A"
+	#depends on D || (E && F)
+        #select B if H
+
+config B
+	tristate "Config B"
+	select C
+
+config C
+	tristate "Config C"
+	#select B
+	#depends on A || B
+
+config D
+	bool "Config D"
+	#select A if !(E && F)
+	#depends on (A || B) && C && E
+	
+config E
+	bool "Config E"
+	#depends on A && G && C && F
+
+config F
+	bool "Config F"
+	#depends on C && H
+
+config G
+	bool "Config G"
+
+config H
+	tristate "Config H"
+	depends on I="777"
+
+config I
+	int "I"
