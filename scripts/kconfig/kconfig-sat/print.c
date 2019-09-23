@@ -13,9 +13,9 @@
 #define LKC_DIRECT_LINK
 #include "../lkc.h"
 #include "../satconfig.h"
-#include "satprint.h"
+#include "print.h"
 #include "fexpr.h"
-#include "satutils.h"
+#include "utils.h"
 
 /*
  * print all symbols, just for debugging

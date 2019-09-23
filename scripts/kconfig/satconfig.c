@@ -15,8 +15,8 @@
 
 #include "satconfig.h"
 #include "kconfig-sat/fexpr.h"
-#include "kconfig-sat/satprint.h"
-#include "kconfig-sat/satutils.h"
+#include "kconfig-sat/print.h"
+#include "kconfig-sat/utils.h"
 #include "kconfig-sat/cnf.h"
 #include "kconfig-sat/constraints.h"
 #include "kconfig-sat/picosat.h"
@@ -40,6 +40,8 @@ struct fexpr *const_true; /* constant True */
 static PicoSAT *pico;
 static int start_core;
 
+static void init_config(const char *Kconfig_file);
+
 static void initialize_picosat(void);
 static void picosat_add_clauses(void);
 static void picosat_solve(void);
@@ -48,20 +50,6 @@ static void run_unsat_problem(PicoSAT *pico);
 static void add_select_constraints(struct symbol *sym);
 
 /* -------------------------------------- */
-
-
-const char *expr_type[] = {
-	"E_NONE", "E_OR", "E_AND", "E_NOT",
-	"E_EQUAL", "E_UNEQUAL", "E_LTH", "E_LEQ", "E_GTH", "E_GEQ",
-	"E_LIST", "E_SYMBOL", "E_RANGE"
-};
-const char *kexpr_type[] = {
-	"PLT_SYMBOL",
-	"PLT_AND",
-	"PLT_OR",
-	"PLT_NOT"
-};
-const char *tristate_type[] = {"no", "mod", "yes"};
 
 
 int main(int argc, char *argv[])
@@ -74,11 +62,10 @@ int main(int argc, char *argv[])
 	double time;
 	start = clock();
 	
-	/* parse KConfig-file and read .config */
-	const char *Kconfig_file = argv[1];
-	conf_parse(Kconfig_file);
-	conf_read(NULL);
+	/* parse Kconfig-file and read .config */
+	init_config(argv[1]);
 
+	/* initialize satmap and cnf_clauses */
 	init_data();
 	
 	/* creating constants */
@@ -126,6 +113,15 @@ int main(int argc, char *argv[])
 	write_cnf_to_file(cnf_clauses, sat_variable_nr, nr_of_clauses);
 	
 	return EXIT_SUCCESS;
+}
+
+/*
+ * parse Kconfig-file and read .config
+ */
+static void init_config (const char *Kconfig_file)
+{
+	conf_parse(Kconfig_file);
+	conf_read(NULL);
 }
 
 

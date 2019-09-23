@@ -215,7 +215,7 @@ clean-files += *conf-cfg
 
 # satconfig
 hostprogs-y	+= satconfig
-satconfig-objs	:= satconfig.o kconfig-sat/cnf.o kconfig-sat/constraints.o kconfig-sat/fexpr.o kconfig-sat/picosat.o kconfig-sat/rangefix.o kconfig-sat/satprint.o kconfig-sat/satutils.o $(common-objs)
+satconfig-objs	:= satconfig.o kconfig-sat/cnf.o kconfig-sat/constraints.o kconfig-sat/fexpr.o kconfig-sat/picosat.o kconfig-sat/rangefix.o kconfig-sat/print.o kconfig-sat/utils.o $(common-objs)
 
 HOSTLDLIBS_satconfig	= $(shell pkg-config --libs glib-2.0)
 HOSTCFLAGS_satconfig.o	= $(shell pkg-config --cflags glib-2.0)
@@ -224,6 +224,6 @@ HOSTCFLAGS_cnf.o	= $(shell pkg-config --cflags glib-2.0)
 HOSTCFLAGS_constraints.o= $(shell pkg-config --cflags glib-2.0)
 HOSTCFLAGS_fexpr.o	= $(shell pkg-config --cflags glib-2.0)
 HOSTCFLAGS_rangefix.o	= $(shell pkg-config --cflags glib-2.0)
-HOSTCFLAGS_satprint.o	= $(shell pkg-config --cflags glib-2.0)
-HOSTCFLAGS_satutils.o	= $(shell pkg-config --cflags glib-2.0)
+HOSTCFLAGS_print.o	= $(shell pkg-config --cflags glib-2.0)
+HOSTCFLAGS_utils.o	= $(shell pkg-config --cflags glib-2.0)
 HOSTCFLAGS_picosat.o	= -DTRACE -Wno-missing-prototypes -Wno-pointer-compare

@@ -14,7 +14,7 @@
 #include "../lkc.h"
 #include "../satconfig.h"
 #include "rangefix.h"
-#include "satutils.h"
+#include "utils.h"
 #include "picosat.h"
 
 static GArray *diagnoses, *diagnoses_symbol;

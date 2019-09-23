@@ -14,8 +14,8 @@
 #include "../lkc.h"
 #include "../satconfig.h"
 #include "cnf.h"
-#include "satprint.h"
-#include "satutils.h"
+#include "print.h"
+#include "utils.h"
 #include "fexpr.h"
 
 static struct tmp_sat_variable * create_tmp_sat_var(struct tmp_sat_variable *parent);
@@ -34,13 +34,14 @@ void construct_cnf_clauses()
 	struct symbol *sym;
 	
 	printf("Constructing CNF-clauses...");
-	
+
 	for_all_symbols(i, sym) {
 		if (sym_get_type(sym) == S_UNKNOWN) continue;
 		
 		struct fexpr *e;
 		for (j = 0; j < sym->constraints->arr->len; j++) {
 			e = g_array_index(sym->constraints->arr, struct fexpr *, j);
+			
 			convert_fexpr_to_cnf(e);
 			unfold_cnf_clause(e);
 		}

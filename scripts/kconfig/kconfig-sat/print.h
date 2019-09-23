@@ -1,5 +1,5 @@
-#ifndef SATPRINT_H
-#define SATPRINT_H
+#ifndef PRINT_H
+#define PRINT_H
 
 #include "../satconfig.h"
 

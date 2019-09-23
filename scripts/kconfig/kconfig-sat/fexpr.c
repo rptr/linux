@@ -14,8 +14,8 @@
 #include "../lkc.h"
 #include "../satconfig.h"
 #include "fexpr.h"
-#include "satutils.h"
-#include "satprint.h"
+#include "utils.h"
+#include "print.h"
 
 
 static void create_fexpr_bool(struct symbol *sym);
@@ -552,7 +552,7 @@ static void add_cnf_clause(struct fexpr *e, struct cnf_clause *cl)
 {
 	if (!e || !cl) return;
 	
-	if (e->left->type == FE_SYMBOL || e->left->type == FE_FALSE || e->left->type == FE_TRUE) {
+	if (e->left->type == FE_SYMBOL || e->left->type == FE_FALSE || e->left->type == FE_TRUE || e->left->type == FE_NONBOOL) {
 		add_literal_to_clause(cl, e->left->satval);
 	} else if (e->left->type == FE_NOT) {
 		add_literal_to_clause(cl, -(e->left->left->satval));
@@ -560,7 +560,7 @@ static void add_cnf_clause(struct fexpr *e, struct cnf_clause *cl)
 		add_cnf_clause(e->left, cl);
 	}
 	
-	if (e->right->type == FE_SYMBOL || e->right->type == FE_FALSE || e->right->type == FE_TRUE) {
+	if (e->right->type == FE_SYMBOL || e->right->type == FE_FALSE || e->right->type == FE_TRUE || e->right->type == FE_NONBOOL) {
 		add_literal_to_clause(cl, e->right->satval);
 	} else if (e->right->type == FE_NOT) {
 		add_literal_to_clause(cl, -(e->right->left->satval));
@@ -577,6 +577,7 @@ void unfold_cnf_clause(struct fexpr *e)
 	if (!e) return;
 	
 	struct gstr empty_string = str_new();
+	struct cnf_clause *cl;
 	
 	switch (e->type) {
 	case FE_AND:
@@ -585,6 +586,10 @@ void unfold_cnf_clause(struct fexpr *e)
 		break;
 	case FE_OR:
 		add_cnf_clause(e, build_cnf_clause(&empty_string, 0));
+		break;
+	case FE_NOT:
+		cl = build_cnf_clause(&empty_string, 0);
+		add_literal_to_clause(cl, -(e->left->satval));
 		break;
 	default:
 		print_fexpr(e, -1);

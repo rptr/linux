@@ -1,5 +1,5 @@
-#ifndef TSEYTIN_H
-#define TSEYTIN_H
+#ifndef CNF_H
+#define CNF_H
 
 void construct_cnf_clauses(void);
 

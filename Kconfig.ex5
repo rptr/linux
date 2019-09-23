@@ -19,6 +19,12 @@ config C
 	depends on A
 	select B
 
-#config D
-	#bool "D"
+config D
+	bool "D"
 	#depends on B
+#	depends on I=7
+
+config I
+	int "I"
+#	default 12
+#	range 10 24 if A

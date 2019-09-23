@@ -15,17 +15,19 @@
 #include "../satconfig.h"
 #include "constraints.h"
 #include "fexpr.h"
-#include "satprint.h"
-#include "satutils.h"
+#include "print.h"
+#include "utils.h"
 
 static void create_tristate_constraint_clause(struct symbol *sym);
 static void add_selects(struct symbol *sym);
 static void add_dependencies(struct symbol* sym);
 static void sym_nonbool_at_least_1(struct symbol *sym);
 static void sym_nonbool_at_most_1(struct symbol *sym);
+static void sym_get_range_constraints(struct symbol *sym);
 
 static struct default_map * default_map_create_entry(char *val, struct fexpr *e);
 static struct property *sym_get_default_prop(struct symbol *sym);
+static long long sym_get_range_val(struct symbol *sym, int base);
 
 /* -------------------------------------- */
 
@@ -87,11 +89,15 @@ void get_constraints(void)
 	
 	/* create constraints for non-booleans */
 	for_all_symbols(i, sym) {
+		if (!sym_is_nonboolean(sym)) continue;
+		
+		/* get the range constraints for int/hex */
+		if (sym_get_type(sym) == S_INT || sym_get_type(sym) == S_HEX)
+			sym_get_range_constraints(sym);
+		
 		/* non-boolean symbols can have at most one of their symbols to be true */
-		if (sym_is_nonboolean(sym)) {
-			sym_nonbool_at_least_1(sym);
-			sym_nonbool_at_most_1(sym);
-		}
+		sym_nonbool_at_least_1(sym);
+		sym_nonbool_at_most_1(sym);
 	}
 	
 	printf("done.\n");
@@ -233,6 +239,61 @@ static void sym_nonbool_at_most_1(struct symbol *sym)
 	}
 }
 
+/*
+ * get the range constraints for int/hex
+ */
+static void sym_get_range_constraints ( struct symbol *sym )
+{
+	struct property *prop = sym_get_range_prop(sym);
+	if (!prop) return;
+	
+	int base;
+	long long range_min, range_max, tmp;
+	
+	switch (sym->type) {
+	case S_INT:
+		base = 10;
+		break;
+	case S_HEX:
+		base = 16;
+		break;
+	default:
+		return;
+	}
+	
+	range_min = sym_get_range_val(prop->expr->left.sym, base);
+	range_max = sym_get_range_val(prop->expr->right.sym, base);
+	
+	/* add the values to known values, if they don't exist yet */
+	sym_get_nonbool_fexpr(sym, prop->expr->left.sym->name);
+	sym_get_nonbool_fexpr(sym, prop->expr->right.sym->name);
+	
+	struct fexpr *e;
+	unsigned int i;
+	/* can skip the first non-boolean value */
+	for (i = 1; i < sym->fexpr_nonbool->arr->len; i++) {
+		e = g_array_index(sym->fexpr_nonbool->arr, struct fexpr *, i);
+		tmp = strtoll(str_get(&e->nb_val), NULL, base);
+		
+		if (tmp >= range_min && tmp <= range_max) continue;
+		
+		struct fexpr *e2 = fexpr_not(e);
+		if (!prop->visible.expr) {
+			/* no prompt condition => !e */
+			sym_add_constraint(sym, e2);
+		} else {
+			/* prompt condition => condition implies !e */
+			struct k_expr *ke = parse_expr(prop->visible.expr, NULL);
+			struct fexpr *e3 = calculate_fexpr_both(ke);
+			convert_fexpr_to_nnf(e3);
+			
+			struct fexpr *e4 = implies(e3, e2);
+			sym_add_constraint(sym, e4);
+		}
+	}
+}
+
+
 static struct default_map * default_map_create_entry(char *val, struct fexpr *e)
 {
 	struct default_map *map = malloc(sizeof(struct default_map));
@@ -256,4 +317,20 @@ static struct property *sym_get_default_prop(struct symbol *sym)
 			return prop;
 	}
 	return NULL;
+}
+
+static long long sym_get_range_val(struct symbol *sym, int base)
+{
+	sym_calc_value(sym);
+	switch (sym->type) {
+	case S_INT:
+		base = 10;
+		break;
+	case S_HEX:
+		base = 16;
+		break;
+	default:
+		break;
+	}
+	return strtoll(sym->curr.val, NULL, base);
 }

@@ -1,5 +1,5 @@
-#ifndef SATUTILS_H
-#define SATUTILS_H
+#ifndef UTILS_H
+#define UTILS_H
 
 #include "../satconfig.h"
 #include "picosat.h"
