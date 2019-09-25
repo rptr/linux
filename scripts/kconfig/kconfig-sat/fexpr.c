@@ -12,6 +12,7 @@
 
 #define LKC_DIRECT_LINK
 #include "../lkc.h"
+
 #include "../satconfig.h"
 #include "fexpr.h"
 #include "utils.h"
@@ -79,6 +80,7 @@ static void create_fexpr_nonbool(struct symbol *sym)
 	int i;
 	for (i = 0; i < 3; i++) {
 		struct fexpr *e = create_fexpr(sat_variable_nr++, FE_NONBOOL, sym->name);
+		e->sym = sym;
 		str_append(&e->name, "=");
 		e->nb_val = str_new();
 		
@@ -260,13 +262,14 @@ struct fexpr * sym_get_nonbool_fexpr(struct symbol *sym, char *value)
 	
 	/* fexpr doesn't exist yet, so create it */
 	e = create_fexpr(sat_variable_nr++, FE_NONBOOL, sym->name);
+	e->sym = sym;
 	str_append(&e->name, "=");
 	str_append(&e->name, value);
 	e->nb_val = str_new();
 	str_append(&e->nb_val, value);
 	
 	/* add it to the sat-map */
-	g_hash_table_insert(satmap, &e->satval, strdup(str_get(&e->name)));
+	g_hash_table_insert(satmap, &e->satval, e);
 	
 	/* add it to the symbol's list */
 	g_array_append_val(sym->fexpr_nonbool->arr, e);

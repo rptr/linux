@@ -12,6 +12,7 @@
 
 #define LKC_DIRECT_LINK
 #include "../lkc.h"
+
 #include "../satconfig.h"
 #include "print.h"
 #include "fexpr.h"
@@ -542,7 +543,8 @@ void print_sym_constraint(struct symbol* sym)
  */
 void print_satmap(gpointer key, gpointer value, gpointer userData)
 {
-	printf( "%d => %s\n", *((int *) key), (char *) value);
+	struct fexpr *e = (struct fexpr *) value;
+	printf( "%d => %s\n", *((int *) key), str_get(&e->name));
 }
 
 /*

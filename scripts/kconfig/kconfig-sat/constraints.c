@@ -12,6 +12,7 @@
 
 #define LKC_DIRECT_LINK
 #include "../lkc.h"
+
 #include "../satconfig.h"
 #include "constraints.h"
 #include "fexpr.h"
@@ -71,8 +72,8 @@ void get_constraints(void)
 			struct k_expr *ke = parse_expr(p->visible.expr, NULL);
 			struct fexpr *nopromptCond = fexpr_not(calculate_fexpr_both(ke));
 			
-			struct property *defprop = sym_get_default_prop(sym);
-			if (defprop->visible.expr) {
+			/* get all default prompts */
+			for_all_defaults(sym, p2) {
 				
 			}
 
@@ -172,8 +173,8 @@ static void add_dependencies(struct symbol *sym)
 		struct fexpr *fe_both = implies(sym->fexpr_m, fexpr_or(dep_both, sel_both));
 		sym_add_constraint(sym, fe_both);
 	} else if (sym_get_type(sym) == S_BOOLEAN) {
-			struct fexpr *fe_both = implies(sym->fexpr_y, fexpr_or(dep_both, sel_both));
-			sym_add_constraint(sym, fe_both);
+		struct fexpr *fe_both = implies(sym->fexpr_y, fexpr_or(dep_both, sel_both));
+		sym_add_constraint(sym, fe_both);
 	} else if (sym_is_nonboolean(sym)) {
 		char int_values[][2] = {"0", "1"};
 		char hex_values[][4] = {"0x0", "0x1"};
@@ -319,6 +320,7 @@ static struct property *sym_get_default_prop(struct symbol *sym)
 	return NULL;
 }
 
+/* get the value for the range */
 static long long sym_get_range_val(struct symbol *sym, int base)
 {
 	sym_calc_value(sym);

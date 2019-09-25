@@ -12,10 +12,11 @@
 
 #define LKC_DIRECT_LINK
 #include "../lkc.h"
+
 #include "../satconfig.h"
+#include "picosat.h"
 #include "rangefix.h"
 #include "utils.h"
-#include "picosat.h"
 
 static GArray *diagnoses, *diagnoses_symbol;
 
@@ -43,12 +44,12 @@ static void print_diagnoses_symbol(GArray *diag_sym);
 static GArray * convert_diagnoses(GArray *diagnoses);
 static struct symbol_fix * symbol_fix_create(struct fexpr *e, enum symbolfix_type type, GArray *diagnosis);
 
-static void apply_fix(void);
-static tristate calculate_new_value(struct fexpr *e, GArray *diagnosis);
+static tristate calculate_new_tri_val(struct fexpr *e, GArray *diagnosis);
+static const char * calculate_new_string_value(struct fexpr *e, GArray *diagnosis);
 
 /* -------------------------------------- */
 
-void rangefix_init(PicoSAT *pico)
+GArray * rangefix_init(PicoSAT *pico)
 {
 	printf("Starting RangeFix...\n");
 	printf("Generating diagnoses...");
@@ -68,7 +69,7 @@ void rangefix_init(PicoSAT *pico)
 	/* convert diagnoses of fexpr to diagnoses of symbols */
 	diagnoses_symbol = convert_diagnoses(diagnoses);
 	
-	apply_fix();
+	return diagnoses_symbol;
 }
 
 /*
@@ -111,6 +112,7 @@ static GArray * generate_diagnoses(PicoSAT *pico)
 		if (res == PICOSAT_SATISFIABLE) {
 // 			printf("SATISFIABLE\n");
 // 			print_array("Found diagnosis", E0);
+// 			printf("size %d\n", E0->len);
 			E = g_array_remove_index(E, diagnosis_index);
 			R = g_array_append_val(R, E0);
 			
@@ -248,7 +250,7 @@ static void add_fexpr_to_constraint_set(gpointer key, gpointer value, gpointer u
 	assert(realKey == e->satval);
 	GArray *C = (GArray *) userData;
 	
-	if (e->type != FE_SYMBOL) return;
+	if (e->type != FE_SYMBOL && e->type != FE_NONBOOL) return;
 	
 	g_array_append_val(C, e);
 }
@@ -262,7 +264,6 @@ static void set_assumptions(PicoSAT *pico, GArray *c)
 	unsigned int i;
 	for (i = 0; i < c->len; i++) {
 		e = g_array_index(c, struct fexpr *, i);
-// 		printf("name %s, symbol %s\n", str_get(&e->name), e->sym->name);
 		fexpr_add_assumption(pico, e);
 	}
 }
@@ -271,11 +272,11 @@ static void fexpr_add_assumption(PicoSAT *pico, struct fexpr *e)
 {
 	struct symbol *sym = e->sym;
 	
-	int config_val = sym->def[S_DEF_USER].tri;
-	config_val = sym_get_tristate_value(sym);
-	
 	if (sym_get_type(sym) == S_BOOLEAN) {
-		if (config_val == yes) {
+		int tri_val = sym->def[S_DEF_USER].tri;
+		tri_val = sym_get_tristate_value(sym);
+	
+		if (tri_val == yes) {
 			picosat_assume(pico, e->satval);
 			e->assumption = true;
 		} else {
@@ -285,8 +286,11 @@ static void fexpr_add_assumption(PicoSAT *pico, struct fexpr *e)
 	}
 	
 	if (sym_get_type(sym) == S_TRISTATE) {
+		int tri_val = sym->def[S_DEF_USER].tri;
+		tri_val = sym_get_tristate_value(sym);
+		
 		if (e->tristate == yes) {
-			if (config_val == yes) {
+			if (tri_val == yes) {
 				picosat_assume(pico, e->satval);
 				e->assumption = true;
 			} else {
@@ -294,13 +298,25 @@ static void fexpr_add_assumption(PicoSAT *pico, struct fexpr *e)
 				e->assumption = false;
 			}
 		} else if (e->tristate == mod) {
-			if (config_val == mod) {
+			if (tri_val == mod) {
 				picosat_assume(pico, e->satval);
 				e->assumption = true;
 			} else {
 				picosat_assume(pico, -(e->satval));
 				e->assumption = false;
 			}
+		}
+	}
+	
+	if (sym_get_type(sym) == S_INT) {
+		const char *string_val = sym_get_string_value(sym);
+	
+		if (strcmp(str_get(&e->nb_val), string_val) == 0) {
+			picosat_assume(pico, e->satval);
+			e->assumption = true;
+		} else {
+			picosat_assume(pico, -(e->satval));
+			e->assumption = false;
 		}
 	}
 }
@@ -528,7 +544,7 @@ static void print_diagnoses(GArray *diag)
 		printf("%d: [", i+1);
 		for (j = 0; j < arr->len; j++) {
 			e = g_array_index(arr, struct fexpr *, j);
-			printf("%s => %s", str_get(&e->name), tristate_get_char(calculate_new_value(e, arr)));
+			printf("%s => %s", str_get(&e->name), tristate_get_char(calculate_new_tri_val(e, arr)));
 			if (j != arr->len - 1)
 				printf(", ");
 		}
@@ -553,6 +569,8 @@ static void print_diagnoses_symbol(GArray *diag_sym)
 			
 			if (fix->type == SF_BOOLEAN)
 				printf("%s => %s", fix->sym->name, tristate_get_char(fix->tri));
+			else if (fix->type == SF_NONBOOLEAN)
+				printf("%s => %s", fix->sym->name, str_get(&fix->nb_val));
 			else
 				perror("NB not yet implemented.");
 			
@@ -574,7 +592,7 @@ static GArray * convert_diagnoses(GArray *diag_arr)
 	
 	GArray *diagnosis, *diagnosis_symbol;
 	struct fexpr *e;
-	struct symbol_fix *fix, *f;
+	struct symbol_fix *fix;
 	unsigned i, j;
 	
 	for (i = 0; i < diag_arr->len; i++) {
@@ -586,6 +604,7 @@ static GArray * convert_diagnoses(GArray *diag_arr)
 			/* diagnosis contains symbol, so continue */
 			if (diagnosis_contains_symbol(diagnosis_symbol, e->sym)) continue;
 			
+			// TODO
 			enum symbolfix_type type = sym_is_boolean(e->sym) ? SF_BOOLEAN : SF_NONBOOLEAN;
 			fix = symbol_fix_create(e, type, diagnosis);
 			
@@ -606,11 +625,10 @@ static struct symbol_fix * symbol_fix_create(struct fexpr *e, enum symbolfix_typ
 	fix->sym = e->sym;
 	fix->type = type;
 	if (type == SF_BOOLEAN) {
-		fix->tri = calculate_new_value(e, diagnosis);
-	}
-	else if (type == SF_NONBOOLEAN) {
+		fix->tri = calculate_new_tri_val(e, diagnosis);
+	} else if (type == SF_NONBOOLEAN) {
 		fix->nb_val = str_new();
-		// TODO
+		str_append(&fix->nb_val, calculate_new_string_value(e, diagnosis));
 	} else {
 		perror("Illegal symbolfix_type.\n");
 	}
@@ -619,39 +637,49 @@ static struct symbol_fix * symbol_fix_create(struct fexpr *e, enum symbolfix_typ
 }
 
 /*
- * list the diagnoses, choose one and apply the fixes
+ * let user choose a diagnosis to be applied
  */
-static void apply_fix(void)
+GArray * choose_fix(GArray *diag)
 {
-	GArray *diagnosis;
-	struct symbol_fix *fix;
-	unsigned int i;
-
 	printf("=== GENERATED DIAGNOSES ===\n");
 	printf("0: No changes wanted\n");
-	print_diagnoses_symbol(diagnoses_symbol);
+	print_diagnoses_symbol(diag);
 	
 	int choice;
 	printf("\n> Choose option: ");
 	scanf("%d", &choice);
 	
 	/* no changes wanted */
-	if (choice == 0) return;
+	if (choice == 0) return NULL;
 	
-	diagnosis = g_array_index(diagnoses_symbol, GArray *, choice - 1);
-	for (i = 0; i < diagnosis->len; i++) {
-		fix = g_array_index(diagnosis, struct symbol_fix *, i);
+	return g_array_index(diag, GArray *, choice - 1);
+}
+
+/*
+ * list the diagnoses, choose one and apply the fixes
+ */
+void apply_fix(GArray *diag)
+{
+	struct symbol_fix *fix;
+	unsigned int i;
+
+	for (i = 0; i < diag->len; i++) {
+		fix = g_array_index(diag, struct symbol_fix *, i);
 		if (fix->type == SF_BOOLEAN)
 			sym_set_tristate_value(fix->sym, fix->tri);
+		else if (fix->type == SF_NONBOOLEAN)
+			sym_set_string_value(fix->sym, str_get(&fix->nb_val));
 	}
 	conf_write(NULL);
 }
 
 /*
- * calculate the new value for a symbol given a diagnosis and a fexpr
+ * calculate the new value for a boolean symbol given a diagnosis and an fexpr
  */
-static tristate calculate_new_value(struct fexpr *e, GArray *diagnosis)
+static tristate calculate_new_tri_val(struct fexpr *e, GArray *diagnosis)
 {
+	assert(sym_is_boolean(e->sym));
+	
 	/* return the opposite of the last assumption for booleans */
 	if (sym_get_type(e->sym) == S_BOOLEAN)
 		return e->assumption ? no : yes;
@@ -689,6 +717,44 @@ static tristate calculate_new_value(struct fexpr *e, GArray *diagnosis)
 		perror("Should not get here.\n");
 	}
 	
-	perror("Error calculating new value.\n");
+	perror("Error calculating new tristate value.\n");
 	return no;
 }
+
+/*
+ * calculate the new value for a non-boolean symbol given a diagnosis and an fexpr
+ */
+static const char * calculate_new_string_value(struct fexpr *e, GArray *diagnosis)
+{
+	assert(sym_is_nonboolean(e->sym));
+	
+	if (sym_get_type(e->sym) == S_INT) {
+		/* if assumption was false before, this is the new value because only 1 variable can be true */
+		if (e->assumption == false)
+			return str_get(&e->nb_val);
+		
+		struct fexpr *e2;
+		unsigned int i;
+		
+		/* a diagnosis always contains 2 variable for the same symbol
+		 * one is set to true, the other to false
+		 * otherwise you'd set 2 variables to true, which is not allowed */
+		for (i = 0; i < diagnosis->len; i++) {
+			e2 = g_array_index(diagnosis, struct fexpr *, i);
+			
+			/* not interested in other symbols or the same fexpr */
+			if (e->sym != e2->sym || e == e2) continue;
+			
+			return str_get(&e2->nb_val);
+		}
+		
+	}
+	
+	perror("Error calculating new string value.\n");
+	return "";
+}
+
+
+
+
+

@@ -6,12 +6,12 @@ menuconfig MODULES
 	default y
 
 config A
-	tristate "CONFIG A"
+	bool "CONFIG A"
 	#depends on B
 
 config B
 	bool "CONFIG B"
-	depends on !A
+	depends on I=7
 	#default m
 
 config C

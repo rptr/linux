@@ -101,6 +101,9 @@ struct fexpr {
 	/* name of the feature expr */
 	struct gstr name;
 	
+	/* associated symbol */
+	struct symbol *sym;
+	
 	/* integer value for the SAT solver */
 	int satval;
 	
@@ -113,7 +116,6 @@ struct fexpr {
 	union {
 		/* symbol */
 		struct {
-			struct symbol *sym;
 			tristate tristate;
 		};
 		/* AND, OR, NOT */

@@ -369,14 +369,13 @@ void sym_add_assumption(PicoSAT *pico, struct symbol *sym)
 	* Decide if we want the value from .config or the actual value,
 	* which might differ because of prompt conditions.
 	*/
-	int value = sym->def[S_DEF_USER].tri;
-	value = sym_get_tristate_value(sym);
 
 	if (sym_get_type(sym) == S_BOOLEAN) {
+		int tri_val = sym->def[S_DEF_USER].tri;
+		tri_val = sym_get_tristate_value(sym);
+		
 		int a = sym->fexpr_y->satval;
-	// 			printf("sym %s, value %d, value user value %d\n", sym->name, sym_get_tristate_value(sym), sym->def[S_DEF_USER].tri);
-	// 			switch (sym_get_tristate_value(sym)) {
-		switch (value) {
+		switch (tri_val) {
 		case no:
 			picosat_assume(pico, -a);
 			sym->fexpr_y->assumption = false;
@@ -391,11 +390,12 @@ void sym_add_assumption(PicoSAT *pico, struct symbol *sym)
 		}
 	}
 	if (sym_get_type(sym) == S_TRISTATE) {
+		int tri_val = sym->def[S_DEF_USER].tri;
+		tri_val = sym_get_tristate_value(sym);
+		
 		int a = sym->fexpr_y->satval;
 		int a_m = sym->fexpr_m->satval;
-	// 			printf("sym %s, value %d, value set by user %d\n", sym->name, sym_get_tristate_value(sym), sym_has_value(sym));
-	// 			switch (sym_get_tristate_value(sym)) {
-		switch (value) {
+		switch (tri_val) {
 		case no:
 			picosat_assume(pico, -a);
 			picosat_assume(pico, -a_m);
@@ -415,6 +415,37 @@ void sym_add_assumption(PicoSAT *pico, struct symbol *sym)
 			sym->fexpr_m->assumption = false;
 			break;
 		}
+	}
+	if (sym_get_type(sym) == S_INT) {
+		const char *string_val = sym_get_string_value(sym);
+		
+		struct fexpr *e;
+		bool assumption_set = false;
+		unsigned int i;
+		
+		/* do not set it for n */
+		for (i = 1; i < sym->fexpr_nonbool->arr->len; i++) {
+			e = g_array_index(sym->fexpr_nonbool->arr, struct fexpr *, i);
+			if (strcmp(str_get(&e->nb_val), string_val) == 0) {
+				picosat_assume(pico, e->satval);
+				e->assumption = true;
+				assumption_set = true;
+			} else {
+				picosat_assume(pico, -(e->satval));
+				e->assumption = false;
+			}
+		}
+		
+		e = g_array_index(sym->fexpr_nonbool->arr, struct fexpr *, 0);
+		/* if no assumption was set, set it to n */
+		if (!assumption_set) {
+			picosat_assume(pico, e->satval);
+			e->assumption = true;
+		} else {
+			picosat_assume(pico, -(e->satval));
+			e->assumption = false;
+		}
+// 		printf("Added assumption: %s %d\n", str_get(&e->name), e->assumption);
 	}
 }
 
