@@ -50,7 +50,39 @@ void construct_cnf_clauses()
 	printf("done.\n");
 }
 
-void build_cnf(struct fexpr *e)
+/*
+ * check, if a CNF clause is a tautology
+ */
+bool cnf_is_tautology(struct cnf_clause *cl)
+{
+	struct cnf_literal *lit, *lit2;
+	unsigned int i, j;
+	int curr;
+	for (i = 0; i < cl->lits->len; i++) {
+		lit = g_array_index(cl->lits, struct cnf_literal *, i);
+		
+		/* exception for the 2 unit clauses for the True/False constants */
+		if (cl->lits->len == 1 && (lit->val == const_true->satval || lit->val == -(const_false->satval))) 
+			return false;
+		
+		/* clause is tautology, if a constant evaluates to true */
+		if (lit->val == -(const_false->satval) || lit->val == const_true->satval)
+			return true;
+		
+		/* given X, check if -X is in the clause as well */
+		// TODO
+		curr = lit->val;
+		for (j = i + 1; j < cl->lits->len; j++) {
+			lit2 = g_array_index(cl->lits, struct cnf_literal *, j);
+			
+			if (curr == -(lit2->val)) return true;
+		}
+	}
+	
+	return false;
+}
+
+static void build_cnf(struct fexpr *e)
 {
 	if (!e)
 		return;

@@ -32,8 +32,6 @@ bool sym_is_boolean(struct symbol *sym);
 bool sym_is_bool_or_triconst(struct symbol *sym);
 bool sym_is_nonboolean(struct symbol *sym);
 
-bool cnf_is_tautology(struct cnf_clause *cl);
-
 void sym_add_constraint(struct symbol *sym, struct fexpr *constraint);
 void sym_add_assumption(PicoSAT *pico, struct symbol *sym);
 void sym_warn_unmet_dep(struct symbol *sym);

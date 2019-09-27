@@ -544,7 +544,8 @@ static void print_diagnoses(GArray *diag)
 		printf("%d: [", i+1);
 		for (j = 0; j < arr->len; j++) {
 			e = g_array_index(arr, struct fexpr *, j);
-			printf("%s => %s", str_get(&e->name), tristate_get_char(calculate_new_tri_val(e, arr)));
+			char *new_val = e->assumption ? "false" : "true";
+			printf("%s => %s", str_get(&e->name), new_val);
 			if (j != arr->len - 1)
 				printf(", ");
 		}
@@ -604,8 +605,14 @@ static GArray * convert_diagnoses(GArray *diag_arr)
 			/* diagnosis contains symbol, so continue */
 			if (diagnosis_contains_symbol(diagnosis_symbol, e->sym)) continue;
 			
-			// TODO
-			enum symbolfix_type type = sym_is_boolean(e->sym) ? SF_BOOLEAN : SF_NONBOOLEAN;
+			// TODO for disallowed
+			enum symbolfix_type type;
+			if (sym_is_boolean(e->sym))
+				type = SF_BOOLEAN;
+			else if (sym_is_nonboolean(e->sym))
+				type = SF_NONBOOLEAN;
+			else
+				type = SF_DISALLOWED;
 			fix = symbol_fix_create(e, type, diagnosis);
 			
 			g_array_append_val(diagnosis_symbol, fix);
@@ -624,20 +631,24 @@ static struct symbol_fix * symbol_fix_create(struct fexpr *e, enum symbolfix_typ
 	struct symbol_fix *fix = malloc(sizeof(struct symbol_fix));
 	fix->sym = e->sym;
 	fix->type = type;
-	if (type == SF_BOOLEAN) {
+	
+	switch(type) {
+	case SF_BOOLEAN:
 		fix->tri = calculate_new_tri_val(e, diagnosis);
-	} else if (type == SF_NONBOOLEAN) {
+		break;
+	case SF_NONBOOLEAN:
 		fix->nb_val = str_new();
 		str_append(&fix->nb_val, calculate_new_string_value(e, diagnosis));
-	} else {
+		break;
+	default:
 		perror("Illegal symbolfix_type.\n");
 	}
-	
+
 	return fix;
 }
 
 /*
- * let user choose a diagnosis to be applied
+ * list the diagnoses and let user choose a diagnosis to be applied
  */
 GArray * choose_fix(GArray *diag)
 {
@@ -656,7 +667,7 @@ GArray * choose_fix(GArray *diag)
 }
 
 /*
- * list the diagnoses, choose one and apply the fixes
+ * apply the fixes from a diagnosis
  */
 void apply_fix(GArray *diag)
 {
@@ -753,8 +764,3 @@ static const char * calculate_new_string_value(struct fexpr *e, GArray *diagnosi
 	perror("Error calculating new string value.\n");
 	return "";
 }
-
-
-
-
-

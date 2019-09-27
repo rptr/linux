@@ -19,7 +19,7 @@
 
 
 /*
- * initialize symbols
+ * initialize satmap and cnf_clauses
  */
 void init_data(void)
 {
@@ -70,22 +70,31 @@ void assign_sat_variables(void)
 void create_constants(void)
 {
 	printf("Creating constants...");
+	
 	/* create TRUE and FALSE constants */
 	const_false = malloc(sizeof(struct fexpr));
 	const_false->name = str_new();
 	str_append(&const_false->name, "0");
 	const_false->type = FE_FALSE;
 	const_false->satval = sat_variable_nr++;
+	g_hash_table_insert(satmap, &const_false->satval, const_false);
+	
+	struct gstr tmp1 = str_new();
+	str_append(&tmp1, "(#): False constant");
+	build_cnf_clause(&tmp1, 1, -const_false->satval);
+
 	
 	const_true = malloc(sizeof(struct fexpr));
 	const_true->name = str_new();
 	str_append(&const_true->name, "1");
 	const_true->type = FE_TRUE;
 	const_true->satval = sat_variable_nr++;
-	
-	/* add to satmap */
-	g_hash_table_insert(satmap, &const_false->satval, const_false);
 	g_hash_table_insert(satmap, &const_true->satval, const_true);
+	
+	struct gstr tmp2 = str_new();
+	str_append(&tmp2, "(#): True constant");
+	build_cnf_clause(&tmp2, 1, const_true->satval);
+	
 	
 	/* add fexpr of constants to tristate constants */
 	symbol_yes.fexpr_y = const_true;
@@ -330,23 +339,6 @@ bool sym_is_nonboolean(struct symbol *sym)
 }
 
 /*
- * checks, if CNF clause is a tautology
- */
-bool cnf_is_tautology(struct cnf_clause *cl)
-{
-	struct cnf_literal *lit;
-	unsigned int i;
-	for (i = 0; i < cl->lits->len; i++) {
-		lit = g_array_index(cl->lits, struct cnf_literal *, i);
-		/* clause is tautology, if a constant evaluates to true */
-		if (lit->val == -(const_false->satval) || lit->val == const_true->satval)
-			return true;
-	}
-	
-	return false;
-}
-
-/*
  * add a constraint for a symbol
  */
 void sym_add_constraint(struct symbol *sym, struct fexpr *constraint)
@@ -423,7 +415,7 @@ void sym_add_assumption(PicoSAT *pico, struct symbol *sym)
 		bool assumption_set = false;
 		unsigned int i;
 		
-		/* do not set it for n */
+		/* do not set it for n yet */
 		for (i = 1; i < sym->fexpr_nonbool->arr->len; i++) {
 			e = g_array_index(sym->fexpr_nonbool->arr, struct fexpr *, i);
 			if (strcmp(str_get(&e->nb_val), string_val) == 0) {

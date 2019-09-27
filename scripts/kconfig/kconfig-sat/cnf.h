@@ -3,10 +3,12 @@
 
 void construct_cnf_clauses(void);
 
-void build_cnf(struct fexpr *e);
+bool cnf_is_tautology(struct cnf_clause *cl);
 
 ///////////////////////////////////////////////////////////
 
+
+// void build_cnf(struct fexpr *e);
 // void build_cnf_tmp_or(struct tmp_sat_variable *t, struct k_expr *e);
 // void build_cnf_tmp_or_yes(struct tmp_sat_variable *t, struct k_expr *e);
 // void build_cnf_tmp_or_mod(struct tmp_sat_variable *t, struct k_expr *e);

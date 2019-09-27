@@ -20,9 +20,11 @@
 #include "rangefix.h"
 #include "fexpr.h"
 #include "print.h"
+#include "cnf.h"
 
 static void run_unsat_problem(PicoSAT *pico);
 static void add_select_constraints(PicoSAT *pico, struct symbol *sym);
+static void sym_desired_value(void);
 
 /* -------------------------------------- */
 
@@ -68,17 +70,6 @@ void picosat_add_clauses(PicoSAT *pico)
 				picosat_add(pico, 0);
 		}
 	}
-	
-	/* need to add these 2 clauses after all others in order to avoid being flagged as tautologies */
-	struct gstr tmp1 = str_new();
-	str_append(&tmp1, "(#): False constant");
-	build_cnf_clause(&tmp1, 1, -const_false->satval);
-	picosat_add_arg(pico, -const_false->satval, 0);
-	
-	struct gstr tmp2 = str_new();
-	str_append(&tmp2, "(#): True constant");
-	build_cnf_clause(&tmp2, 1, const_true->satval);
-	picosat_add_arg(pico, const_true->satval, 0);
 	
 	/* add assumptions */
 	struct symbol *sym;
@@ -215,4 +206,14 @@ static void add_select_constraints(PicoSAT *pico, struct symbol *sym)
 		}
 	}
 // 	printf("old %d, new %d\n", tmp_clauses, nr_of_clauses);
+}
+
+static void sym_desired_value(void)
+{
+	int choice;
+	printf("\n> ");
+	scanf("%d", &choice);
+	
+	/* no changes wanted */
+	if (choice == 0) return;
 }
