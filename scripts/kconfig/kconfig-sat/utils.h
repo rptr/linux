@@ -1,7 +1,7 @@
 #ifndef UTILS_H
 #define UTILS_H
 
-#include "../satconfig.h"
+#include "satconf.h"
 #include "picosat.h"
 
 void init_data(void);
@@ -34,6 +34,7 @@ bool sym_is_nonboolean(struct symbol *sym);
 
 void sym_add_constraint(struct symbol *sym, struct fexpr *constraint);
 void sym_add_assumption(PicoSAT *pico, struct symbol *sym);
+void sym_add_assumption_tri(PicoSAT *pico, struct symbol *sym, tristate tri_val);
 void sym_warn_unmet_dep(struct symbol *sym);
 
 #endif

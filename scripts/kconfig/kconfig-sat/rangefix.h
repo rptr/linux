@@ -1,7 +1,7 @@
 #ifndef RANGEFIX_H
 #define RANGEFIX_H
 
-#include "../satconfig.h"
+#include "satconf.h"
 #include "picosat.h"
 
 /* initialize RangeFix and return the diagnoses */

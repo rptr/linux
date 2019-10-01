@@ -13,7 +13,7 @@
 #define LKC_DIRECT_LINK
 #include "../lkc.h"
 
-#include "../satconfig.h"
+#include "satconf.h"
 #include "picosat.h"
 #include "satutils.h"
 #include "utils.h"
@@ -192,7 +192,6 @@ static void add_select_constraints(PicoSAT *pico, struct symbol *sym)
 	for (i = tmp_clauses; i < cnf_clauses->len; i++) {
 		cl = g_array_index(cnf_clauses, struct cnf_clause *, i);
 		if (cnf_is_tautology(cl)) {
-			
 			nr_of_clauses--;
 			continue;
 		}

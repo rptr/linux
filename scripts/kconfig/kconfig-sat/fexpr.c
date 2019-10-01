@@ -13,7 +13,7 @@
 #define LKC_DIRECT_LINK
 #include "../lkc.h"
 
-#include "../satconfig.h"
+#include "satconf.h"
 #include "fexpr.h"
 #include "utils.h"
 #include "print.h"

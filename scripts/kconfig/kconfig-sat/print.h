@@ -1,7 +1,7 @@
 #ifndef PRINT_H
 #define PRINT_H
 
-#include "../satconfig.h"
+#include "satconf.h"
 
 #define OUTFILE_DIMACS "./scripts/kconfig/kconfig-sat/out_cnf.dimacs"
 #define OUTFILE_FEXPR "./scripts/kconfig/kconfig-sat/out_constraints"

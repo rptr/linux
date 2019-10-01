@@ -13,7 +13,7 @@
 #define LKC_DIRECT_LINK
 #include "../lkc.h"
 
-#include "../satconfig.h"
+#include "satconf.h"
 #include "picosat.h"
 #include "rangefix.h"
 #include "utils.h"
@@ -674,14 +674,20 @@ void apply_fix(GArray *diag)
 	struct symbol_fix *fix;
 	unsigned int i;
 
+	// TODO
+	// order is important
+	// either sort it or forcewrite it into config
+	// or do with a fixpoint, i.e. repeat until everything is set
 	for (i = 0; i < diag->len; i++) {
 		fix = g_array_index(diag, struct symbol_fix *, i);
 		if (fix->type == SF_BOOLEAN)
 			sym_set_tristate_value(fix->sym, fix->tri);
 		else if (fix->type == SF_NONBOOLEAN)
 			sym_set_string_value(fix->sym, str_get(&fix->nb_val));
+		
+		conf_write(NULL);
 	}
-	conf_write(NULL);
+// 	conf_write(NULL);
 }
 
 /*

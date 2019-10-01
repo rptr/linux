@@ -1,7 +1,7 @@
 #ifndef FEXPR_H
 #define FEXPR_H
 
-#include "../satconfig.h"
+#include "satconf.h"
 
 void sym_create_fexpr (struct symbol *sym);
 

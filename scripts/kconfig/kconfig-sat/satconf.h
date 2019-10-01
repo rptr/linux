@@ -1,5 +1,6 @@
-#ifndef SATCONFIG_H
-#define SATCONFIG_H
+#ifndef SATCONF_H
+#define SATCONF_H
+
 #define CNF_REASON_LENGTH 512
 #define STRING_LENGTH 100
 #define PRINT_ALL_CNF false
@@ -7,6 +8,7 @@
 #define SATVARS_PER_SYMBOL 3
 
 /* external functions */
+int run_satconf(const char *Kconfig_file);
 char * get_test_char(void);
 
 /* external variables */
@@ -158,6 +160,26 @@ struct default_map {
 	struct gstr val;
 	
 	struct fexpr *e;
+};
+
+
+enum symboldv_type {
+	SDV_BOOLEAN,	/* boolean/tristate */
+	SDV_NONBOOLEAN	/* string/int/hex */
+};
+
+struct symbol_dvalue {
+	struct symbol *sym;
+	
+	enum symboldv_type type;
+	
+	union {
+		/* boolean/tristate */
+		tristate tri;
+		
+		/* string/int/hex */
+		struct gstr nb_val;
+	};
 };
 
 enum symbolfix_type {

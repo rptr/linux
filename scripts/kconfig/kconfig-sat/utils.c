@@ -12,7 +12,7 @@
 
 #define LKC_DIRECT_LINK
 #include "../lkc.h"
-#include "../satconfig.h"
+#include "satconf.h"
 #include "utils.h"
 #include "print.h"
 #include "fexpr.h"
@@ -362,51 +362,11 @@ void sym_add_assumption(PicoSAT *pico, struct symbol *sym)
 	* which might differ because of prompt conditions.
 	*/
 
-	if (sym_get_type(sym) == S_BOOLEAN) {
+	if (sym_is_boolean(sym)) {
 		int tri_val = sym->def[S_DEF_USER].tri;
 		tri_val = sym_get_tristate_value(sym);
 		
-		int a = sym->fexpr_y->satval;
-		switch (tri_val) {
-		case no:
-			picosat_assume(pico, -a);
-			sym->fexpr_y->assumption = false;
-			break;
-		case mod:
-			perror("Should not happen. Boolean symbol is set to mod.\n");
-			break;
-		case yes:
-			picosat_assume(pico, a);
-			sym->fexpr_y->assumption = true;
-			break;
-		}
-	}
-	if (sym_get_type(sym) == S_TRISTATE) {
-		int tri_val = sym->def[S_DEF_USER].tri;
-		tri_val = sym_get_tristate_value(sym);
-		
-		int a = sym->fexpr_y->satval;
-		int a_m = sym->fexpr_m->satval;
-		switch (tri_val) {
-		case no:
-			picosat_assume(pico, -a);
-			picosat_assume(pico, -a_m);
-			sym->fexpr_y->assumption = false;
-			sym->fexpr_m->assumption = false;
-			break;
-		case mod:
-			picosat_assume(pico, -a);
-			picosat_assume(pico, a_m);
-			sym->fexpr_y->assumption = false;
-			sym->fexpr_m->assumption = true;
-			break;
-		case yes:
-			picosat_assume(pico, a);
-			picosat_assume(pico, -a_m);
-			sym->fexpr_y->assumption = true;
-			sym->fexpr_m->assumption = false;
-			break;
-		}
+		sym_add_assumption_tri(pico, sym, tri_val);
 	}
 	if (sym_get_type(sym) == S_INT) {
 		const char *string_val = sym_get_string_value(sym);
@@ -438,6 +398,50 @@ void sym_add_assumption(PicoSAT *pico, struct symbol *sym)
 			e->assumption = false;
 		}
 // 		printf("Added assumption: %s %d\n", str_get(&e->name), e->assumption);
+	}
+}
+
+void sym_add_assumption_tri(PicoSAT *pico, struct symbol *sym, tristate tri_val)
+{
+	if (sym_get_type(sym) == S_BOOLEAN) {
+		int a = sym->fexpr_y->satval;
+		switch (tri_val) {
+		case no:
+			picosat_assume(pico, -a);
+			sym->fexpr_y->assumption = false;
+			break;
+		case mod:
+			perror("Should not happen. Boolean symbol is set to mod.\n");
+			break;
+		case yes:
+			picosat_assume(pico, a);
+			sym->fexpr_y->assumption = true;
+			break;
+		}
+	}
+	if (sym_get_type(sym) == S_TRISTATE) {
+		int a = sym->fexpr_y->satval;
+		int a_m = sym->fexpr_m->satval;
+		switch (tri_val) {
+		case no:
+			picosat_assume(pico, -a);
+			picosat_assume(pico, -a_m);
+			sym->fexpr_y->assumption = false;
+			sym->fexpr_m->assumption = false;
+			break;
+		case mod:
+			picosat_assume(pico, -a);
+			picosat_assume(pico, a_m);
+			sym->fexpr_y->assumption = false;
+			sym->fexpr_m->assumption = true;
+			break;
+		case yes:
+			picosat_assume(pico, a);
+			picosat_assume(pico, -a_m);
+			sym->fexpr_y->assumption = true;
+			sym->fexpr_m->assumption = false;
+			break;
+		}
 	}
 }
 

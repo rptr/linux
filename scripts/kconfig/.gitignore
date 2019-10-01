@@ -17,5 +17,5 @@ gconf
 # satconfig
 #
 satconfig
-satconfig-cfg
+satdvconfig
 kconfig-sat/out_*
