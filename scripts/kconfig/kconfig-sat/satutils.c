@@ -106,6 +106,7 @@ void picosat_solve(PicoSAT *pico)
 		unsigned int i;
 		bool found = false;
 		
+		/* check, if a symbol has been selected, but has unmet dependencies */
 		for_all_symbols(i, sym) {
 			if (sym->dir_dep.tri < sym->rev_dep.tri) {
 				found = true;

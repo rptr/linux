@@ -7,7 +7,7 @@ menuconfig MODULES
 
 config A
 	bool "CONFIG A"
-	depends on B || C
+	depends on B
 
 config B
 	bool "CONFIG B"
@@ -15,7 +15,7 @@ config B
 
 config C
 	bool "CONFIG C"
-	#depends on A
+	depends on !B
 	#select B
 
 #config D

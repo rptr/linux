@@ -19,6 +19,15 @@
 
 
 /*
+ * parse Kconfig-file and read .config
+ */
+void init_config(const char *Kconfig_file)
+{
+	conf_parse(Kconfig_file);
+	conf_read(NULL);
+}
+
+/*
  * initialize satmap and cnf_clauses
  */
 void init_data(void)

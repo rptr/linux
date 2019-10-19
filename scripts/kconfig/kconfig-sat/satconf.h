@@ -7,10 +7,6 @@
 #define PRINT_CNF_REASONS true
 #define SATVARS_PER_SYMBOL 3
 
-/* external functions */
-int run_satconf(const char *Kconfig_file);
-char * get_test_char(void);
-
 /* external variables */
 extern unsigned int sat_variable_nr;
 extern unsigned int tmp_variable_nr;
@@ -87,7 +83,7 @@ struct k_expr {
 	};
 };
 
-/* different types for k_expr */
+/* different types for f_expr */
 enum fexpr_type {
 	FE_SYMBOL,
 	FE_AND,
@@ -204,5 +200,12 @@ struct symbol_fix {
 		struct gstr disallowed;
 	};
 };
+
+/* external functions */
+GArray * run_satconf(struct symbol_dvalue *sdv);
+
+int run_satconf_cli(const char *Kconfig_file);
+
+char * get_test_char(void);
 
 #endif

@@ -4,6 +4,7 @@
 #include "satconf.h"
 #include "picosat.h"
 
+void init_config (const char *Kconfig_file);
 void init_data(void);
 
 void assign_sat_variables(void);

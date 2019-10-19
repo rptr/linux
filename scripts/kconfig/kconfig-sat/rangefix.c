@@ -17,6 +17,7 @@
 #include "picosat.h"
 #include "rangefix.h"
 #include "utils.h"
+#include "symbol_mod.h"
 
 static GArray *diagnoses, *diagnoses_symbol;
 
@@ -672,21 +673,46 @@ GArray * choose_fix(GArray *diag)
 void apply_fix(GArray *diag)
 {
 	struct symbol_fix *fix;
-	unsigned int i;
+	struct symbol *sym;
+	unsigned int i, j;
+	
+	// force-write values and then reload everything ?
 
-	// TODO
-	// order is important
-	// either sort it or forcewrite it into config
-	// or do with a fixpoint, i.e. repeat until everything is set
+	/*
+	 * changes will be applied as a "transaction"
+	 * we allow illegal values temporarily and all values will be 
+	 * checked after each fix has been applied
+	 */
+	for (i = 0; i < diag->len; i++) {
+		fix = g_array_index(diag, struct symbol_fix *, i);
+		if (fix->type == SF_BOOLEAN) {
+			sym_set_tristate_value_mod(fix->sym, fix->tri);
+		}
+
+		else if (fix->type == SF_NONBOOLEAN)
+			sym_set_string_value(fix->sym, str_get(&fix->nb_val));
+	}
+	
+	conf_write(NULL);
+	conf_read(NULL);
+	
+// 	/* recalculate all values */
+// 	for (j = 0; j < diag->len; j++) {
+// 	for (i = 0; i < diag->len; i++) {
+// 		fix = g_array_index(diag, struct symbol_fix *, i);
+// 		sym_calc_value(fix->sym);
+// 	}
+// 	}
+	
+	/* check that all values are within range */
 	for (i = 0; i < diag->len; i++) {
 		fix = g_array_index(diag, struct symbol_fix *, i);
 		if (fix->type == SF_BOOLEAN)
-			sym_set_tristate_value(fix->sym, fix->tri);
-		else if (fix->type == SF_NONBOOLEAN)
-			sym_set_string_value(fix->sym, str_get(&fix->nb_val));
-		
-		conf_write(NULL);
+			if (!sym_tristate_within_range_mod(fix->sym, fix->tri))
+				perror("Symbol not within range\n");
+		// TODO for non-booleans
 	}
+	
 // 	conf_write(NULL);
 }
 

@@ -35,13 +35,9 @@ unsigned int nr_of_clauses = 0; /* number of CNF-clauses */
 struct fexpr *const_false; /* constant False */
 struct fexpr *const_true; /* constant True */
 
-static PicoSAT *pico; /* SAT-solver */
-
-static void init_config(const char *Kconfig_file);
-
 /* -------------------------------------- */
 
-int run_satconf(const char *Kconfig_file)
+int run_satconf_cli(const char *Kconfig_file)
 {
 // 	printf("\nHello satconfig!\n\n");
 
@@ -91,7 +87,7 @@ int run_satconf(const char *Kconfig_file)
 // 	g_hash_table_foreach(satmap, print_satmap, NULL);
 	
 	/* start PicoSAT */
-	pico = initialize_picosat();
+	PicoSAT *pico = initialize_picosat();
 	picosat_add_clauses(pico);
 	picosat_solve(pico);
 
@@ -104,11 +100,123 @@ int run_satconf(const char *Kconfig_file)
 	return EXIT_SUCCESS;
 }
 
-/*
- * parse Kconfig-file and read .config
- */
-static void init_config (const char *Kconfig_file)
+GArray * run_satconf(struct symbol_dvalue *sdv)
 {
-	conf_parse(Kconfig_file);
-	conf_read(NULL);
+	printf("\n");
+	printf("Init...");
+	/* measure time for constructing constraints and clauses */
+	clock_t start, end;
+	double time;
+	start = clock();
+
+	/* initialize satmap and cnf_clauses */
+	init_data();
+	
+	/* creating constants */
+	create_constants();
+	
+	/* assign SAT variables & create sat_map */
+	assign_sat_variables();
+	
+	/* get the constraints */
+	get_constraints();
+	
+	/* construct the CNF clauses */
+	construct_cnf_clauses();
+	
+	end = clock();
+	time = ((double) (end - start)) / CLOCKS_PER_SEC;
+	
+	printf("Generating constraints and clauses...done. (%.6f secs.)\n", time);
+	
+	/* start PicoSAT */
+	PicoSAT *pico = initialize_picosat();
+	picosat_add_clauses(pico);
+	
+	/* add unit clauses for symbol */
+	if (sym_get_type(sdv->sym) == S_BOOLEAN) {
+		switch (sdv->tri) {
+		case yes:
+			picosat_add_arg(pico, sdv->sym->fexpr_y->satval, 0);
+			break;
+		case no:
+			picosat_add_arg(pico, -(sdv->sym->fexpr_y->satval), 0);
+			break;
+		case mod:
+			perror("Should not happen.\n");
+		}
+	} else if (sym_get_type(sdv->sym) == S_TRISTATE) {
+		switch (sdv->tri) {
+		case yes:
+			picosat_add_arg(pico, sdv->sym->fexpr_y->satval, 0);
+			picosat_add_arg(pico, -(sdv->sym->fexpr_m->satval), 0);
+			break;
+		case mod:
+			picosat_add_arg(pico, -(sdv->sym->fexpr_y->satval), 0);
+			picosat_add_arg(pico, sdv->sym->fexpr_m->satval, 0);
+			break;
+		case no:
+			picosat_add_arg(pico, -(sdv->sym->fexpr_y->satval), 0);
+			picosat_add_arg(pico, -(sdv->sym->fexpr_m->satval), 0);
+		}
+	}
+	
+// 	picosat_solve(pico);
+	printf("Solving SAT-problem...");
+	start = clock();
+	
+	int res = picosat_sat(pico, -1);
+	
+	end = clock();
+	time = ((double) (end - start)) / CLOCKS_PER_SEC;
+	printf("done. (%.6f secs.)\n\n", time);
+	
+	if (res == PICOSAT_SATISFIABLE) {
+		printf("===> Problem is satisfiable <===\n");
+		
+		return g_array_new(false, false, sizeof(GArray *));
+		
+// 		struct symbol *sym;
+// 		unsigned int i;
+// 		bool found = false;
+// 		
+// 		/* check, if a symbol has been selected, but has unmet dependencies */
+// 		for_all_symbols(i, sym) {
+// 			if (sym->dir_dep.tri < sym->rev_dep.tri) {
+// 				found = true;
+// 				sym_warn_unmet_dep(sym);
+// 				add_select_constraints(pico, sym);
+// 			}
+// 		}
+// 		if (!found) return;
+// 		printf("\n");
+// 		
+// 		/* add assumptions again */
+// 		for_all_symbols(i, sym)
+// 			sym_add_assumption(pico, sym);
+// 		
+// 		int res = picosat_sat(pico, -1);
+// 		
+// 		/* problem should be unsatisfiable now */
+// 		if (res == PICOSAT_UNSATISFIABLE) {
+// 			return rangefix_init(pico);
+// 		} else {
+// 			printf("SOMETHING IS A MISS. PROBLEM IS NOT UNSATISFIABLE.\n");
+// 			return NULL;
+// 		}
+		
+// 		printf("All CNFs:\n");
+// 		print_all_cnf_clauses( cnf_clauses );
+		
+	} else if (res == PICOSAT_UNSATISFIABLE) {
+		printf("===> PROBLEM IS UNSATISFIABLE <===\n");
+		printf("\n");
+		return rangefix_init(pico);
+	}
+	else {
+		printf("Unknown if satisfiable.\n");
+		return NULL;
+	}
+		
+	return NULL;
 }

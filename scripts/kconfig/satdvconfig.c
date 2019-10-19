@@ -20,7 +20,6 @@
 #include "kconfig-sat/cnf.h"
 #include "kconfig-sat/satutils.h"
 
-static void init_config(const char *Kconfig_file);
 static struct symbol * read_symbol_from_stdin(void);
 static struct symbol_dvalue * sym_create_sdv(struct symbol *sym, char *input);
 static void run_satdvconf(struct symbol_dvalue *sdv);
@@ -51,15 +50,6 @@ int main(int argc, char *argv[])
 	run_satdvconf(sdv);
 	
 	return EXIT_SUCCESS;
-}
-
-/*
- * parse Kconfig-file and read .config
- */
-static void init_config(const char *Kconfig_file)
-{
-	conf_parse(Kconfig_file);
-	conf_read(NULL);
 }
 
 /*

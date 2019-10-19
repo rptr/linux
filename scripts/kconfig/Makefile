@@ -219,7 +219,7 @@ clean-files += *conf-cfg
 
 # satconfig
 hostprogs-y	+= satconfig satdvconfig
-satconf-objs	:= kconfig-sat/cnf.o kconfig-sat/constraints.o kconfig-sat/fexpr.o kconfig-sat/picosat.o kconfig-sat/print.o kconfig-sat/rangefix.o kconfig-sat/satconf.o kconfig-sat/satutils.o kconfig-sat/utils.o
+satconf-objs	:= kconfig-sat/cnf.o kconfig-sat/constraints.o kconfig-sat/fexpr.o kconfig-sat/picosat.o kconfig-sat/print.o kconfig-sat/rangefix.o kconfig-sat/satconf.o kconfig-sat/satutils.o kconfig-sat/symbol_mod.o kconfig-sat/utils.o
 
 satconfig-objs	:= satconfig.o $(satconf-objs) $(common-objs)
 satdvconfig-objs	:= satdvconfig.o $(satconf-objs) $(common-objs)
