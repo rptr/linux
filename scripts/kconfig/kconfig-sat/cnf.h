@@ -1,8 +1,10 @@
 #ifndef CNF_H
 #define CNF_H
 
+/* construct the CNF-clauses from the constraints */
 void construct_cnf_clauses(void);
 
+/* check, if a CNF-clause is a tautology */
 bool cnf_is_tautology(struct cnf_clause *cl);
 
 ///////////////////////////////////////////////////////////

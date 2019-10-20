@@ -217,3 +217,100 @@ static void sym_desired_value(void)
 	/* no changes wanted */
 	if (choice == 0) return;
 }
+
+/*
+ * add assumption for a symbol to the SAT-solver
+ */
+void sym_add_assumption(PicoSAT *pico, struct symbol *sym)
+{
+	/*
+	* TODO
+	* Decide if we want the value from .config or the actual value,
+	* which might differ because of prompt conditions.
+	*/
+
+	if (sym_is_boolean(sym)) {
+		int tri_val = sym->def[S_DEF_USER].tri;
+		tri_val = sym_get_tristate_value(sym);
+		
+		sym_add_assumption_tri(pico, sym, tri_val);
+	}
+	if (sym_get_type(sym) == S_INT) {
+		const char *string_val = sym_get_string_value(sym);
+		
+		struct fexpr *e;
+		bool assumption_set = false;
+		unsigned int i;
+		
+		/* do not set it for n yet */
+		for (i = 1; i < sym->fexpr_nonbool->arr->len; i++) {
+			e = g_array_index(sym->fexpr_nonbool->arr, struct fexpr *, i);
+			if (strcmp(str_get(&e->nb_val), string_val) == 0) {
+				picosat_assume(pico, e->satval);
+				e->assumption = true;
+				assumption_set = true;
+			} else {
+				picosat_assume(pico, -(e->satval));
+				e->assumption = false;
+			}
+		}
+		
+		e = g_array_index(sym->fexpr_nonbool->arr, struct fexpr *, 0);
+		/* if no assumption was set, set it to n */
+		if (!assumption_set) {
+			picosat_assume(pico, e->satval);
+			e->assumption = true;
+		} else {
+			picosat_assume(pico, -(e->satval));
+			e->assumption = false;
+		}
+// 		printf("Added assumption: %s %d\n", str_get(&e->name), e->assumption);
+	}
+}
+
+/*
+ * add assumption for a boolean symbol to the SAT-solver
+ */
+void sym_add_assumption_tri(PicoSAT *pico, struct symbol *sym, tristate tri_val)
+{
+	if (sym_get_type(sym) == S_BOOLEAN) {
+		int a = sym->fexpr_y->satval;
+		switch (tri_val) {
+		case no:
+			picosat_assume(pico, -a);
+			sym->fexpr_y->assumption = false;
+			break;
+		case mod:
+			perror("Should not happen. Boolean symbol is set to mod.\n");
+			break;
+		case yes:
+			picosat_assume(pico, a);
+			sym->fexpr_y->assumption = true;
+			break;
+		}
+	}
+	if (sym_get_type(sym) == S_TRISTATE) {
+		int a = sym->fexpr_y->satval;
+		int a_m = sym->fexpr_m->satval;
+		switch (tri_val) {
+		case no:
+			picosat_assume(pico, -a);
+			picosat_assume(pico, -a_m);
+			sym->fexpr_y->assumption = false;
+			sym->fexpr_m->assumption = false;
+			break;
+		case mod:
+			picosat_assume(pico, -a);
+			picosat_assume(pico, a_m);
+			sym->fexpr_y->assumption = false;
+			sym->fexpr_m->assumption = true;
+			break;
+		case yes:
+			picosat_assume(pico, a);
+			picosat_assume(pico, -a_m);
+			sym->fexpr_y->assumption = true;
+			sym->fexpr_m->assumption = false;
+			break;
+		}
+	}
+}

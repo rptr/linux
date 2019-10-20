@@ -41,7 +41,7 @@ static void create_fexpr_bool(struct symbol *sym)
 {
 	struct fexpr *fexpr_y = create_fexpr(sat_variable_nr++, FE_SYMBOL, sym->name);
 	fexpr_y->sym = sym;
-	fexpr_y->tristate = yes;
+	fexpr_y->tri = yes;
 	/* add it to satmap */
 	g_hash_table_insert(satmap, &fexpr_y->satval, fexpr_y);
 	
@@ -52,7 +52,7 @@ static void create_fexpr_bool(struct symbol *sym)
 		fexpr_m = create_fexpr(sat_variable_nr++, FE_SYMBOL, sym->name);
 		str_append(&fexpr_m->name, "_MODULE");
 		fexpr_m->sym = sym;
-		fexpr_m->tristate = mod;
+		fexpr_m->tri = mod;
 		/* add it to satmap */
 		g_hash_table_insert(satmap, &fexpr_m->satval, fexpr_m);
 	} else {
@@ -247,20 +247,15 @@ static struct fexpr * equiv_fexpr(struct fexpr *a, struct fexpr *b)
 }
 
 /*
- * return the fexpr of a non-boolean symbol for a specific value
- * if it doesn't exist yet, create it
+ * create the fexpr of a non-boolean symbol for a specific value
  */
-struct fexpr * sym_get_nonbool_fexpr(struct symbol *sym, char *value)
+struct fexpr * sym_create_nonbool_fexpr(struct symbol *sym, char *value)
 {
-	struct fexpr *e;
-	int i;
-	for (i = 0; i < sym->fexpr_nonbool->arr->len; i++) {
-		e = g_array_index(sym->fexpr_nonbool->arr, struct fexpr *, i);
-		if (strcmp(str_get(&e->nb_val), value) == 0)
-			return e;
-	}
+	struct fexpr *e = sym_get_nonbool_fexpr(sym, value);
 	
-	/* fexpr doesn't exist yet, so create it */
+	if (e != NULL)
+		return e;
+	
 	e = create_fexpr(sat_variable_nr++, FE_NONBOOL, sym->name);
 	e->sym = sym;
 	str_append(&e->name, "=");
@@ -275,6 +270,36 @@ struct fexpr * sym_get_nonbool_fexpr(struct symbol *sym, char *value)
 	g_array_append_val(sym->fexpr_nonbool->arr, e);
 	
 	return e;
+}
+
+/*
+ * return the fexpr of a non-boolean symbol for a specific value, NULL if non-existent
+ */
+struct fexpr * sym_get_nonbool_fexpr(struct symbol *sym, char *value)
+{
+	struct fexpr *e;
+	int i;
+	for (i = 0; i < sym->fexpr_nonbool->arr->len; i++) {
+		e = g_array_index(sym->fexpr_nonbool->arr, struct fexpr *, i);
+		if (strcmp(str_get(&e->nb_val), value) == 0)
+			return e;
+	}
+	
+	return NULL;
+}
+
+/*
+ * return the fexpr of a non-boolean symbol for a specific value, if it exists
+ * otherwise create it
+ */
+struct fexpr * sym_get_or_create_nonbool_fexpr(struct symbol *sym, char *value)
+{
+	struct fexpr *e = sym_get_nonbool_fexpr(sym, value);
+	
+	if (e != NULL)
+		return e;
+	else
+		return sym_create_nonbool_fexpr(sym, value);
 }
 
 /*
@@ -302,10 +327,10 @@ struct fexpr * calculate_fexpr_y_equals(struct k_expr *a)
 	
 	/* comparing nonboolean with a constant */
 	if (sym_is_nonboolean(a->eqsym) && sym_get_type(a->eqvalue) == S_UNKNOWN) {
-		return sym_get_nonbool_fexpr(a->eqsym, a->eqvalue->name);
+		return sym_get_or_create_nonbool_fexpr(a->eqsym, a->eqvalue->name);
 	}
 	if (sym_get_type(a->eqsym) == S_UNKNOWN && sym_is_nonboolean(a->eqvalue)) {
-		return sym_get_nonbool_fexpr(a->eqvalue, a->eqsym->name);
+		return sym_get_or_create_nonbool_fexpr(a->eqvalue, a->eqsym->name);
 	}
 	
 	/* comparing nonboolean with tristate constant, will never be true */
@@ -378,7 +403,7 @@ struct fexpr * sym_get_fexpr_both(struct symbol *sym)
 }
 
 /*
- * construct a fexpr, when "A implies B"
+ * macro to construct a fexpr for "A implies B"
  */
 struct fexpr * implies(struct fexpr *a, struct fexpr *b)
 {
@@ -386,7 +411,7 @@ struct fexpr * implies(struct fexpr *a, struct fexpr *b)
 }
 
 /*
- * return true if the fexpr is a symbol, a True/False-constant or a literal symbolizing a non-boolean
+ * check, if the fexpr is a symbol, a True/False-constant or a literal symbolizing a non-boolean
  */
 bool fexpr_is_symbol(struct fexpr *e)
 {
@@ -394,7 +419,7 @@ bool fexpr_is_symbol(struct fexpr *e)
 }
 
 /*
- * return true if the fexpr is a symbol, a True/False-constant, a literal symbolizing a non-boolean or NOT
+ * check, if the fexpr is a symbol, a True/False-constant, a literal symbolizing a non-boolean or NOT
  */
 bool fexpr_is_symbol_or_not(struct fexpr *e)
 {
@@ -403,7 +428,7 @@ bool fexpr_is_symbol_or_not(struct fexpr *e)
 
 
 /*
- * convert a fexpr into Negation normal form
+ * convert a fexpr into negation normal form
  */
 static bool convert_fexpr_to_nnf_util(struct fexpr *e)
 {
@@ -487,7 +512,7 @@ void convert_fexpr_to_nnf(struct fexpr *e) {
 }
 
 /* 
- * convert a fexpr from Negation normal form into Conjunctive normal form
+ * convert a fexpr from negation normal form into conjunctive normal form
  */
 static bool convert_nnf_to_cnf_util(struct fexpr *e)
 {
@@ -573,7 +598,7 @@ static void add_cnf_clause(struct fexpr *e, struct cnf_clause *cl)
 }
 
 /*
- * extract the CNF-clauses from an expression in CNF
+ * extract the CNF-clauses from an fexpr in CNF
  */
 void unfold_cnf_clause(struct fexpr *e)
 {

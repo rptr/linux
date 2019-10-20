@@ -1,6 +1,8 @@
 #ifndef SATCONF_H
 #define SATCONF_H
 
+#include "../lkc.h"
+
 #define CNF_REASON_LENGTH 512
 #define STRING_LENGTH 100
 #define PRINT_ALL_CNF false
@@ -68,7 +70,7 @@ struct k_expr {
 		/* symbol */
 		struct {
 			struct symbol *sym;
-			tristate tristate;
+			tristate tri;
 		};
 		/* AND, OR, NOT */
 		struct {
@@ -114,7 +116,7 @@ struct fexpr {
 	union {
 		/* symbol */
 		struct {
-			tristate tristate;
+			tristate tri;
 		};
 		/* AND, OR, NOT */
 		struct {

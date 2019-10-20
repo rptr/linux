@@ -7,23 +7,24 @@ menuconfig MODULES
 
 config A
 	bool "CONFIG A"
-	depends on B
+#	depends on B || C
 
 config B
 	bool "CONFIG B"
-	#depends on !A
+	depends on !A && I=7
 
 config C
 	bool "CONFIG C"
-	depends on !B
-	#select B
+#	depends on !B
+	select B
+	depends on A
 
 #config D
 #	bool "D"
 #	depends on !C
 #	depends on I=7
 
-#config I
-#	int "I"
+config I
+	int "I"
 #	default 12
 #	range 10 24 if A

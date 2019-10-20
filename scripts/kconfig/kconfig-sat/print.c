@@ -42,6 +42,9 @@ void print_all_symbols(void)
 	}
 }
 
+/*
+ * print the symbol
+ */
 void print_symbol(struct symbol *sym)
 {
 	printf("Symbol: ");
@@ -61,11 +64,11 @@ void print_symbol(struct symbol *sym)
 
 	/* print default values */
 	for_all_defaults(sym, p)
-		print_default(sym, p);
+		print_default(p);
 
 	/* print select statements */
 	for_all_properties(sym, p, P_SELECT)
-		print_select(sym, p);
+		print_select(p);
 
 	/* print reverse dependencies */
 	if (sym->rev_dep.expr) {
@@ -76,7 +79,7 @@ void print_symbol(struct symbol *sym)
 
 	/* print imply statements */
 	for_all_properties(sym, p, P_IMPLY)
-		print_imply(sym, p);
+		print_imply(p);
 
 	/* print weak reverse denpencies */
 	if (sym->implied.expr) {
@@ -97,9 +100,9 @@ void print_symbol(struct symbol *sym)
 }
 
 /*
- * print a default value for a symbol
+ * print a default value for a property
  */
-void print_default(struct symbol *sym, struct property *p)
+void print_default(struct property *p)
 {
 	assert(p->type == P_DEFAULT);
 	printf("\tdefault %u", p->expr->left.sym->curr.tri);
@@ -111,9 +114,9 @@ void print_default(struct symbol *sym, struct property *p)
 }
 
 /*
- * print a select statement for a symbol
+ * print a select statement for a property
  */
-void print_select(struct symbol *sym, struct property *p)
+void print_select(struct property *p)
 {
 	assert(p->type == P_SELECT);
 	struct expr *e = p->expr;
@@ -128,9 +131,9 @@ void print_select(struct symbol *sym, struct property *p)
 }
 
 /*
- * print an imply statement for a symbol
+ * print an imply statement for a property
  */
-void print_imply(struct symbol *sym, struct property *p)
+void print_imply(struct property *p)
 {
 	assert(p->type == P_IMPLY);
 	struct expr *e = p->expr;
@@ -227,7 +230,7 @@ void print_kexpr(struct k_expr *e)
 	switch (e->type) {
 	case KE_SYMBOL:
 		printf("%s", e->sym->name);
-		if (e->tristate == mod)
+		if (e->tri == mod)
 			printf("_m");
 		break;
 	case KE_AND:

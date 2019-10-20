@@ -74,7 +74,7 @@ void assign_sat_variables(void)
 }
 
 /*
- * create some constants
+ * create True/False constants
  */
 void create_constants(void)
 {
@@ -119,7 +119,7 @@ void create_constants(void)
 }
 
 /*
- * create a fexpr
+ *  
  */
 struct fexpr * create_fexpr(int satval, enum fexpr_type type, char* name)
 {
@@ -216,7 +216,7 @@ char * tristate_get_char(tristate val)
 }
 
 /*
- * return if a k_expr can evaluate to mod
+ * check if a k_expr can evaluate to mod
  */
 bool can_evaluate_to_mod(struct k_expr *e)
 {
@@ -262,7 +262,7 @@ struct k_expr * get_const_true_as_kexpr()
 }
 
 /*
- * retrieve value from satmap given a key (sat_variable_nr)
+ * /
  */
 struct fexpr * get_fexpr_from_satmap(int key)
 {
@@ -284,7 +284,7 @@ struct k_expr * parse_expr(struct expr *e, struct k_expr *parent)
 	case E_SYMBOL:
 		ke->type = KE_SYMBOL;
 		ke->sym = e->left.sym;
-		ke->tristate = no;
+		ke->tri = no;
 		return ke;
 	case E_AND:
 		ke->type = KE_AND;
@@ -317,14 +317,14 @@ struct k_expr * parse_expr(struct expr *e, struct k_expr *parent)
 }
 
 /*
- * checks, if the symbol is a tristate-constant
+ * check, if the symbol is a tristate-constant
  */
 bool is_tristate_constant(struct symbol *sym) {
 	return sym == &symbol_yes || sym == &symbol_mod || sym == &symbol_no;
 }
 
 /*
- * checks, if a symbol is of type boolean or tristate
+ * check, if a symbol is of type boolean or tristate
  */
 bool sym_is_boolean(struct symbol *sym)
 {
@@ -332,7 +332,7 @@ bool sym_is_boolean(struct symbol *sym)
 }
 
 /*
- * checks, if a symbol is a boolean/tristate or a tristate constant
+ * check, if a symbol is a boolean/tristate or a tristate constant
  */
 bool sym_is_bool_or_triconst(struct symbol *sym)
 {
@@ -340,7 +340,7 @@ bool sym_is_bool_or_triconst(struct symbol *sym)
 }
 
 /*
- * checks, if a symbol is of type int, hex, or string
+ * check, if a symbol is of type int, hex, or string
  */
 bool sym_is_nonboolean(struct symbol *sym)
 {
@@ -357,101 +357,6 @@ void sym_add_constraint(struct symbol *sym, struct fexpr *constraint)
 	convert_fexpr_to_nnf(constraint);
 	
 	g_array_append_val(sym->constraints->arr, constraint);
-}
-
-
-/*
- * add assumption for a symbol to the SAT-solver
- */
-void sym_add_assumption(PicoSAT *pico, struct symbol *sym)
-{
-	/*
-	* TODO
-	* Decide if we want the value from .config or the actual value,
-	* which might differ because of prompt conditions.
-	*/
-
-	if (sym_is_boolean(sym)) {
-		int tri_val = sym->def[S_DEF_USER].tri;
-		tri_val = sym_get_tristate_value(sym);
-		
-		sym_add_assumption_tri(pico, sym, tri_val);
-	}
-	if (sym_get_type(sym) == S_INT) {
-		const char *string_val = sym_get_string_value(sym);
-		
-		struct fexpr *e;
-		bool assumption_set = false;
-		unsigned int i;
-		
-		/* do not set it for n yet */
-		for (i = 1; i < sym->fexpr_nonbool->arr->len; i++) {
-			e = g_array_index(sym->fexpr_nonbool->arr, struct fexpr *, i);
-			if (strcmp(str_get(&e->nb_val), string_val) == 0) {
-				picosat_assume(pico, e->satval);
-				e->assumption = true;
-				assumption_set = true;
-			} else {
-				picosat_assume(pico, -(e->satval));
-				e->assumption = false;
-			}
-		}
-		
-		e = g_array_index(sym->fexpr_nonbool->arr, struct fexpr *, 0);
-		/* if no assumption was set, set it to n */
-		if (!assumption_set) {
-			picosat_assume(pico, e->satval);
-			e->assumption = true;
-		} else {
-			picosat_assume(pico, -(e->satval));
-			e->assumption = false;
-		}
-// 		printf("Added assumption: %s %d\n", str_get(&e->name), e->assumption);
-	}
-}
-
-void sym_add_assumption_tri(PicoSAT *pico, struct symbol *sym, tristate tri_val)
-{
-	if (sym_get_type(sym) == S_BOOLEAN) {
-		int a = sym->fexpr_y->satval;
-		switch (tri_val) {
-		case no:
-			picosat_assume(pico, -a);
-			sym->fexpr_y->assumption = false;
-			break;
-		case mod:
-			perror("Should not happen. Boolean symbol is set to mod.\n");
-			break;
-		case yes:
-			picosat_assume(pico, a);
-			sym->fexpr_y->assumption = true;
-			break;
-		}
-	}
-	if (sym_get_type(sym) == S_TRISTATE) {
-		int a = sym->fexpr_y->satval;
-		int a_m = sym->fexpr_m->satval;
-		switch (tri_val) {
-		case no:
-			picosat_assume(pico, -a);
-			picosat_assume(pico, -a_m);
-			sym->fexpr_y->assumption = false;
-			sym->fexpr_m->assumption = false;
-			break;
-		case mod:
-			picosat_assume(pico, -a);
-			picosat_assume(pico, a_m);
-			sym->fexpr_y->assumption = false;
-			sym->fexpr_m->assumption = true;
-			break;
-		case yes:
-			picosat_assume(pico, a);
-			picosat_assume(pico, -a_m);
-			sym->fexpr_y->assumption = true;
-			sym->fexpr_m->assumption = false;
-			break;
-		}
-	}
 }
 
 /*

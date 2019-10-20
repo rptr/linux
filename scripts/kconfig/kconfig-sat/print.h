@@ -6,23 +6,33 @@
 #define OUTFILE_DIMACS "./scripts/kconfig/kconfig-sat/out_cnf.dimacs"
 #define OUTFILE_FEXPR "./scripts/kconfig/kconfig-sat/out_constraints"
 
+/* print all symbols */
 void print_all_symbols(void);
 
+/* print the symbol */
 void print_symbol(struct symbol *sym);
 
-void print_default(struct symbol *sym, struct property *p);
+/* print a default value for a property */
+void print_default(struct property *p);
 
-void print_select(struct symbol *sym, struct property *p);
+/* print a select statement for a property */
+void print_select(struct property *p);
 
-void print_imply(struct symbol *sym, struct property *p);
+/* print an imply statement for a property */
+void print_imply(struct property *p);
 
+/* print an expr */
 void print_expr(struct expr *e, int prevtoken);
 
+/* print some debug info about the tree structure of k_expr */
 void debug_print_kexpr(struct k_expr *e);
 
+/* print a kexpr */
 void print_kexpr(struct k_expr *e);
 
+/* print an fexpr */
 void print_fexpr(struct fexpr *e, int parent);
+
 
 void kexpr_as_char(struct k_expr *e, struct gstr *s);
 

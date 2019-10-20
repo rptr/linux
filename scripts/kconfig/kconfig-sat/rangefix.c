@@ -290,7 +290,7 @@ static void fexpr_add_assumption(PicoSAT *pico, struct fexpr *e)
 		int tri_val = sym->def[S_DEF_USER].tri;
 		tri_val = sym_get_tristate_value(sym);
 		
-		if (e->tristate == yes) {
+		if (e->tri == yes) {
 			if (tri_val == yes) {
 				picosat_assume(pico, e->satval);
 				e->assumption = true;
@@ -298,7 +298,7 @@ static void fexpr_add_assumption(PicoSAT *pico, struct fexpr *e)
 				picosat_assume(pico, -(e->satval));
 				e->assumption = false;
 			}
-		} else if (e->tristate == mod) {
+		} else if (e->tri == mod) {
 			if (tri_val == mod) {
 				picosat_assume(pico, e->satval);
 				e->assumption = true;
@@ -730,7 +730,7 @@ static tristate calculate_new_tri_val(struct fexpr *e, GArray *diagnosis)
 	/* new values for tristate must be deduced from the diagnosis */
 	if (sym_get_type(e->sym) == S_TRISTATE) {
 		/* fexpr_y */
-		if (e->tristate == yes) {
+		if (e->tri == yes) {
 			if (e->assumption == true)
 				/* 
 				 * if diagnosis contains fexpr_m, fexpr_m was false
@@ -744,7 +744,7 @@ static tristate calculate_new_tri_val(struct fexpr *e, GArray *diagnosis)
 				return yes;
 		}
 		/* fexpr_m */
-		if (e->tristate == mod) {
+		if (e->tri == mod) {
 			if (e->assumption == true)
 				/*
 				 * if diagnosis contains fexpr_y, fexpr_y was false

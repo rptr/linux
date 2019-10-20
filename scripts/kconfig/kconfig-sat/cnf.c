@@ -51,7 +51,7 @@ void construct_cnf_clauses()
 }
 
 /*
- * check, if a CNF clause is a tautology
+ * check, if a CNF-clause is a tautology
  */
 bool cnf_is_tautology(struct cnf_clause *cl)
 {

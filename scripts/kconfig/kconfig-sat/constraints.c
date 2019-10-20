@@ -183,16 +183,16 @@ static void add_dependencies(struct symbol *sym)
 		
 		switch (sym_get_type(sym)) {
 		case S_INT:
-			e1 = sym_get_nonbool_fexpr(sym, int_values[0]);
-			e2 = sym_get_nonbool_fexpr(sym, int_values[1]);
+			e1 = sym_get_or_create_nonbool_fexpr(sym, int_values[0]);
+			e2 = sym_get_or_create_nonbool_fexpr(sym, int_values[1]);
 			break;
 		case S_HEX:
-			e1 = sym_get_nonbool_fexpr(sym, hex_values[0]);
-			e2 = sym_get_nonbool_fexpr(sym, hex_values[1]);
+			e1 = sym_get_or_create_nonbool_fexpr(sym, hex_values[0]);
+			e2 = sym_get_or_create_nonbool_fexpr(sym, hex_values[1]);
 			break;
 		case S_STRING:
-			e1 = sym_get_nonbool_fexpr(sym, string_values[0]);
-			e2 = sym_get_nonbool_fexpr(sym, string_values[1]);
+			e1 = sym_get_or_create_nonbool_fexpr(sym, string_values[0]);
+			e2 = sym_get_or_create_nonbool_fexpr(sym, string_values[1]);
 			break;
 		default:
 			e1 = const_true;
@@ -243,7 +243,7 @@ static void sym_nonbool_at_most_1(struct symbol *sym)
 /*
  * get the range constraints for int/hex
  */
-static void sym_get_range_constraints ( struct symbol *sym )
+static void sym_get_range_constraints(struct symbol *sym)
 {
 	struct property *prop = sym_get_range_prop(sym);
 	if (!prop) return;
@@ -266,8 +266,8 @@ static void sym_get_range_constraints ( struct symbol *sym )
 	range_max = sym_get_range_val(prop->expr->right.sym, base);
 	
 	/* add the values to known values, if they don't exist yet */
-	sym_get_nonbool_fexpr(sym, prop->expr->left.sym->name);
-	sym_get_nonbool_fexpr(sym, prop->expr->right.sym->name);
+	sym_create_nonbool_fexpr(sym, prop->expr->left.sym->name);
+	sym_create_nonbool_fexpr(sym, prop->expr->right.sym->name);
 	
 	struct fexpr *e;
 	unsigned int i;
