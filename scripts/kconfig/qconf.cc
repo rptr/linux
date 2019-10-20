@@ -15,6 +15,10 @@
 #include <QMenu>
 #include <QListWidget>
 #include <QTableWidget>
+#include <QHBoxLayout>
+#include <glib.h>
+#include "lkc.h"
+#include "kconfig-sat/satconf.h"
 
 #include <qapplication.h>
 #include <qdesktopwidget.h>
@@ -38,7 +42,7 @@
 #include "images.h"
 #include <iostream>
 
-#include "conflict_resolver.h"
+// #include "conflict_resolver.h"
 #include <QAbstractItemView>
 #include <QMimeData>
 static QApplication *configApp;
@@ -1017,7 +1021,8 @@ ConflictsView::ConflictsView(QWidget* parent, const char *name)
 {
 	currentSelectedMenu = nullptr;
 	setObjectName(name);
-	QVBoxLayout *verticalLayout = new QVBoxLayout(this);
+	QHBoxLayout *horizontalLayout = new QHBoxLayout(this);
+	QVBoxLayout *verticalLayout = new QVBoxLayout();
 	verticalLayout->setContentsMargins(0, 0, 0, 0);
 	conflictsToolBar = new QToolBar("ConflictTools", this);
 	// toolbar buttons [n] [m] [y] [calculate fixes] [remove]
@@ -1060,6 +1065,10 @@ ConflictsView::ConflictsView(QWidget* parent, const char *name)
 	//conflictsTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
 
 	connect(conflictsTable, SIGNAL(cellClicked(int, int)), SLOT(cellClicked(int,int)));
+	horizontalLayout->addLayout(verticalLayout);
+	QPushButton* solution  = new QPushButton("hello");
+	horizontalLayout->addWidget(solution);
+	solution->setText("sdfsdf");
 
 }
 void QTableWidget::dropEvent(QDropEvent *event)
@@ -1123,6 +1132,8 @@ void ConflictsView::addSymbol()
 				conflictsTable->setItem(conflictsTable->rowCount()-1,1,new QTableWidgetItem(tristate_value_to_string(currentval)));
 				conflictsTable->setItem(conflictsTable->rowCount()-1,2,new QTableWidgetItem(tristate_value_to_string(currentval)));
 
+				std::cerr << "Adding " << sym->name << " to list " << std::endl;
+
 			}else{
 				// std::cerr << "we have the symbol already at index " << unsigned(addedSymbolList[sym->name]-1 )<< std::endl;
 				conflictsTable->item(matches[0].row(),2)->setText(tristate_value_to_string(currentval));
@@ -1159,31 +1170,37 @@ void ConflictsView::cellClicked(int row, int column)
 	std::cerr << "help:::: " <<  men->help << std::endl;
 	emit(conflictSelected(men));
 }
+void ConflictsView::calculateFixes(void)
+{
+
+
+}
 void ConflictsView::changeAll(void)
 {
-	std::cerr << "change all clicked" << std::endl;
-	std::cerr << constraints[0].symbol.toStdString() << std::endl;
-	if (constraints.length() == 0)
-		return;
-	// for each constraint in constraints,
-	// find the symbol* from kconfig,
-	// call sym_set_tristate_value() if it is tristate or boolean.
-	for (int i = 0; i < constraints.length() ; i++)
-	{
-		struct symbol* sym = sym_find(constraints[i].symbol.toStdString().c_str());
-		if(!sym)
-			return;
-		int type = sym_get_type(sym);
-		switch (type) {
-		case S_BOOLEAN:
-		case S_TRISTATE:
-			if (!sym_set_tristate_value(sym, constraints[i].req))
-				return;
-			break;
-		}
-	}
+	return;
+	// std::cerr << "change all clicked" << std::endl;
+	// std::cerr << constraints[0].symbol.toStdString() << std::endl;
+	// if (constraints.length() == 0)
+	// 	return;
+	// // for each constraint in constraints,
+	// // find the symbol* from kconfig,
+	// // call sym_set_tristate_value() if it is tristate or boolean.
+	// for (int i = 0; i < constraints.length() ; i++)
+	// {
+	// 	struct symbol* sym = sym_find(constraints[i].symbol.toStdString().c_str());
+	// 	if(!sym)
+	// 		return;
+	// 	int type = sym_get_type(sym);
+	// 	switch (type) {
+	// 	case S_BOOLEAN:
+	// 	case S_TRISTATE:
+	// 		if (!sym_set_tristate_value(sym, constraints[i].req))
+	// 			return;
+	// 		break;
+	// 	}
+	// }
 
-	emit(refreshMenu());
+	// emit(refreshMenu());
 }
 /*
 void ConflictsView::conflictSelected(struct menu * men)
