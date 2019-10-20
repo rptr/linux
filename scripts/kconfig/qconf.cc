@@ -14,6 +14,7 @@
 #include <QFileDialog>
 #include <QMenu>
 #include <QListWidget>
+#include <QComboBox>
 #include <QTableWidget>
 #include <QHBoxLayout>
 #include <glib.h>
@@ -1050,7 +1051,7 @@ ConflictsView::ConflictsView(QWidget* parent, const char *name)
 	connect(removeSymbol, SIGNAL(triggered(bool)), SLOT(removeSymbol()));
 	//connect clicking 'calculate fixes' to 'change all symbol values to fix all conflicts'
 	// no longer used anymore for now.
-	//connect(fixConflictsAction, SIGNAL(triggered(bool)), SLOT(changeAll()));
+	connect(fixConflictsAction, SIGNAL(triggered(bool)), SLOT(calculateFixes()));
 
 	conflictsTable = (QTableWidget*) new dropAbleView(this);
 	conflictsTable->setRowCount(0);
@@ -1066,9 +1067,26 @@ ConflictsView::ConflictsView(QWidget* parent, const char *name)
 
 	connect(conflictsTable, SIGNAL(cellClicked(int, int)), SLOT(cellClicked(int,int)));
 	horizontalLayout->addLayout(verticalLayout);
-	QPushButton* solution  = new QPushButton("hello");
-	horizontalLayout->addWidget(solution);
-	solution->setText("solution goes here");
+
+	// populate the solution view on the right hand side:
+	QVBoxLayout *solutionLayout = new QVBoxLayout();
+	solutionLayout->setContentsMargins(0, 0, 0, 0);
+	solutionSelector = new QComboBox();
+	connect(solutionSelector, QOverload<int>::of(&QComboBox::currentIndexChanged),
+		[=](int index){ changeSolutionTable(index); });
+	solutionTable = new QTableWidget();
+	solutionTable->setRowCount(0);
+	solutionTable->setColumnCount(2);
+	solutionTable->setHorizontalHeaderLabels(QStringList()  << "Symbol" << "New Value");
+
+
+	solutionLayout->addWidget(new QLabel("Solutions:"));
+	solutionLayout->addWidget(solutionSelector);
+	solutionLayout->addWidget(solutionTable);
+
+	horizontalLayout->addLayout(solutionLayout);
+	// QString charx{get_test_char()};
+	// solution->setText(charx);
 
 }
 void QTableWidget::dropEvent(QDropEvent *event)
@@ -1170,8 +1188,36 @@ void ConflictsView::cellClicked(int row, int column)
 	std::cerr << "help:::: " <<  men->help << std::endl;
 	emit(conflictSelected(men));
 }
+void ConflictsView::changeSolutionTable(int solution_number){
+	if(solution_output == nullptr || solution_number < 0){
+		return;
+	}
+	GArray* selected_solution = g_array_index(solution_output,GArray * , solution_number);
+	std::cout << "solution length =" << unsigned(selected_solution->len) << std::endl;
+	// solutionTable->clearContents();
+	solutionTable->setRowCount(0);
+	for (int i = 0; i <selected_solution->len; i++)
+	{
+		solutionTable->insertRow(solutionTable->rowCount());
+		struct symbol_fix* cur_symbol = g_array_index(selected_solution,struct symbol_fix*,i);
+		solutionTable->setItem(solutionTable->rowCount()-1,0,new QTableWidgetItem(cur_symbol->sym->name));
+
+		if (cur_symbol->type == symbolfix_type::SF_BOOLEAN){
+			std::cout << "adding boolean symbol " << std::endl;
+			solutionTable->setItem(solutionTable->rowCount()-1,1,new QTableWidgetItem(tristate_value_to_string(cur_symbol->tri)));
+		} else if(cur_symbol->type == symbolfix_type::SF_NONBOOLEAN){
+			std::cout << "adding non boolean symbol " << std::endl;
+			solutionTable->setItem(solutionTable->rowCount()-1,1,new QTableWidgetItem(cur_symbol->nb_val.s));
+		} else {
+			std::cout << "adding disalllowed symbol " << std::endl;
+			solutionTable->setItem(solutionTable->rowCount()-1,1,new QTableWidgetItem(cur_symbol->disallowed.s));
+		}
+		std::cout << "Adding " << cur_symbol->sym->name << " to list " << std::endl;
+	}
+}
 void ConflictsView::calculateFixes(void)
 {
+	std::cout << "clicked calculate fixes" << std::endl;
 	// call satconf to get a solution by looking at the grid and taking the symbol and their desired value.
 	//get the symbols from  grid:
 	auto first_symbol = conflictsTable->item(0,0)->text().toUtf8().data();
@@ -1179,11 +1225,25 @@ void ConflictsView::calculateFixes(void)
 
 	struct symbol_dvalue wanted_;
 	wanted_.sym = sym;
-	wanted_.type = static_cast<symboldv_type>(0);
-	wanted_.tri =static_cast<tristate>(2);
+	wanted_.type = static_cast<symboldv_type>(sym->type == symbol_type::S_BOOLEAN?0:1);
+	wanted_.tri =string_value_to_tristate(conflictsTable->item(0,1)->text());
 
-	// GArray* output = run_satconf(&wanted_);
-	// std::cout << "solution length = " << unsigned(output->len) << std::endl;
+	solution_output = run_satconf(&wanted_);
+	if (solution_output == nullptr || solution_output->len == 0)
+	{
+		return;
+	}
+	std::cout << "solution length = " << unsigned(solution_output->len) << std::endl;
+	solutionSelector->clear();
+	for (int i = 0; i < solution_output->len; i++)
+	{
+		solutionSelector->addItem(QString::number(i+1));
+	}
+	// populate the solution table from the first solution gotten
+	changeSolutionTable(0);
+
+
+
 
 
 

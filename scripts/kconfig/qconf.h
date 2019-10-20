@@ -20,6 +20,7 @@
 #include "expr.h"
 
 #include "conflict_resolver.h"
+#include "kconfig-sat/satconf.h"
 
 class ConfigView;
 class ConfigList;
@@ -261,6 +262,11 @@ public slots:
 	void changeToYes();
 	void changeToModule();
 
+
+
+  // switches the solution table with selected solution index from  solution_output
+  void changeSolutionTable(int solution_number);
+
   // calls satconfig to solve to get wanted value to current value
   void calculateFixes();
 signals:
@@ -272,6 +278,15 @@ signals:
 public:
 	QTableWidget* conflictsTable;
 	QList<Constraint> constraints;
+
+  // the comobox on the right hand side. used to select a solutio after
+  // getting solution from satconfig
+  QComboBox* solutionSelector{nullptr};
+
+  // the table which shows the selected solution showing variable = New value changes
+	QTableWidget* solutionTable{nullptr};
+
+  GArray* solution_output{nullptr};
 
 	QToolBar *conflictsToolBar;
 	struct menu * currentSelectedMenu ;
