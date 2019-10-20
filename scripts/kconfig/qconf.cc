@@ -42,7 +42,7 @@
 #include "images.h"
 #include <iostream>
 
-// #include "conflict_resolver.h"
+#include "conflict_resolver.h"
 #include <QAbstractItemView>
 #include <QMimeData>
 static QApplication *configApp;
@@ -1068,7 +1068,7 @@ ConflictsView::ConflictsView(QWidget* parent, const char *name)
 	horizontalLayout->addLayout(verticalLayout);
 	QPushButton* solution  = new QPushButton("hello");
 	horizontalLayout->addWidget(solution);
-	solution->setText("sdfsdf");
+	solution->setText("solution goes here");
 
 }
 void QTableWidget::dropEvent(QDropEvent *event)
@@ -1172,6 +1172,19 @@ void ConflictsView::cellClicked(int row, int column)
 }
 void ConflictsView::calculateFixes(void)
 {
+	// call satconf to get a solution by looking at the grid and taking the symbol and their desired value.
+	//get the symbols from  grid:
+	auto first_symbol = conflictsTable->item(0,0)->text().toUtf8().data();
+	struct symbol* sym = sym_find(first_symbol);
+
+	struct symbol_dvalue wanted_;
+	wanted_.sym = sym;
+	wanted_.type = static_cast<symboldv_type>(0);
+	wanted_.tri =static_cast<tristate>(2);
+
+	// GArray* output = run_satconf(&wanted_);
+	// std::cout << "solution length = " << unsigned(output->len) << std::endl;
+
 
 
 }
