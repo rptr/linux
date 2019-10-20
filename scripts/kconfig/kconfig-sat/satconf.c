@@ -220,3 +220,11 @@ GArray * run_satconf(struct symbol_dvalue *sdv)
 		
 	return NULL;
 }
+
+/*
+ * test function
+ */
+char * get_test_char(void)
+{
+	return "kconfig-sat";
+}
