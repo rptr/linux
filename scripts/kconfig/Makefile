@@ -214,7 +214,7 @@ HOSTCFLAGS_utils.o	= $(shell pkg-config --cflags glib-2.0)
 
 hostprogs-y	+= qconf
 qconf-cxxobjs	:= qconf.o conflict_resolver.o
-qconf-objs	:= images.o $(common-objs) $(satconf-objs)
+qconf-objs	:= images.o $(common-objs) kconfig-sat/cnf.o kconfig-sat/constraints.o kconfig-sat/fexpr.o kconfig-sat/picosat.o kconfig-sat/print.o kconfig-sat/rangefix.o kconfig-sat/satconf.o kconfig-sat/satutils.o kconfig-sat/symbol_mod.o kconfig-sat/utils.o
 
 HOSTLDLIBS_qconf	= $(shell . $(obj)/qconf-cfg && echo $$libs && pkg-config --libs glib-2.0)
 HOSTLDLIBS_conflict_resolver	= $(shell . $(obj)/qconf-cfg && echo $$libs)
