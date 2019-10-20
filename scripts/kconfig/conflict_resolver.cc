@@ -5,7 +5,7 @@
 #include <iostream>
 #include <QList>
 #include "conflict_resolver.h"
-
+#if 0
 QList<Constraint> get_constraints()
 {
     /*
@@ -39,6 +39,7 @@ QList<Constraint> get_constraints()
     return x;
 
 }
+#endif
 
 QString tristate_value_to_string(tristate x)
 {
