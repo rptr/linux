@@ -1,5 +1,8 @@
 #ifndef SATCONF_H
 #define SATCONF_H
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #include "../lkc.h"
 
@@ -59,10 +62,10 @@ enum kexpr_type {
 struct k_expr {
 	/* parent k_expr */
 	struct k_expr *parent;
-	
+
 	/* type of the k_expr */
 	enum kexpr_type type;
-	
+
 	/* temporary SAT variable associated with this k_expr */
 	struct tmp_sat_variable *t;
 
@@ -100,19 +103,19 @@ enum fexpr_type {
 struct fexpr {
 	/* name of the feature expr */
 	struct gstr name;
-	
+
 	/* associated symbol */
 	struct symbol *sym;
-	
+
 	/* integer value for the SAT solver */
 	int satval;
-	
+
 	/* assumption in the last call to PicoSAT */
 	bool assumption;
-	
+
 	/* type of the fexpr */
 	enum fexpr_type type;
-	
+
 	union {
 		/* symbol */
 		struct {
@@ -133,30 +136,30 @@ struct fexpr {
 			struct gstr nb_val;
 		};
 	};
-	
+
 };
 
 /* temporary SAT variables */
 struct tmp_sat_variable {
 	/* temporary variable number */
 	int nr;
-	
+
 	/* integer value for the SAT solver */
 	int satval;
-	
+
 	/* string representation for debugging */
 	char sval[STRING_LENGTH];
-	
+
 	/* parent temporary SAT variable */
 	struct tmp_sat_variable *parent;
-	
+
 	/* next temporary SAT variable - null if last */
 	struct tmp_sat_variable *next;
 };
 
 struct default_map {
 	struct gstr val;
-	
+
 	struct fexpr *e;
 };
 
@@ -168,13 +171,13 @@ enum symboldv_type {
 
 struct symbol_dvalue {
 	struct symbol *sym;
-	
+
 	enum symboldv_type type;
-	
+
 	union {
 		/* boolean/tristate */
 		tristate tri;
-		
+
 		/* string/int/hex */
 		struct gstr nb_val;
 	};
@@ -188,16 +191,16 @@ enum symbolfix_type {
 
 struct symbol_fix {
 	struct symbol *sym;
-	
+
 	enum symbolfix_type type;
-	
+
 	union {
 		/* boolean/tristate */
 		tristate tri;
-		
+
 		/* string/int/hex */
 		struct gstr nb_val;
-		
+
 		/* disallowed non-boolean values */
 		struct gstr disallowed;
 	};
@@ -209,5 +212,8 @@ GArray * run_satconf(struct symbol_dvalue *sdv);
 int run_satconf_cli(const char *Kconfig_file);
 
 char * get_test_char(void);
+#ifdef __cplusplus
+}
+#endif
 
 #endif
