@@ -28,6 +28,7 @@ typedef struct
 
 // QList<Constraint> get_constraints();
 QString tristate_value_to_string(tristate x);
+tristate string_value_to_tristate(QString x);
 
 
 
