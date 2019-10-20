@@ -260,6 +260,9 @@ public slots:
 	void changeToNo();
 	void changeToYes();
 	void changeToModule();
+
+  // calls satconfig to solve to get wanted value to current value
+  void calculateFixes();
 signals:
 	void showNameChanged(bool);
 	void showRangeChanged(bool);
