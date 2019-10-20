@@ -60,3 +60,14 @@ QString tristate_value_to_string(tristate x)
     }
 
 }
+tristate string_value_to_tristate(QString x){
+    if (x == "YES"){
+        return tristate::yes;
+    } else if (x == "NO"){
+        return tristate::no;
+    } else if (x == "MODULE")
+    {
+        return tristate::mod;
+    }
+
+}
