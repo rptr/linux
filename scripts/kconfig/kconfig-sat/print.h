@@ -1,15 +1,13 @@
 #ifndef PRINT_H
 #define PRINT_H
 
-#include "satconf.h"
-
 #define OUTFILE_DIMACS "./scripts/kconfig/kconfig-sat/out_cnf.dimacs"
 #define OUTFILE_FEXPR "./scripts/kconfig/kconfig-sat/out_constraints"
 
 /* print all symbols */
 void print_all_symbols(void);
 
-/* print the symbol */
+/* print a symbol */
 void print_symbol(struct symbol *sym);
 
 /* print a default value for a property */
@@ -33,23 +31,31 @@ void print_kexpr(struct k_expr *e);
 /* print an fexpr */
 void print_fexpr(struct fexpr *e, int parent);
 
-
+/* write a kexpr into a string */
 void kexpr_as_char(struct k_expr *e, struct gstr *s);
 
+/* write an fexpr into a string (format needed for testing) */
 void fexpr_as_char(struct fexpr *e, struct gstr *s, int parent);
 
+/* write an fexpr into a string */
 void fexpr_as_char_short(struct fexpr *e, struct gstr *s, int parent);
 
+/* print a CNF-clause */
 void print_cnf_clause(struct cnf_clause *cl);
 
+/* print all CNF-clauses */
 void print_all_cnf_clauses(GArray *cnf_clauses);
 
+/* print all constraints for a symbol */
 void print_sym_constraint(struct symbol *sym);
 
+/* print the satmap */
 void print_satmap(gpointer key, gpointer value, gpointer userData);
 
+/* write all CNF-clauses into a file in DIMACS-format */
 void write_cnf_to_file(GArray *cnf_clauses, int sat_variable_nr, int nr_of_clauses);
 
+/* write all constraints into a file for testing purposes */
 void write_constraints_to_file(void);
 
 #endif

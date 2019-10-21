@@ -8,17 +8,9 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
-#include <glib.h>
-
-#define LKC_DIRECT_LINK
-#include "lkc.h"
 
 #include "kconfig-sat/satconf.h"
-#include "kconfig-sat/picosat.h"
-#include "kconfig-sat/utils.h"
-#include "kconfig-sat/constraints.h"
-#include "kconfig-sat/cnf.h"
-#include "kconfig-sat/satutils.h"
+
 
 static struct symbol * read_symbol_from_stdin(void);
 static struct symbol_dvalue * sym_create_sdv(struct symbol *sym, char *input);

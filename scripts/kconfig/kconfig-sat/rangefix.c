@@ -8,16 +8,8 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
-#include <glib.h>
-
-#define LKC_DIRECT_LINK
-#include "../lkc.h"
 
 #include "satconf.h"
-#include "picosat.h"
-#include "rangefix.h"
-#include "utils.h"
-#include "symbol_mod.h"
 
 static GArray *diagnoses, *diagnoses_symbol;
 

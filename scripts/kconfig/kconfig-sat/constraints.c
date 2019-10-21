@@ -8,16 +8,8 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
-#include <glib.h>
-
-#define LKC_DIRECT_LINK
-#include "../lkc.h"
 
 #include "satconf.h"
-#include "constraints.h"
-#include "fexpr.h"
-#include "print.h"
-#include "utils.h"
 
 static void create_tristate_constraint_clause(struct symbol *sym);
 static void add_selects(struct symbol *sym);

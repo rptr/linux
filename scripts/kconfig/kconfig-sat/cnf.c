@@ -8,15 +8,9 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
-#include <glib.h>
 
-#define LKC_DIRECT_LINK
-#include "../lkc.h"
 #include "satconf.h"
-#include "cnf.h"
-#include "print.h"
-#include "utils.h"
-#include "fexpr.h"
+
 
 // static struct tmp_sat_variable * create_tmp_sat_var(struct tmp_sat_variable *parent);
 // static void build_cnf_tseytin_t(struct tmp_sat_variable *t, struct fexpr *e);

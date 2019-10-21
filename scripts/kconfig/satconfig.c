@@ -8,10 +8,6 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
-#include <glib.h>
-
-#define LKC_DIRECT_LINK
-#include "lkc.h"
 
 #include "kconfig-sat/satconf.h"
 

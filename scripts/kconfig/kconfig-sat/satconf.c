@@ -8,20 +8,8 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
-#include <glib.h>
-
-#define LKC_DIRECT_LINK
-#include "../lkc.h"
 
 #include "satconf.h"
-#include "picosat.h"
-#include "fexpr.h"
-#include "print.h"
-#include "utils.h"
-#include "cnf.h"
-#include "constraints.h"
-#include "rangefix.h"
-#include "satutils.h"
 
 unsigned int sat_variable_nr = 1;
 unsigned int tmp_variable_nr = 1;

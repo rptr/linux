@@ -8,16 +8,8 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
-#include <glib.h>
-
-#define LKC_DIRECT_LINK
-#include "../lkc.h"
 
 #include "satconf.h"
-#include "fexpr.h"
-#include "utils.h"
-#include "print.h"
-
 
 static void create_fexpr_bool(struct symbol *sym);
 static void create_fexpr_nonbool(struct symbol *sym);

@@ -1,11 +1,18 @@
+#define _GNU_SOURCE
+#include <assert.h>
 #include <ctype.h>
+#include <locale.h>
+#include <regex.h>
+#include <stdarg.h>
+#include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <regex.h>
 #include <sys/utsname.h>
+#include <time.h>
+#include <unistd.h>
 
-#include "../lkc.h"
-#include "symbol_mod.h"
+#include "satconf.h"
 
 static void sym_set_changed(struct symbol *sym)
 {

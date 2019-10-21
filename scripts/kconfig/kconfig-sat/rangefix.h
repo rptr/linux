@@ -1,9 +1,6 @@
 #ifndef RANGEFIX_H
 #define RANGEFIX_H
 
-#include "satconf.h"
-#include "picosat.h"
-
 /* initialize RangeFix and return the diagnoses */
 GArray * rangefix_init(PicoSAT *pico);
 

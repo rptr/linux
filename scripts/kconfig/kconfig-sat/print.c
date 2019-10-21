@@ -8,15 +8,8 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
-#include <glib.h>
-
-#define LKC_DIRECT_LINK
-#include "../lkc.h"
 
 #include "satconf.h"
-#include "print.h"
-#include "fexpr.h"
-#include "utils.h"
 
 /*
  * print all symbols, just for debugging
@@ -394,7 +387,7 @@ void kexpr_as_char(struct k_expr *e, struct gstr *s)
 }
 
 /*
- * write a fexpr into a string (format needed for testing)
+ * write an fexpr into a string (format needed for testing)
  */
 void fexpr_as_char(struct fexpr *e, struct gstr *s, int parent)
 {
@@ -442,6 +435,9 @@ void fexpr_as_char(struct fexpr *e, struct gstr *s, int parent)
 	}
 }
 
+/*
+ * write an fexpr into a string
+ */
 void fexpr_as_char_short(struct fexpr *e, struct gstr *s, int parent)
 {
 	if (!e)
@@ -487,7 +483,7 @@ void fexpr_as_char_short(struct fexpr *e, struct gstr *s, int parent)
 }
 
 /*
- * print a CNF clause
+ * print a CNF-clause
  */
 void print_cnf_clause(struct cnf_clause *cl)
 {
@@ -510,7 +506,7 @@ void print_cnf_clause(struct cnf_clause *cl)
 }
 
 /*
- * print all CNF clauses
+ * print all CNF-clauses
  */
 void print_all_cnf_clauses(GArray *cnf_clauses)
 {
@@ -560,7 +556,7 @@ static void print_satmap_dimacs(gpointer key, gpointer value, gpointer fd)
 
 
 /*
- * write the CNF-clauses into a file in DIMACS-format
+ * write all CNF-clauses into a file in DIMACS-format
  */
 void write_cnf_to_file(GArray *cnf_clauses, int sat_variable_nr, int nr_of_clauses)
 {
@@ -595,14 +591,13 @@ void write_cnf_to_file(GArray *cnf_clauses, int sat_variable_nr, int nr_of_claus
 void write_constraints_to_file(void)
 {
 	FILE *fd = fopen(OUTFILE_FEXPR, "w");
-	unsigned int i;
+	unsigned int i, j;
 	struct symbol *sym;
+	struct fexpr *e;
 
 	for_all_symbols(i, sym) {
 		if (sym_get_type(sym) == S_UNKNOWN) continue;
 		
-		struct fexpr *e;
-		int j;
 		for (j = 0; j < sym->constraints->arr->len; j++) {
 			e = g_array_index(sym->constraints->arr, struct fexpr *, j);
 			struct gstr s = str_new();

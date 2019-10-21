@@ -8,19 +8,8 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
-#include <glib.h>
-
-#define LKC_DIRECT_LINK
-#include "../lkc.h"
 
 #include "satconf.h"
-#include "picosat.h"
-#include "satutils.h"
-#include "utils.h"
-#include "rangefix.h"
-#include "fexpr.h"
-#include "print.h"
-#include "cnf.h"
 
 static void run_unsat_problem(PicoSAT *pico);
 static void add_select_constraints(PicoSAT *pico, struct symbol *sym);

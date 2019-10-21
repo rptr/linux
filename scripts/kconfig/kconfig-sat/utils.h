@@ -1,9 +1,6 @@
 #ifndef UTILS_H
 #define UTILS_H
 
-#include "satconf.h"
-#include "picosat.h"
-
 /* parse Kconfig-file and read .config */
 void init_config (const char *Kconfig_file);
 

@@ -8,15 +8,8 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
-#include <glib.h>
 
-#define LKC_DIRECT_LINK
-#include "../lkc.h"
 #include "satconf.h"
-#include "utils.h"
-#include "print.h"
-#include "fexpr.h"
-
 
 /*
  * parse Kconfig-file and read .config
