@@ -23,53 +23,62 @@ unsigned int nr_of_clauses = 0; /* number of CNF-clauses */
 struct fexpr *const_false; /* constant False */
 struct fexpr *const_true; /* constant True */
 
+static bool init_done = false;
+
 /* -------------------------------------- */
 
 int run_satconf_cli(const char *Kconfig_file)
 {
 // 	printf("\nHello satconfig!\n\n");
 
-	printf("Init...");
-	/* measure time for constructing constraints and clauses */
-	clock_t start, end;
-	double time;
-	start = clock();
-	
-	/* parse Kconfig-file and read .config */
-	init_config(Kconfig_file);
+	if (!init_done) {
+		printf("Init...");
+		/* measure time for constructing constraints and clauses */
+		clock_t start, end;
+		double time;
+		start = clock();
+		
+		/* parse Kconfig-file and read .config */
+		init_config(Kconfig_file);
 
-	/* initialize satmap and cnf_clauses */
-	init_data();
-	
-	/* creating constants */
-	create_constants();
-	
-	/* assign SAT variables & create sat_map */
-	assign_sat_variables();
-	
-	/* get the constraints */
-	get_constraints();
+		/* initialize satmap and cnf_clauses */
+		init_data();
+		
+		/* creating constants */
+		create_constants();
+		
+		/* assign SAT variables & create sat_map */
+		assign_sat_variables();
+		
+		/* get the constraints */
+		get_constraints();
+		
+		/* print all symbols and its constraints */
+	// 	print_all_symbols();
+		
+		/* construct the CNF clauses */
+		construct_cnf_clauses();
+
+		end = clock();
+		time = ((double) (end - start)) / CLOCKS_PER_SEC;
+		
+		printf("Generating constraints and clauses...done. (%.6f secs.)\n", time);
+		
+		/* write constraints to file */
+		write_constraints_to_file();
+		
+		init_done = true;
+	}
+
 	
 	/* print all symbols and its constraints */
 // 	print_all_symbols();
 	
-	/* construct the CNF clauses */
-	construct_cnf_clauses();
 
-	end = clock();
-	time = ((double) (end - start)) / CLOCKS_PER_SEC;
-	
-	/* print all symbols and its constraints */
-// 	print_all_symbols();
-	
-	/* write constraints to file */
-	write_constraints_to_file();
 	
 	/* print all CNFs */
 // 	printf("All CNFs:\n");
 // 	print_all_cnf_clauses( cnf_clauses );
-	
-	printf("Generating constraints and clauses...done. (%.6f secs.)\n", time);
 	
 	/* print the satmap */
 // 	g_hash_table_foreach(satmap, print_satmap, NULL);
@@ -90,32 +99,37 @@ int run_satconf_cli(const char *Kconfig_file)
 
 GArray * run_satconf(struct symbol_dvalue *sdv)
 {
-	printf("\n");
-	printf("Init...");
-	/* measure time for constructing constraints and clauses */
 	clock_t start, end;
 	double time;
-	start = clock();
+	
+	if (!init_done) {
+		printf("\n");
+		printf("Init...");
+		/* measure time for constructing constraints and clauses */
+		start = clock();
 
-	/* initialize satmap and cnf_clauses */
-	init_data();
-	
-	/* creating constants */
-	create_constants();
-	
-	/* assign SAT variables & create sat_map */
-	assign_sat_variables();
-	
-	/* get the constraints */
-	get_constraints();
-	
-	/* construct the CNF clauses */
-	construct_cnf_clauses();
-	
-	end = clock();
-	time = ((double) (end - start)) / CLOCKS_PER_SEC;
-	
-	printf("Generating constraints and clauses...done. (%.6f secs.)\n", time);
+		/* initialize satmap and cnf_clauses */
+		init_data();
+		
+		/* creating constants */
+		create_constants();
+		
+		/* assign SAT variables & create sat_map */
+		assign_sat_variables();
+		
+		/* get the constraints */
+		get_constraints();
+		
+		/* construct the CNF clauses */
+		construct_cnf_clauses();
+		
+		end = clock();
+		time = ((double) (end - start)) / CLOCKS_PER_SEC;
+		
+		printf("Generating constraints and clauses...done. (%.6f secs.)\n", time);
+		
+		init_done = true;
+	}
 	
 	/* start PicoSAT */
 	PicoSAT *pico = initialize_picosat();
@@ -162,7 +176,9 @@ GArray * run_satconf(struct symbol_dvalue *sdv)
 	if (res == PICOSAT_SATISFIABLE) {
 		printf("===> Problem is satisfiable <===\n");
 		
-		return g_array_new(false, false, sizeof(GArray *));
+		GArray *ret = g_array_new(false, false, sizeof(GArray *));
+		free(pico);
+		return ret;
 		
 // 		struct symbol *sym;
 // 		unsigned int i;
@@ -199,13 +215,18 @@ GArray * run_satconf(struct symbol_dvalue *sdv)
 	} else if (res == PICOSAT_UNSATISFIABLE) {
 		printf("===> PROBLEM IS UNSATISFIABLE <===\n");
 		printf("\n");
-		return rangefix_init(pico);
+		
+		GArray *ret = rangefix_init(pico);
+		free(pico);
+		return ret;
 	}
 	else {
 		printf("Unknown if satisfiable.\n");
+		free(pico);
 		return NULL;
 	}
-		
+	
+	free(pico);
 	return NULL;
 }
 

@@ -36,6 +36,9 @@ PicoSAT * initialize_picosat(void)
 void picosat_add_clauses(PicoSAT *pico)
 {
 	printf("Adding clauses...");
+	
+	int tmp_clauses = nr_of_clauses;
+	
 	clock_t start, end;
 	double time;
 	start = clock();
@@ -47,7 +50,7 @@ void picosat_add_clauses(PicoSAT *pico)
 	for (i = 0; i < cnf_clauses->len; i++) {
 		cl = g_array_index(cnf_clauses, struct cnf_clause *, i);
 		if (cnf_is_tautology(cl)) {
-			nr_of_clauses--;
+			tmp_clauses--;
 			continue;
 		}
 		
@@ -67,9 +70,9 @@ void picosat_add_clauses(PicoSAT *pico)
 	
 	end = clock();
 	time = ((double) (end - start)) / CLOCKS_PER_SEC;
-	printf("%d clauses added. (%.6f secs.)\n", nr_of_clauses, time);
+	printf("%d clauses added. (%.6f secs.)\n", tmp_clauses, time);
 
-	assert(nr_of_clauses == picosat_added_original_clauses(pico));
+	assert(tmp_clauses == picosat_added_original_clauses(pico));
 }
 
 /*
