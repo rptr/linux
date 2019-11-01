@@ -29,8 +29,6 @@ static bool init_done = false;
 
 int run_satconf_cli(const char *Kconfig_file)
 {
-// 	printf("\nHello satconfig!\n\n");
-
 	if (!init_done) {
 		printf("Init...");
 		/* measure time for constructing constraints and clauses */
@@ -229,6 +227,18 @@ GArray * run_satconf(struct symbol_dvalue *sdv)
 	free(pico);
 	return NULL;
 }
+
+/*
+ * apply a fix
+ */
+int apply_satfix(GArray *fix)
+{
+	printf("\nApplying fixes...\n");
+	print_diagnosis_symbol(fix);
+	
+	return EXIT_SUCCESS;
+}
+
 
 /*
  * test function

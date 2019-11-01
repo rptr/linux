@@ -7,7 +7,10 @@ GArray * rangefix_init(PicoSAT *pico);
 /* ask user which fix to apply */
 GArray * choose_fix(GArray *diag);
 
-/* aplly the fix */
+/* apply the fix */
 void apply_fix(GArray *diag);
+
+/* print a single diagnosis of type symbol_fix */
+void print_diagnosis_symbol(GArray *diag_sym);
 
 #endif

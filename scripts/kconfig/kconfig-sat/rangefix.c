@@ -547,31 +547,42 @@ static void print_diagnoses(GArray *diag)
 }
 
 /*
+ * print a single diagnosis of type symbol_fix
+ */
+void print_diagnosis_symbol(GArray *diag_sym)
+{
+	struct symbol_fix *fix;
+	unsigned int i;
+	
+	printf("[");
+	for (i = 0; i < diag_sym->len; i++) {
+		fix = g_array_index(diag_sym, struct symbol_fix *, i);
+		
+		if (fix->type == SF_BOOLEAN)
+			printf("%s => %s", fix->sym->name, tristate_get_char(fix->tri));
+		else if (fix->type == SF_NONBOOLEAN)
+			printf("%s => %s", fix->sym->name, str_get(&fix->nb_val));
+		else
+			perror("NB not yet implemented.");
+		
+		if (i != diag_sym->len - 1)
+			printf(", ");
+	}
+	printf("]\n");
+}
+
+/*
  * print the diagnoses of type symbol_fix
  */
 static void print_diagnoses_symbol(GArray *diag_sym)
 {
 	GArray *arr;
-	struct symbol_fix *fix;
-	unsigned int i, j;
+	unsigned int i;
 
 	for (i = 0; i < diag_sym->len; i++) {
 		arr = g_array_index(diag_sym, GArray *, i);
-		printf("%d: [", i+1);
-		for (j = 0; j < arr->len; j++) {
-			fix = g_array_index(arr, struct symbol_fix *, j);
-			
-			if (fix->type == SF_BOOLEAN)
-				printf("%s => %s", fix->sym->name, tristate_get_char(fix->tri));
-			else if (fix->type == SF_NONBOOLEAN)
-				printf("%s => %s", fix->sym->name, str_get(&fix->nb_val));
-			else
-				perror("NB not yet implemented.");
-			
-			if (j != arr->len - 1)
-				printf(", ");
-		}
-		printf("]\n");
+		printf("%d: ", i+1);
+		print_diagnosis_symbol(arr);
 	}
 }
 
