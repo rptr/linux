@@ -1079,10 +1079,13 @@ ConflictsView::ConflictsView(QWidget* parent, const char *name)
 	solutionTable->setColumnCount(2);
 	solutionTable->setHorizontalHeaderLabels(QStringList()  << "Symbol" << "New Value");
 
+	applyFixButton = new QPushButton("Apply Selected solution");
+	connect(applyFixButton, SIGNAL(clicked(bool)), SLOT(applyFixButtonClick()));
 
 	solutionLayout->addWidget(new QLabel("Solutions:"));
 	solutionLayout->addWidget(solutionSelector);
 	solutionLayout->addWidget(solutionTable);
+	solutionLayout->addWidget(applyFixButton);
 
 	horizontalLayout->addLayout(solutionLayout);
 	// QString charx{get_test_char()};
@@ -1102,6 +1105,20 @@ void ConflictsView::changeToNo(){
 			conflictsTable->item(rows[i].row(),1)->setText("NO");
 		}
 	}
+}
+void ConflictsView::applyFixButtonClick(){
+	// std::cerr << "solution selected = " << signed(solutionSelector->currentIndex()) << std::endl;
+	signed int solution_number = solutionSelector->currentIndex();
+
+	if (solution_number == -1 || solution_output == NULL) {
+		return;
+	}
+
+	GArray* selected_solution = g_array_index(solution_output,GArray * , solution_number);
+	apply_satfix(selected_solution);
+	// std::cout << "solution length =" << unsigned(selected_solution->len) << std::endl;
+	// std::cerr << "solution selected = "  << std::endl;
+	// solutionSelector->currentIndex
 }
 void ConflictsView::changeToYes(){
 	QItemSelectionModel *select = conflictsTable->selectionModel();
@@ -1185,7 +1202,8 @@ void ConflictsView::cellClicked(int row, int column)
 	}
 	struct property* prop = sym->prop;
 	struct menu* men = prop->menu;
-	std::cerr << "help:::: " <<  men->help << std::endl;
+	// uncommenting following like somehow disables click signal of 'apply selected solution'
+	// std::cerr << "help:::: " <<  men->help << std::endl;
 	emit(conflictSelected(men));
 }
 void ConflictsView::changeSolutionTable(int solution_number){
