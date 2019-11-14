@@ -263,6 +263,9 @@ public slots:
 	void changeToModule();
 
 
+	void applyFixButtonClick();
+
+
 
   // switches the solution table with selected solution index from  solution_output
   void changeSolutionTable(int solution_number);
@@ -285,6 +288,9 @@ public:
 
   // the table which shows the selected solution showing variable = New value changes
 	QTableWidget* solutionTable{nullptr};
+
+  // Apply fixes button on the solution view
+	QPushButton* applyFixButton{nullptr};
 
   GArray* solution_output{nullptr};
 
