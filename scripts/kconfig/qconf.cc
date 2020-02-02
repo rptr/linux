@@ -1034,6 +1034,9 @@ ConflictsView::ConflictsView(QWidget* parent, const char *name)
 	QAction *fixConflictsAction = new QAction("Calculate Fixes");
 	QAction *removeSymbol = new QAction("Remove Symbol");
 
+	//if you change the order of buttons here, change the code where
+	//module button was disabled if symbol is boolean, selecting module button
+	//depends on a specific index in list of action
 	fixConflictsAction->setCheckable(false);
 	conflictsToolBar->addAction(addSymbol);
 	conflictsToolBar->addAction(setConfigSymbolAsNo);
@@ -1082,7 +1085,8 @@ ConflictsView::ConflictsView(QWidget* parent, const char *name)
 	applyFixButton = new QPushButton("Apply Selected solution");
 	connect(applyFixButton, SIGNAL(clicked(bool)), SLOT(applyFixButtonClick()));
 
-	solutionLayout->addWidget(new QLabel("Solutions:"));
+	numSolutionLabel = new QLabel("Solutions:");
+	solutionLayout->addWidget(numSolutionLabel);
 	solutionLayout->addWidget(solutionSelector);
 	solutionLayout->addWidget(solutionTable);
 	solutionLayout->addWidget(applyFixButton);
@@ -1204,6 +1208,15 @@ void ConflictsView::cellClicked(int row, int column)
 	struct menu* men = prop->menu;
 	// uncommenting following like somehow disables click signal of 'apply selected solution'
 	// std::cerr << "help:::: " <<  men->help << std::endl;
+	if (sym->type == symbol_type::S_BOOLEAN){
+		//disable module button
+		conflictsToolBar->actions()[2]->setDisabled(true);
+
+	}
+	else {
+		//enable module button
+		conflictsToolBar->actions()[2]->setDisabled(false);
+	}
 	emit(conflictSelected(men));
 }
 void ConflictsView::changeSolutionTable(int solution_number){
@@ -1258,6 +1271,7 @@ void ConflictsView::calculateFixes(void)
 		solutionSelector->addItem(QString::number(i+1));
 	}
 	// populate the solution table from the first solution gotten
+	numSolutionLabel->setText(QString("Solutions: (%1) found").arg(solution_output->len));
 	changeSolutionTable(0);
 
 
