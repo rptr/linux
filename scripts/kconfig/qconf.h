@@ -296,6 +296,8 @@ public:
 
 	QToolBar *conflictsToolBar;
 	struct menu * currentSelectedMenu ;
+	QLabel* numSolutionLabel{nullptr};
+
 
 };
 
