@@ -92,7 +92,8 @@ enum fexpr_type {
 	FE_EQUALS,
 	FE_TRUE,  /* constant of value True */
 	FE_FALSE,  /* constant of value False */
-	FE_NONBOOL  /* for all non-(boolean/tristate) constants */
+	FE_NONBOOL,  /* for all non-(boolean/tristate) constants */
+	FE_CHOICE /* symbols of type choice */
 };
 
 /* struct for a propositional logic formula */

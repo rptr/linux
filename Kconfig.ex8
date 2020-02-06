@@ -1,0 +1,7 @@
+menuconfig MODULES
+        bool "Enable loadable module support"
+        option modules
+	default y
+
+config A
+	def_bool y

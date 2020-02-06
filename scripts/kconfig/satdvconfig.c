@@ -27,7 +27,13 @@ int main(int argc, char *argv[])
 	/* parse Kconfig-file and read .config */
 	init_config(argv[1]);
 	
+	GArray *diagnoses, *chosen_fix;
+	GArray *symbols;
+	
 	while(1) {
+		/* create the array */
+		symbols = g_array_new(false, false, sizeof(struct symbol_dvalue *));
+		
 		/* ask for user input */
 		struct symbol *sym = read_symbol_from_stdin();
 		
@@ -40,12 +46,17 @@ int main(int argc, char *argv[])
 		strtok(input, "\n");
 		
 		struct symbol_dvalue *sdv = sym_create_sdv(sym, input);
+		g_array_append_val(symbols, sdv);
 		
 // 		run_satdvconf(sdv);
-		GArray *diagnoses = run_satconf(sdv);
-		GArray *chosen_fix = choose_fix(diagnoses);
+		diagnoses = run_satconf(symbols);
+		chosen_fix = choose_fix(diagnoses);
 		
-		apply_satfix(chosen_fix);
+		if (chosen_fix != NULL)
+			apply_satfix(chosen_fix);
+		
+		/* clear the array */
+		g_array_free(symbols, TRUE);
 	}
 
 	
@@ -92,7 +103,7 @@ static struct symbol_dvalue * sym_create_sdv(struct symbol *sym, char *input)
 			perror("Not a valid tristate value.");
 		
 		/* sanitize input for booleans */
-		if (sym_get_type(sym) == S_BOOLEAN && sdv->tri == mod)
+		if (sym->type == S_BOOLEAN && sdv->tri == mod)
 			sdv->tri = yes;
 	} else if (sym_is_nonboolean(sym)) {
 		sdv->nb_val = str_new();

@@ -265,7 +265,7 @@ static void fexpr_add_assumption(PicoSAT *pico, struct fexpr *e)
 {
 	struct symbol *sym = e->sym;
 	
-	if (sym_get_type(sym) == S_BOOLEAN) {
+	if (sym->type == S_BOOLEAN) {
 		int tri_val = sym->def[S_DEF_USER].tri;
 		tri_val = sym_get_tristate_value(sym);
 	
@@ -278,7 +278,7 @@ static void fexpr_add_assumption(PicoSAT *pico, struct fexpr *e)
 		}
 	}
 	
-	if (sym_get_type(sym) == S_TRISTATE) {
+	if (sym->type == S_TRISTATE) {
 		int tri_val = sym->def[S_DEF_USER].tri;
 		tri_val = sym_get_tristate_value(sym);
 		
@@ -301,7 +301,7 @@ static void fexpr_add_assumption(PicoSAT *pico, struct fexpr *e)
 		}
 	}
 	
-	if (sym_get_type(sym) == S_INT) {
+	if (sym->type == S_INT) {
 		const char *string_val = sym_get_string_value(sym);
 	
 		if (strcmp(str_get(&e->nb_val), string_val) == 0) {
@@ -679,8 +679,13 @@ void apply_fix(GArray *diag)
 	struct symbol *sym;
 	unsigned int i, j;
 	
-	// force-write values and then reload everything ?
+	
+	
+	printf("\nTrying to apply fixes now...");
 
+// 	printf("\n\n");
+	
+	
 	/*
 	 * changes will be applied as a "transaction"
 	 * we allow illegal values temporarily and all values will be 
@@ -688,35 +693,60 @@ void apply_fix(GArray *diag)
 	 */
 	for (i = 0; i < diag->len; i++) {
 		fix = g_array_index(diag, struct symbol_fix *, i);
+	
+// 		printf("Symbol %s, curr. val %s", fix->sym->name, sym_get_string_value(fix->sym));
+// 		
+// 		printf("\n");
+// 		if (fix->sym->dir_dep.expr) {
+// 			printf("Dep: ");
+// 			print_expr(fix->sym->dir_dep.expr, E_NONE);
+// 			printf(", val %d\n", fix->sym->dir_dep.tri);
+// 		}
+		
 		if (fix->type == SF_BOOLEAN) {
+// 			printf("Symbol %s, val %u\n", fix->sym->name, fix->tri);
 			sym_set_tristate_value_mod(fix->sym, fix->tri);
+			
 		}
 
 		else if (fix->type == SF_NONBOOLEAN)
 			sym_set_string_value(fix->sym, str_get(&fix->nb_val));
 	}
-	
-	conf_write(NULL);
-	conf_read(NULL);
-	
-// 	/* recalculate all values */
-// 	for (j = 0; j < diag->len; j++) {
-// 	for (i = 0; i < diag->len; i++) {
-// 		fix = g_array_index(diag, struct symbol_fix *, i);
-// 		sym_calc_value(fix->sym);
-// 	}
-// 	}
+
+	/* Just updating the symbols' does not suffice.
+	 * The values for everything else needs to be updated as well.
+	 * Recalculations must be performed.
+	 * One way of doing it is to save the current configuration and then
+	 * simply reload it, thereby recalculating everything.
+	 */
+	conf_write(".config_sat");
+	conf_read(".config_sat");
+
 	
 	/* check that all values are within range */
 	for (i = 0; i < diag->len; i++) {
 		fix = g_array_index(diag, struct symbol_fix *, i);
+		
+		
+// 		printf("Symbol %s, curr. val %s", fix->sym->name, sym_get_string_value(fix->sym));
+// 		
+// 		printf("\n");
+		
+		
+// 		if (fix->sym->dir_dep.expr) {
+// 			printf("Dep: ");
+// 			print_expr(fix->sym->dir_dep.expr, E_NONE);
+// 			printf(", val %d\n", fix->sym->dir_dep.tri);
+// 		}
+		
 		if (fix->type == SF_BOOLEAN)
-			if (!sym_tristate_within_range_mod(fix->sym, fix->tri))
-				perror("Symbol not within range\n");
+			if (!sym_tristate_within_range(fix->sym, fix->tri))
+				printf("Symbol %s not within range\n", fix->sym->name);
 		// TODO for non-booleans
 	}
 	
-// 	conf_write(NULL);
+	conf_write(NULL);
+	printf("done.\n");
 }
 
 /*
@@ -727,11 +757,11 @@ static tristate calculate_new_tri_val(struct fexpr *e, GArray *diagnosis)
 	assert(sym_is_boolean(e->sym));
 	
 	/* return the opposite of the last assumption for booleans */
-	if (sym_get_type(e->sym) == S_BOOLEAN)
+	if (e->sym->type == S_BOOLEAN)
 		return e->assumption ? no : yes;
 	
 	/* new values for tristate must be deduced from the diagnosis */
-	if (sym_get_type(e->sym) == S_TRISTATE) {
+	if (e->sym->type == S_TRISTATE) {
 		/* fexpr_y */
 		if (e->tri == yes) {
 			if (e->assumption == true)
@@ -774,7 +804,7 @@ static const char * calculate_new_string_value(struct fexpr *e, GArray *diagnosi
 {
 	assert(sym_is_nonboolean(e->sym));
 	
-	if (sym_get_type(e->sym) == S_INT) {
+	if (e->sym->type == S_INT) {
 		/* if assumption was false before, this is the new value because only 1 variable can be true */
 		if (e->assumption == false)
 			return str_get(&e->nb_val);

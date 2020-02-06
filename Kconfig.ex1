@@ -27,6 +27,9 @@ config G
 	tristate "CONFIG G"
 	select H
 
+menu "test"
+	visible if A
 config H
 	tristate "CONFIG H"
-	
+	default m
+endmenu

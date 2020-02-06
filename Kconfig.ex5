@@ -6,25 +6,25 @@ menuconfig MODULES
 	default y
 
 config A
-	bool "CONFIG A"
-#	depends on B || C
+	tristate "CONFIG A"
 
 config B
-	bool "CONFIG B"
-	depends on !A && I=7
+	tristate "CONFIG B"
 
-config C
-	bool "CONFIG C"
-#	depends on !B
-	select B
+choice
+	prompt "CHOICE_1"
 	depends on A
 
-#config D
-#	bool "D"
-#	depends on !C
-#	depends on I=7
+config D
+	tristate "CONFIG D"
 
-config I
-	int "I"
-#	default 12
-#	range 10 24 if A
+config E
+	tristate "CONFIG E"
+
+config F
+	bool "CONFIG F"
+
+config G
+	bool "CONFIG G"
+
+endchoice

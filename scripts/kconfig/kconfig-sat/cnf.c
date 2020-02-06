@@ -30,7 +30,7 @@ void construct_cnf_clauses()
 	printf("Constructing CNF-clauses...");
 
 	for_all_symbols(i, sym) {
-		if (sym_get_type(sym) == S_UNKNOWN) continue;
+		if (sym->type == S_UNKNOWN) continue;
 		
 		struct fexpr *e;
 		for (j = 0; j < sym->constraints->arr->len; j++) {

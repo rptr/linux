@@ -13,21 +13,27 @@
 
 static void create_fexpr_bool(struct symbol *sym);
 static void create_fexpr_nonbool(struct symbol *sym);
+static void create_fexpr_unknown(struct symbol *sym);
+static void create_fexpr_choice(struct symbol *sym);
 
 /*
  * create the fexpr for a symbol
  */
 void sym_create_fexpr(struct symbol *sym)
-{
-	if (sym_is_boolean(sym))
+{	
+	if (sym_is_choice(sym))
+		create_fexpr_choice(sym);
+	else if (sym_is_boolean(sym))
 		create_fexpr_bool(sym);
-	else
+	else if (sym_is_nonboolean(sym))
 		create_fexpr_nonbool(sym);
+	else
+		create_fexpr_unknown(sym);
 }
 
 
 /*
- * create the fexpr for a boolean symbol
+ * create the fexpr for a boolean/tristate symbol
  */
 static void create_fexpr_bool(struct symbol *sym)
 {
@@ -40,7 +46,7 @@ static void create_fexpr_bool(struct symbol *sym)
 	sym->fexpr_y = fexpr_y;
 	
 	struct fexpr *fexpr_m;
-	if (sym_get_type(sym) == S_TRISTATE) {
+	if (sym->type == S_TRISTATE) {
 		fexpr_m = create_fexpr(sat_variable_nr++, FE_SYMBOL, sym->name);
 		str_append(&fexpr_m->name, "_MODULE");
 		fexpr_m->sym = sym;
@@ -76,7 +82,7 @@ static void create_fexpr_nonbool(struct symbol *sym)
 		str_append(&e->name, "=");
 		e->nb_val = str_new();
 		
-		switch (sym_get_type(sym)) {
+		switch (sym->type) {
 		case S_INT:
 			str_append(&e->name, int_values[i]);
 			str_append(&e->nb_val, int_values[i]);
@@ -94,24 +100,71 @@ static void create_fexpr_nonbool(struct symbol *sym)
 		}
 
 		g_array_append_val(sym->fexpr_nonbool->arr, e);
-		
-		//printf("s %s\n", str_get(&e->nb_val));
 
 		/* add it to satmap */
 		g_hash_table_insert(satmap, &e->satval, e);
 	}
 }
 
+
 /*
- * calculate the both-part of a k_expr
+ * set fexpr_y and fexpr_m simply to False
+ */
+static void create_fexpr_unknown(struct symbol *sym)
+{
+	sym->fexpr_y = const_false;
+	sym->fexpr_m = const_false;
+}
+
+
+/*
+ * create the fexpr for a choice symbol
+ */
+static void create_fexpr_choice(struct symbol *sym)
+{
+	assert(sym_is_boolean(sym));
+	
+	struct property *prompt = sym_get_prompt(sym);
+	assert(prompt);
+	
+	char *name = strdup(prompt->text);
+	
+	//printf("\nChoice: %s, prop_type %s\n", sym->name, prompt->text);
+	struct fexpr *fexpr_y = create_fexpr(sat_variable_nr++, FE_CHOICE, name);
+	fexpr_y->sym = sym;
+	fexpr_y->tri = yes;
+	/* add it to satmap */
+	g_hash_table_insert(satmap, &fexpr_y->satval, fexpr_y);
+	
+	sym->fexpr_y = fexpr_y;
+	
+	struct fexpr *fexpr_m;
+	if (sym->type == S_TRISTATE) {
+		fexpr_m = create_fexpr(sat_variable_nr++, FE_CHOICE, name);
+		str_append(&fexpr_m->name, "_MODULE");
+		fexpr_m->sym = sym;
+		fexpr_m->tri = mod;
+		/* add it to satmap */
+		g_hash_table_insert(satmap, &fexpr_m->satval, fexpr_m);
+	} else {
+// 		printf("is NOT tristate\n");
+		fexpr_m = const_false;
+	}
+	sym->fexpr_m = fexpr_m;
+}
+
+
+/*
+ * calculate, when k_expr will evaluate to yes or mod
  */
 struct fexpr * calculate_fexpr_both(struct k_expr *e)
 {
 	return fexpr_or(calculate_fexpr_m(e), calculate_fexpr_y(e));
 }
 
+
 /*
- * calculate the yes-part of a k_expr
+ * calculate, when k_expr will evaluate to yes
  */
 struct fexpr * calculate_fexpr_y(struct k_expr *e)
 {
@@ -143,7 +196,7 @@ struct fexpr * calculate_fexpr_y(struct k_expr *e)
 
 
 /*
- * calculate the mod-part of a k_expr
+ * calculate, when k_expr will evaluate to mod
  */
 struct fexpr * calculate_fexpr_m(struct k_expr *e)
 {
@@ -168,7 +221,7 @@ struct fexpr * calculate_fexpr_m(struct k_expr *e)
 }
 
 /*
- * calculate the yes-part of a k_expr of type AND
+ * calculate, when k_expr of type AND will evaluate to yes
  * A && B
  */
 struct fexpr * calculate_fexpr_y_and(struct k_expr *a, struct k_expr *b)
@@ -177,7 +230,7 @@ struct fexpr * calculate_fexpr_y_and(struct k_expr *a, struct k_expr *b)
 }
 
 /*
- * calculate the mod-part of a k_expr of type AND
+ * calculate, when k_expr of type AND will evaluate to mod
  * (A || A_m) && (B || B_m) && !(A && B)
  */
 struct fexpr * calculate_fexpr_m_and(struct k_expr *a, struct k_expr *b)
@@ -191,7 +244,7 @@ struct fexpr * calculate_fexpr_m_and(struct k_expr *a, struct k_expr *b)
 }
 
 /*
- * calculate the yes-part of a k_expr of type OR
+ * calculate, when k_expr of type OR will evaluate to yes
  * A || B
  */
 struct fexpr * calculate_fexpr_y_or(struct k_expr *a, struct k_expr *b)
@@ -200,7 +253,7 @@ struct fexpr * calculate_fexpr_y_or(struct k_expr *a, struct k_expr *b)
 }
 
 /*
- * calculate the mod-part of a k_expr of type OR
+ * calculate, when k_expr of type OR will evaluate to mod
  * (A_m || B_m) && !A && !B
  */
 struct fexpr * calculate_fexpr_m_or(struct k_expr *a, struct k_expr *b)
@@ -213,7 +266,7 @@ struct fexpr * calculate_fexpr_m_or(struct k_expr *a, struct k_expr *b)
 }
 
 /*
- * calculate the yes-part of a k_expr of type NOT
+ * calculate, when k_expr of type NOT will evaluate to yes
  * !(A || A_m)
  */
 struct fexpr * calculate_fexpr_y_not(struct k_expr *a)
@@ -222,7 +275,7 @@ struct fexpr * calculate_fexpr_y_not(struct k_expr *a)
 }
 
 /*
- * calculate the mod-part of a k_expr of type NOT
+ * calculate, when k_expr of type NOT will evaluate to mod
  * A_m
  */
 struct fexpr * calculate_fexpr_m_not(struct k_expr *a)
@@ -295,7 +348,7 @@ struct fexpr * sym_get_or_create_nonbool_fexpr(struct symbol *sym, char *value)
 }
 
 /*
- * calculate the yes-part of a k_expr of type EQUAL
+ * calculate, when k_expr of type EQUAL will evaluate to yes
  * (A=B) && (A_m=B_m)
  */
 struct fexpr * calculate_fexpr_y_equals(struct k_expr *a)
@@ -305,7 +358,7 @@ struct fexpr * calculate_fexpr_y_equals(struct k_expr *a)
 		return a->eqsym == a->eqvalue ? const_true : const_false;
 	
 	/* comparing 2 nonboolean constants */
-	if (sym_get_type(a->eqsym) == S_UNKNOWN && sym_get_type(a->eqvalue) == S_UNKNOWN) {
+	if (a->eqsym->type == S_UNKNOWN && a->eqvalue->type == S_UNKNOWN) {
 		return strcmp(a->eqsym->name, a->eqvalue->name) == 0 ? const_true : const_false;
 	}
 	
@@ -318,10 +371,10 @@ struct fexpr * calculate_fexpr_y_equals(struct k_expr *a)
 	}
 	
 	/* comparing nonboolean with a constant */
-	if (sym_is_nonboolean(a->eqsym) && sym_get_type(a->eqvalue) == S_UNKNOWN) {
+	if (sym_is_nonboolean(a->eqsym) && a->eqvalue->type == S_UNKNOWN) {
 		return sym_get_or_create_nonbool_fexpr(a->eqsym, a->eqvalue->name);
 	}
-	if (sym_get_type(a->eqsym) == S_UNKNOWN && sym_is_nonboolean(a->eqvalue)) {
+	if (a->eqsym->type == S_UNKNOWN && sym_is_nonboolean(a->eqvalue)) {
 		return sym_get_or_create_nonbool_fexpr(a->eqvalue, a->eqsym->name);
 	}
 	
@@ -353,6 +406,14 @@ struct fexpr * calculate_fexpr_y_unequals(struct k_expr *a)
  */
 struct fexpr * fexpr_and(struct fexpr *a, struct fexpr *b)
 {
+	if (a == const_false || b == const_false)
+		return const_false;
+	
+	if (a == const_true)
+		return b;
+	if (b == const_true)
+		return a;
+	
 	struct fexpr *fe = malloc(sizeof(struct fexpr));
 	fe->type = FE_AND;
 	fe->left = a;
@@ -366,6 +427,14 @@ struct fexpr * fexpr_and(struct fexpr *a, struct fexpr *b)
  */
 struct fexpr * fexpr_or(struct fexpr *a, struct fexpr *b)
 {
+	if (a == const_false)
+		return b;
+	if (b == const_false)
+		return a;
+	
+	if (a == const_true || b == const_true)
+		return const_true;
+	
 	struct fexpr *fe = malloc(sizeof(struct fexpr));
 	fe->type = FE_OR;
 	fe->left = a;
@@ -379,6 +448,11 @@ struct fexpr * fexpr_or(struct fexpr *a, struct fexpr *b)
  */
 struct fexpr * fexpr_not(struct fexpr *a)
 {
+	if (a == const_false)
+		return const_true;
+	if (a == const_true)
+		return const_false;
+	
 	struct fexpr *fe = malloc(sizeof(struct fexpr));
 	fe->type = FE_NOT;
 	fe->left = a;
@@ -391,7 +465,7 @@ struct fexpr * fexpr_not(struct fexpr *a)
  */
 struct fexpr * sym_get_fexpr_both(struct symbol *sym)
 {
-	return sym_get_type(sym) == S_TRISTATE ? fexpr_or(sym->fexpr_m, sym->fexpr_y) : sym->fexpr_y;
+	return sym->type == S_TRISTATE ? fexpr_or(sym->fexpr_m, sym->fexpr_y) : sym->fexpr_y;
 }
 
 /*
@@ -429,6 +503,7 @@ static bool convert_fexpr_to_nnf_util(struct fexpr *e)
 	
 	switch (e->type) {
 	case FE_SYMBOL:
+	case FE_CHOICE:
 	case FE_FALSE:
 	case FE_TRUE:
 		return false;
@@ -510,6 +585,7 @@ static bool convert_nnf_to_cnf_util(struct fexpr *e)
 {
 	switch (e->type) {
 	case FE_SYMBOL:
+	case FE_CHOICE:
 	case FE_FALSE:
 	case FE_TRUE:
 		return false;
@@ -612,8 +688,9 @@ void unfold_cnf_clause(struct fexpr *e)
 		add_literal_to_clause(cl, -(e->left->satval));
 		break;
 	default:
-		print_fexpr(e, -1);
-		printf("type %d\n", e->type);
+		// TODO
+		//print_fexpr(e, -1);
+		//printf("type %d\n", e->type);
 		break;
 	}
 }

@@ -10,6 +10,9 @@ void print_all_symbols(void);
 /* print a symbol */
 void print_symbol(struct symbol *sym);
 
+/* print a symbol's name */
+void print_sym_name(struct symbol *sym);
+
 /* print a default value for a property */
 void print_default(struct property *p);
 
@@ -20,16 +23,16 @@ void print_select(struct property *p);
 void print_imply(struct property *p);
 
 /* print an expr */
-void print_expr(struct expr *e, int prevtoken);
+void print_expr(char *tag, struct expr *e, int prevtoken);
 
 /* print some debug info about the tree structure of k_expr */
 void debug_print_kexpr(struct k_expr *e);
 
 /* print a kexpr */
-void print_kexpr(struct k_expr *e);
+void print_kexpr(char *tag, struct k_expr *e);
 
 /* print an fexpr */
-void print_fexpr(struct fexpr *e, int parent);
+void print_fexpr(char *tag, struct fexpr *e, int parent);
 
 /* write a kexpr into a string */
 void kexpr_as_char(struct k_expr *e, struct gstr *s);

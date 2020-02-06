@@ -28,7 +28,7 @@ static void sym_set_changed(struct symbol *sym)
 // TODO function needs a rewrite to reflect changes from RangeFix
 bool sym_tristate_within_range_mod(struct symbol *sym, tristate val)
 {
-	int type = sym_get_type(sym);
+	int type = sym->type;
 	
 	if (type != S_BOOLEAN && type != S_TRISTATE) {
 		printf("ERROR: sym %s - wrong type\n", sym->name);

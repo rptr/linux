@@ -58,10 +58,8 @@ void assign_sat_variables(void)
 	
 	printf("Creating SAT-variables...");
 	
-	for_all_symbols(i, sym) {
-		if (sym_get_type(sym) != S_UNKNOWN)
-			create_sat_variables(sym);
-	}
+	for_all_symbols(i, sym)
+		create_sat_variables(sym);
 	
 	printf("done.\n");
 }
@@ -218,7 +216,7 @@ bool can_evaluate_to_mod(struct k_expr *e)
 	
 	switch (e->type) {
 	case KE_SYMBOL:
-		return sym_get_type(e->sym) == S_TRISTATE ? true : false;
+		return e->sym->type == S_TRISTATE ? true : false;
 	case KE_AND:
 	case KE_OR:
 		return can_evaluate_to_mod(e->left) || can_evaluate_to_mod(e->right);
@@ -270,7 +268,6 @@ struct fexpr * get_fexpr_from_satmap(int key)
 struct k_expr * parse_expr(struct expr *e, struct k_expr *parent)
 {
 	struct k_expr *ke = malloc(sizeof(struct k_expr));
-	debug_print_kexpr(ke);
 	ke->parent = parent;
 
 	switch (e->type) {
@@ -321,7 +318,7 @@ bool is_tristate_constant(struct symbol *sym) {
  */
 bool sym_is_boolean(struct symbol *sym)
 {
-	return sym_get_type(sym) == S_BOOLEAN || sym_get_type(sym) == S_TRISTATE;
+	return sym->type == S_BOOLEAN || sym->type == S_TRISTATE;
 }
 
 /*
@@ -337,7 +334,20 @@ bool sym_is_bool_or_triconst(struct symbol *sym)
  */
 bool sym_is_nonboolean(struct symbol *sym)
 {
-	return sym_get_type(sym) == S_INT || sym_get_type(sym) == S_HEX || sym_get_type(sym) == S_STRING;
+	return sym->type == S_INT || sym->type == S_HEX || sym->type == S_STRING;
+}
+
+/*
+ * return the prompt of the symbol, if there is one
+ */
+struct property * sym_get_prompt(struct symbol *sym)
+{
+	struct property *prop;
+	
+	for_all_prompts(sym, prop)
+		return prop;
+	
+	return NULL;
 }
 
 /*

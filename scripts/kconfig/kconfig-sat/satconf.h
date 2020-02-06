@@ -32,13 +32,11 @@ extern "C" {
 
 
 /* external functions */
-GArray * run_satconf(struct symbol_dvalue *sdv);
+GArray * run_satconf(GArray *arr);
 
 int apply_satfix(GArray *fix);
 
 int run_satconf_cli(const char *Kconfig_file);
-
-char * get_test_char(void);
 
 
 /* make functions accessible from xconfig */

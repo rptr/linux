@@ -41,18 +41,18 @@ int run_satconf_cli(const char *Kconfig_file)
 
 		/* initialize satmap and cnf_clauses */
 		init_data();
-		
+
 		/* creating constants */
 		create_constants();
-		
+
 		/* assign SAT variables & create sat_map */
 		assign_sat_variables();
-		
+
 		/* get the constraints */
 		get_constraints();
-		
+
 		/* print all symbols and its constraints */
-	// 	print_all_symbols();
+// 		print_all_symbols();
 		
 		/* construct the CNF clauses */
 		construct_cnf_clauses();
@@ -68,9 +68,9 @@ int run_satconf_cli(const char *Kconfig_file)
 		init_done = true;
 	}
 
-	
+// 	return EXIT_SUCCESS;
 	/* print all symbols and its constraints */
-// 	print_all_symbols();
+//	print_all_symbols();
 	
 
 	
@@ -95,7 +95,7 @@ int run_satconf_cli(const char *Kconfig_file)
 	return EXIT_SUCCESS;
 }
 
-GArray * run_satconf(struct symbol_dvalue *sdv)
+GArray * run_satconf(GArray *arr)
 {
 	clock_t start, end;
 	double time;
@@ -133,33 +133,39 @@ GArray * run_satconf(struct symbol_dvalue *sdv)
 	PicoSAT *pico = initialize_picosat();
 	picosat_add_clauses(pico);
 	
-	/* add unit clauses for symbol */
-	if (sym_get_type(sdv->sym) == S_BOOLEAN) {
-		switch (sdv->tri) {
-		case yes:
-			picosat_add_arg(pico, sdv->sym->fexpr_y->satval, 0);
-			break;
-		case no:
-			picosat_add_arg(pico, -(sdv->sym->fexpr_y->satval), 0);
-			break;
-		case mod:
-			perror("Should not happen.\n");
-		}
-	} else if (sym_get_type(sdv->sym) == S_TRISTATE) {
-		switch (sdv->tri) {
-		case yes:
-			picosat_add_arg(pico, sdv->sym->fexpr_y->satval, 0);
-			picosat_add_arg(pico, -(sdv->sym->fexpr_m->satval), 0);
-			break;
-		case mod:
-			picosat_add_arg(pico, -(sdv->sym->fexpr_y->satval), 0);
-			picosat_add_arg(pico, sdv->sym->fexpr_m->satval, 0);
-			break;
-		case no:
-			picosat_add_arg(pico, -(sdv->sym->fexpr_y->satval), 0);
-			picosat_add_arg(pico, -(sdv->sym->fexpr_m->satval), 0);
+	/* add unit clauses for each symbol */
+	unsigned int i;
+	struct symbol_dvalue *sdv;
+	for (i = 0; i < arr->len; i++) {
+		sdv = g_array_index(arr, struct symbol_dvalue *, i);
+		if (sdv->sym->type == S_BOOLEAN) {
+			switch (sdv->tri) {
+			case yes:
+				picosat_add_arg(pico, sdv->sym->fexpr_y->satval, 0);
+				break;
+			case no:
+				picosat_add_arg(pico, -(sdv->sym->fexpr_y->satval), 0);
+				break;
+			case mod:
+				perror("Should not happen.\n");
+			}
+		} else if (sdv->sym->type == S_TRISTATE) {
+			switch (sdv->tri) {
+			case yes:
+				picosat_add_arg(pico, sdv->sym->fexpr_y->satval, 0);
+				picosat_add_arg(pico, -(sdv->sym->fexpr_m->satval), 0);
+				break;
+			case mod:
+				picosat_add_arg(pico, -(sdv->sym->fexpr_y->satval), 0);
+				picosat_add_arg(pico, sdv->sym->fexpr_m->satval, 0);
+				break;
+			case no:
+				picosat_add_arg(pico, -(sdv->sym->fexpr_y->satval), 0);
+				picosat_add_arg(pico, -(sdv->sym->fexpr_m->satval), 0);
+			}
 		}
 	}
+
 	
 // 	picosat_solve(pico);
 	printf("Solving SAT-problem...");
@@ -236,14 +242,7 @@ int apply_satfix(GArray *fix)
 	printf("\nApplying fixes...\n");
 	print_diagnosis_symbol(fix);
 	
+	apply_fix(fix);
+	
 	return EXIT_SUCCESS;
-}
-
-
-/*
- * test function
- */
-char * get_test_char(void)
-{
-	return "kconfig-sat";
 }

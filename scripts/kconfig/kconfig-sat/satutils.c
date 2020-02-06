@@ -161,7 +161,7 @@ static void add_select_constraints(PicoSAT *pico, struct symbol *sym)
 	struct fexpr *dep_both = calculate_fexpr_both(ke_dirdep);
 	int tmp_clauses = nr_of_clauses;
 	
-	if (sym_get_type(sym) == S_TRISTATE) {
+	if (sym->type == S_TRISTATE) {
 		struct fexpr *dep_y = calculate_fexpr_y(ke_dirdep);
 		struct fexpr *fe_y = implies(sym->fexpr_y, dep_y);
 		convert_fexpr_to_nnf(fe_y);
@@ -172,7 +172,7 @@ static void add_select_constraints(PicoSAT *pico, struct symbol *sym)
 		convert_fexpr_to_nnf(fe_both);
 		convert_fexpr_to_cnf(fe_both);
 		unfold_cnf_clause(fe_both);
-	} else if (sym_get_type(sym) == S_BOOLEAN) {
+	} else if (sym->type == S_BOOLEAN) {
 		struct fexpr *fe_both = implies(sym->fexpr_y, dep_both);
 		convert_fexpr_to_nnf(fe_both);
 		convert_fexpr_to_cnf(fe_both);
@@ -227,7 +227,7 @@ void sym_add_assumption(PicoSAT *pico, struct symbol *sym)
 		
 		sym_add_assumption_tri(pico, sym, tri_val);
 	}
-	if (sym_get_type(sym) == S_INT) {
+	if (sym->type == S_INT) {
 		const char *string_val = sym_get_string_value(sym);
 		
 		struct fexpr *e;
@@ -265,7 +265,7 @@ void sym_add_assumption(PicoSAT *pico, struct symbol *sym)
  */
 void sym_add_assumption_tri(PicoSAT *pico, struct symbol *sym, tristate tri_val)
 {
-	if (sym_get_type(sym) == S_BOOLEAN) {
+	if (sym->type == S_BOOLEAN) {
 		int a = sym->fexpr_y->satval;
 		switch (tri_val) {
 		case no:
@@ -281,7 +281,7 @@ void sym_add_assumption_tri(PicoSAT *pico, struct symbol *sym, tristate tri_val)
 			break;
 		}
 	}
-	if (sym_get_type(sym) == S_TRISTATE) {
+	if (sym->type == S_TRISTATE) {
 		int a = sym->fexpr_y->satval;
 		int a_m = sym->fexpr_m->satval;
 		switch (tri_val) {

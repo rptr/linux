@@ -1,15 +1,14 @@
 menuconfig MODULES
-        bool "Enable loadable module support"
-        option modules
+	bool "Enable loadable module support"
+	option modules
 	default y
 
 config A
-	bool "A prompt"
+	tristate "A prompt"
 
 config B
-	bool "B prompt"
-	select A
+	tristate "B prompt"
 
 config C
-	bool "C prompt"
-#	depends on A && !B
+	tristate "C prompt"
+	depends on A && B

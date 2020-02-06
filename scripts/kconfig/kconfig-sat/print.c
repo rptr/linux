@@ -11,6 +11,8 @@
 
 #include "satconf.h"
 
+static void print_expr_util(struct expr *e, int prevtoken);
+
 /*
  * print all symbols, just for debugging
  */
@@ -22,7 +24,7 @@ void print_all_symbols(void)
 	printf("\n");
 	
 	for_all_symbols(i, sym) {
-		if (sym_get_type(sym) == S_UNKNOWN)
+		if (sym->type == S_UNKNOWN)
 			continue;
 		
 		print_symbol(sym);
@@ -45,7 +47,7 @@ void print_symbol(struct symbol *sym)
 
 	if (sym_is_boolean(sym)) {
 		printf("name %s, type %s, fexpr_y %d", sym->name, sym_type_name(sym->type), sym->fexpr_y->satval);
-		if (sym_get_type(sym) == S_TRISTATE)
+		if (sym->type == S_TRISTATE)
 			printf(", fexpr_m %d", sym->fexpr_m->satval);
 	} else {
 		printf("name %s, type %s", sym->name, sym_type_name(sym->type));
@@ -66,7 +68,7 @@ void print_symbol(struct symbol *sym)
 	/* print reverse dependencies */
 	if (sym->rev_dep.expr) {
 		printf("\tselected if ");
-		print_expr(sym->rev_dep.expr, E_NONE);
+		print_expr_util(sym->rev_dep.expr, E_NONE);
 		printf("  (reverse dep.)\n");
 	}
 
@@ -77,20 +79,36 @@ void print_symbol(struct symbol *sym)
 	/* print weak reverse denpencies */
 	if (sym->implied.expr) {
 		printf("\timplied if ");
-		print_expr(sym->implied.expr, E_NONE);
+		print_expr_util(sym->implied.expr, E_NONE);
 		printf("  (weak reverse dep.)\n");
 	}
 
 	/* print dependencies */
 	if (sym->dir_dep.expr) {
 		printf("\tdepends on ");
-		print_expr(sym->dir_dep.expr, E_NONE);
+		print_expr_util(sym->dir_dep.expr, E_NONE);
 		printf("\n");
 	}
 
 	printf("\n");
 
 }
+
+/*
+ * print a symbol's name
+ */
+void print_sym_name(struct symbol *sym)
+{
+	printf("Symbol: ");
+	if (sym_is_choice(sym)) {
+		struct property *prompt = sym_get_prompt(sym);
+		printf("%s (Choice)", prompt->text);
+	} else  {
+		printf("%s", sym->name);
+	}
+	printf("\n");
+}
+
 
 /*
  * print a default value for a property
@@ -101,7 +119,7 @@ void print_default(struct property *p)
 	printf("\tdefault %u", p->expr->left.sym->curr.tri);
 	if (p->visible.expr) {
 		printf(" if ");
-		print_expr(p->visible.expr, E_NONE);
+		print_expr_util(p->visible.expr, E_NONE);
 	}
 	printf("\n");
 }
@@ -114,12 +132,10 @@ void print_select(struct property *p)
 	assert(p->type == P_SELECT);
 	struct expr *e = p->expr;
 
-	printf("\tselect ");
-	print_expr(e, E_NONE);
-	if (p->visible.expr) {
-		printf(" if ");
-		print_expr(p->visible.expr, E_NONE);
-	}
+	print_expr("\tselect", e, E_NONE);
+	if (p->visible.expr)
+		print_expr(" if", p->visible.expr, E_NONE);
+	
 	printf("\n");
 }
 
@@ -132,10 +148,10 @@ void print_imply(struct property *p)
 	struct expr *e = p->expr;
 
 	printf("\timply ");
-	print_expr(e, E_NONE);
+	print_expr_util(e, E_NONE);
 	if (p->visible.expr) {
 		printf(" if ");
-		print_expr(p->visible.expr, E_NONE);
+		print_expr_util(p->visible.expr, E_NONE);
 	}
 	printf("\n");
 }
@@ -143,7 +159,7 @@ void print_imply(struct property *p)
 /*
  * print an expr
  */
-void print_expr(struct expr *e, int prevtoken)
+void print_expr_util(struct expr *e, int prevtoken)
 {
 	if (!e)
 		return;
@@ -157,20 +173,20 @@ void print_expr(struct expr *e, int prevtoken)
 		break;
 	case E_NOT:
 		printf("!");
-		print_expr(e->left.expr, E_NOT);
+		print_expr_util(e->left.expr, E_NOT);
 		break;
 	case E_AND:
 		printf("(");
-		print_expr(e->left.expr, E_AND);
+		print_expr_util(e->left.expr, E_AND);
 		printf(" && ");
-		print_expr(e->right.expr, E_AND);
+		print_expr_util(e->right.expr, E_AND);
 		printf(")");
 		break;
 	case E_OR:
 		printf("(");
-		print_expr(e->left.expr, E_OR);
+		print_expr_util(e->left.expr, E_OR);
 		printf(" || ");
-		print_expr(e->right.expr, E_OR);
+		print_expr_util(e->right.expr, E_OR);
 		printf(")");
 		break;
 	case E_EQUAL:
@@ -211,11 +227,18 @@ void print_expr(struct expr *e, int prevtoken)
 		break;
 	}
 }
+void print_expr(char *tag, struct expr *e, int prevtoken)
+{
+	printf("%s ", tag);
+	print_expr_util(e, prevtoken);
+	printf("\n");
+}
+
 
 /*
  * print a kexpr
  */
-void print_kexpr(struct k_expr *e)
+static void print_kexpr_util(struct k_expr *e)
 {
 	if (!e)
 		return;
@@ -228,21 +251,21 @@ void print_kexpr(struct k_expr *e)
 		break;
 	case KE_AND:
 		printf("(");
-		print_kexpr(e->left);
+		print_kexpr_util(e->left);
 		printf(" && ");
-		print_kexpr(e->right);
+		print_kexpr_util(e->right);
 		printf(")");
 		break;
 	case KE_OR:
 		printf("(");
-		print_kexpr(e->left);
+		print_kexpr_util(e->left);
 		printf(" || ");
-		print_kexpr(e->right);
+		print_kexpr_util(e->right);
 		printf(")");
 		break;
 	case KE_NOT:
 		printf("!");
-		print_kexpr(e->left);
+		print_kexpr_util(e->left);
 		break;
 	case KE_EQUAL:
 	case KE_UNEQUAL:
@@ -258,39 +281,47 @@ void print_kexpr(struct k_expr *e)
 		break;
 	}
 }
+void print_kexpr(char *tag, struct k_expr *e)
+{
+	printf("%s ", tag);
+	print_kexpr_util(e);
+	printf("\n");
+}
+
 
 /*
  * print a fexpr
  */
-void print_fexpr(struct fexpr *e, int parent)
+static void print_fexpr_util(struct fexpr *e, int parent)
 {
 	if (!e)
 		return;
 	
 	switch (e->type) {
 	case FE_SYMBOL:
+	case FE_CHOICE:
 		printf("%s", str_get(&e->name));
 		break;
 	case FE_AND:
 		/* need this hack for the FeatureExpr parser */
 		if (parent != FE_AND)
 			printf("(");
-		print_fexpr(e->left, FE_AND);
+		print_fexpr_util(e->left, FE_AND);
 		printf(" && ");
-		print_fexpr(e->right, FE_AND);
+		print_fexpr_util(e->right, FE_AND);
 		if (parent != FE_AND)
 			printf(")");
 		break;
 	case FE_OR:
 		printf("(");
-		print_fexpr(e->left, FE_OR);
+		print_fexpr_util(e->left, FE_OR);
 		printf(" || ");
-		print_fexpr(e->right, FE_OR);
+		print_fexpr_util(e->right, FE_OR);
 		printf(")");
 		break;
 	case FE_NOT:
 		printf("!");
-		print_fexpr(e->left, FE_NOT);
+		print_fexpr_util(e->left, FE_NOT);
 		break;
 	case FE_EQUALS:
 		printf("%s=%s", e->sym->name, e->eqvalue->name);
@@ -306,6 +337,13 @@ void print_fexpr(struct fexpr *e, int parent)
 		break;
 	}
 }
+void print_fexpr(char *tag, struct fexpr *e, int parent)
+{
+	printf("%s ", tag);
+	print_fexpr_util(e, parent);
+	printf("\n");
+}
+
 
 /*
  * print some debug info about the tree structure of k_expr
@@ -396,6 +434,7 @@ void fexpr_as_char(struct fexpr *e, struct gstr *s, int parent)
 	
 	switch (e->type) {
 	case FE_SYMBOL:
+	case FE_CHOICE:
 	case FE_NONBOOL:
 		str_append(s, "definedEx(");
 		str_append(s, str_get(&e->name));
@@ -527,7 +566,7 @@ void print_sym_constraint(struct symbol* sym)
 	int i;
 	for (i = 0; i < sym->constraints->arr->len; i++) {
 		e = g_array_index(sym->constraints->arr, struct fexpr *, i);
-		print_fexpr(e, -1);
+		print_fexpr_util(e, -1);
 		#if PRINT_ALL_CNF
 			printf("\nCNF: ");
 			convert_fexpr_to_cnf(e);
@@ -596,7 +635,7 @@ void write_constraints_to_file(void)
 	struct fexpr *e;
 
 	for_all_symbols(i, sym) {
-		if (sym_get_type(sym) == S_UNKNOWN) continue;
+		if (sym->type == S_UNKNOWN) continue;
 		
 		for (j = 0; j < sym->constraints->arr->len; j++) {
 			e = g_array_index(sym->constraints->arr, struct fexpr *, j);
