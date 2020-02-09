@@ -1253,8 +1253,8 @@ void ConflictsView::calculateFixes(void)
 	std::cout << "clicked calculate fixes" << std::endl;
 	// call satconf to get a solution by looking at the grid and taking the symbol and their desired value.
 	//get the symbols from  grid:
-	auto first_symbol = conflictsTable->item(0,0)->text().toUtf8().data();
-	struct symbol* sym = sym_find(first_symbol);
+	if(conflictsTable->rowCount() == 0)
+		return;
 
 	GArray* wanted_symbols = g_array_sized_new(FALSE,TRUE,sizeof(struct symbol_dvalue *),conflictsTable->rowCount());
 	//loop through the rows in conflicts table adding each row into the array:
