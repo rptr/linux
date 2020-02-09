@@ -34,6 +34,8 @@
 #include <qregexp.h>
 #include <qevent.h>
 
+#include <gmodule.h>
+
 #include <stdlib.h>
 
 #include "lkc.h"
@@ -1254,12 +1256,20 @@ void ConflictsView::calculateFixes(void)
 	auto first_symbol = conflictsTable->item(0,0)->text().toUtf8().data();
 	struct symbol* sym = sym_find(first_symbol);
 
-	struct symbol_dvalue wanted_;
-	wanted_.sym = sym;
-	wanted_.type = static_cast<symboldv_type>(sym->type == symbol_type::S_BOOLEAN?0:1);
-	wanted_.tri =string_value_to_tristate(conflictsTable->item(0,1)->text());
+	GArray* wanted_symbols = g_array_sized_new(FALSE,TRUE,sizeof(struct symbol_dvalue),conflictsTable->rowCount());
+	//loop through the rows in conflicts table adding each row into the array:
+	for (int i = 0; i < conflictsTable->rowCount(); i++)
+	{
+		struct symbol_dvalue tmp;
+		auto _symbol = conflictsTable->item(i,0)->text().toUtf8().data();
+		struct symbol* sym = sym_find(_symbol);
 
-	solution_output = run_satconf(&wanted_);
+		tmp.type = static_cast<symboldv_type>(sym->type == symbol_type::S_BOOLEAN?0:1);
+		tmp.tri = string_value_to_tristate(conflictsTable->item(i,1)->text());
+		g_array_append_val(wanted_symbols,tmp);
+	}
+	solution_output = run_satconf(wanted_symbols);
+	g_array_free (wanted_symbols,FALSE);
 	if (solution_output == nullptr || solution_output->len == 0)
 	{
 		return;
