@@ -1256,19 +1256,25 @@ void ConflictsView::calculateFixes(void)
 	auto first_symbol = conflictsTable->item(0,0)->text().toUtf8().data();
 	struct symbol* sym = sym_find(first_symbol);
 
-	GArray* wanted_symbols = g_array_sized_new(FALSE,TRUE,sizeof(struct symbol_dvalue),conflictsTable->rowCount());
+	GArray* wanted_symbols = g_array_sized_new(FALSE,TRUE,sizeof(struct symbol_dvalue *),conflictsTable->rowCount());
 	//loop through the rows in conflicts table adding each row into the array:
+	struct symbol_dvalue* p = nullptr;
+	p = static_cast<struct symbol_dvalue*>(calloc(conflictsTable->rowCount(),sizeof(struct symbol_dvalue)));
+	if (!p)
+		return;
 	for (int i = 0; i < conflictsTable->rowCount(); i++)
 	{
-		struct symbol_dvalue tmp;
+		struct symbol_dvalue *tmp = (p+i);
 		auto _symbol = conflictsTable->item(i,0)->text().toUtf8().data();
 		struct symbol* sym = sym_find(_symbol);
 
-		tmp.type = static_cast<symboldv_type>(sym->type == symbol_type::S_BOOLEAN?0:1);
-		tmp.tri = string_value_to_tristate(conflictsTable->item(i,1)->text());
+		tmp->sym = sym;
+		tmp->type = static_cast<symboldv_type>(sym->type == symbol_type::S_BOOLEAN?0:1);
+		tmp->tri = string_value_to_tristate(conflictsTable->item(i,1)->text());
 		g_array_append_val(wanted_symbols,tmp);
 	}
 	solution_output = run_satconf(wanted_symbols);
+	free(p);
 	g_array_free (wanted_symbols,FALSE);
 	if (solution_output == nullptr || solution_output->len == 0)
 	{
