@@ -15,6 +15,7 @@ static void build_tristate_constraint_clause(struct symbol *sym);
 static void add_selects(struct symbol *sym);
 static void add_dependencies(struct symbol* sym);
 static void add_choice_prompt_cond(struct symbol *sym);
+static void add_choice_dependencies(struct symbol *sym);
 static void add_choice_constraints(struct symbol *sym);
 static void sym_nonbool_at_least_1(struct symbol *sym);
 static void sym_nonbool_at_most_1(struct symbol *sym);
@@ -37,9 +38,15 @@ void get_constraints(void)
 	
 	printf("Building constraints...");
 	
+// 	printf("\n");
+	
 	for_all_symbols(i, sym) {
-		if (!sym_is_boolean(sym) && !sym_is_nonboolean(sym))
+		if (sym->type == S_UNKNOWN)
 			continue;
+		
+// 		print_sym_name(sym);
+// 		if (sym_is_choice_value(sym))
+// 			printf("IS CHOICE VALUE\n");
 		
 		/* build tristate constraints */
 		if (sym->type == S_TRISTATE)
@@ -58,10 +65,16 @@ void get_constraints(void)
 		/* build constraints for dependencies */
 		if (sym->dir_dep.expr)
 			add_dependencies(sym);
+
+// 		print_sym_constraint(sym);
 		
 		/* build constraints for choice prompts */
 		if (sym_is_choice(sym))
 			add_choice_prompt_cond(sym);
+		
+		/* build constraints for dependencies (choice symbols) */
+		if (sym_is_choice(sym))
+			add_choice_dependencies(sym);
 		
 		/* build constraints for the choice options */
 		if (sym_is_choice(sym))
@@ -169,13 +182,6 @@ static void add_dependencies(struct symbol *sym)
 	struct k_expr *ke_revdep = sym->rev_dep.expr ? parse_expr(sym->rev_dep.expr, NULL) : get_const_false_as_kexpr();
 	
 // 	print_kexpr("kexpr:", ke_dirdep);
-
-	struct gstr reason = str_new();
-	str_append(&reason, "(#): ");
-	str_append(&reason, sym->name);
-	str_append(&reason, " depends on ");
-	// TODO ke_dirdep | ke_revdep
-	kexpr_as_char(ke_dirdep, &reason);
 	
 	struct fexpr *dep_both = calculate_fexpr_both(ke_dirdep);
 	struct fexpr *sel_both = sym->rev_dep.expr ? calculate_fexpr_both(ke_revdep) : const_false;
@@ -192,8 +198,15 @@ static void add_dependencies(struct symbol *sym)
 		struct fexpr *fe_both = implies(sym->fexpr_m, fexpr_or(dep_both, sel_both));
 		sym_add_constraint(sym, fe_both);
 	} else if (sym->type == S_BOOLEAN) {
-		struct fexpr *fe_both = implies(sym->fexpr_y, fexpr_or(dep_both, sel_both));
-		sym_add_constraint(sym, fe_both);
+		if (!sym_is_choice_value(sym)) {
+			struct fexpr *fe_both = implies(sym->fexpr_y, fexpr_or(dep_both, sel_both));
+			sym_add_constraint(sym, fe_both);
+		} else {
+			assert(ke_dirdep->type == KE_SYMBOL);
+			struct symbol *ch = ke_dirdep->sym;
+			struct fexpr *fe = implies(sym->fexpr_y, fexpr_and(ch->fexpr_y, fexpr_not(ch->fexpr_m)));
+			sym_add_constraint(sym, fe);
+		}
 	} else if (sym_is_nonboolean(sym)) {
 		char int_values[][2] = {"0", "1"};
 		char hex_values[][4] = {"0x0", "0x1"};
@@ -239,16 +252,59 @@ static void add_choice_prompt_cond(struct symbol* sym)
 	struct k_expr *ke = prompt->visible.expr ? parse_expr(prompt->visible.expr, NULL) : get_const_true_as_kexpr();
 	struct fexpr *promptCondition = calculate_fexpr_both(ke);
 	
+// 	print_expr("CHOICE_1 PROMPT:", prompt->visible.expr, E_NONE);
+// 	print_fexpr("C_1 fexpr:", promptCondition, -1);
+	
 	struct fexpr *fe_both = sym_get_fexpr_both(sym);
 	
 	if (!sym_is_optional(sym)) {
 		struct fexpr *req_cond = implies(promptCondition, fe_both);
+// 		print_fexpr("PromptCond:", req_cond, -1);
 		sym_add_constraint(sym, req_cond);
 	}
 	
 	struct fexpr *pr_cond = implies(fe_both, promptCondition);
 	sym_add_constraint(sym, pr_cond);
 }
+
+/*
+ * build constraints for dependencies (choice symbols)
+ */
+static void add_choice_dependencies(struct symbol *sym)
+{
+	assert(sym_is_choice(sym));
+	
+	struct property *prompt = sym_get_prompt(sym);
+	assert(prompt);
+	
+	struct k_expr *ke_dirdep = prompt->visible.expr ? parse_expr(prompt->visible.expr, NULL) : get_const_true_as_kexpr();
+
+// 	print_expr("dir_dep expr:", sym->dir_dep.expr, E_NONE);
+	
+	//struct k_expr *ke_dirdep = parse_expr(sym->dir_dep.expr, NULL);
+	//struct k_expr *ke_revdep = sym->rev_dep.expr ? parse_expr(sym->rev_dep.expr, NULL) : get_const_false_as_kexpr();
+	
+	struct fexpr *dep_both = calculate_fexpr_both(ke_dirdep);
+	//struct fexpr *sel_both = sym->rev_dep.expr ? calculate_fexpr_both(ke_revdep) : const_false;
+
+// 	print_fexpr("fexpr dep_both:", dep_both, -1);
+// 	print_fexpr("fexpr sel_both:", sel_both, -1);
+	
+	if (sym->type == S_TRISTATE) {
+		struct fexpr *dep_y = calculate_fexpr_y(ke_dirdep);
+		//struct fexpr *sel_y = calculate_fexpr_y(ke_revdep);
+		//struct fexpr *fe_y = implies(sym->fexpr_y, fexpr_or(dep_y, sel_y));
+		struct fexpr *fe_y = implies(sym->fexpr_y, dep_y);
+		sym_add_constraint(sym, fe_y);
+		
+		struct fexpr *fe_both = implies(sym->fexpr_m, dep_both);
+		sym_add_constraint(sym, fe_both);
+	} else if (sym->type == S_BOOLEAN) {
+		struct fexpr *fe_both = implies(sym->fexpr_y, dep_both);
+		sym_add_constraint(sym, fe_both);
+	}
+}
+
 
 /*
  * build constraints for the choice symbols

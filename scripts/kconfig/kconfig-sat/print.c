@@ -166,8 +166,8 @@ void print_expr_util(struct expr *e, int prevtoken)
 
 	switch (e->type) {
 	case E_SYMBOL:
-		if (e->left.sym->name)
-			printf("%s", e->left.sym->name);
+		if (sym_get_name(e->left.sym) != NULL)
+			printf("%s", sym_get_name(e->left.sym));
 		else
 			printf("left was null\n");
 		break;
@@ -245,7 +245,7 @@ static void print_kexpr_util(struct k_expr *e)
 
 	switch (e->type) {
 	case KE_SYMBOL:
-		printf("%s", e->sym->name);
+		printf("%s", sym_get_name(e->sym));
 		if (e->tri == mod)
 			printf("_m");
 		break;
