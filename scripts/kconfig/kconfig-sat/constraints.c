@@ -219,6 +219,7 @@ static void add_dependencies(struct symbol *sym)
 			break;
 		}
 		
+		// TODO
 		struct fexpr *fe_both = implies(fexpr_or(e1, e2), fexpr_or(dep_both, sel_both));
 		sym_add_constraint(sym, fe_both);
 	}

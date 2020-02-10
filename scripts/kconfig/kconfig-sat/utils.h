@@ -66,9 +66,14 @@ bool sym_is_bool_or_triconst(struct symbol *sym);
 /* check, if a symbol is of type int, hex, or string */
 bool sym_is_nonboolean(struct symbol *sym);
 
+/* check, if a symbol has a prompt */
+bool sym_has_prompt(struct symbol *sym);
+
 /* return the prompt of the symbol, if there is one */
 struct property * sym_get_prompt(struct symbol *sym);
 
+/* return the name of the symbol */
+char * sym_get_name(struct symbol *sym);
 
 /* add a constraint for a symbol */
 void sym_add_constraint(struct symbol *sym, struct fexpr *constraint);

@@ -338,6 +338,19 @@ bool sym_is_nonboolean(struct symbol *sym)
 }
 
 /*
+ * check, if a symbol has a prompt
+ */
+bool sym_has_prompt(struct symbol *sym)
+{
+	struct property *prop;
+
+	for_all_prompts(sym, prop)
+		return true;
+
+	return false;
+}
+
+/*
  * return the prompt of the symbol, if there is one
  */
 struct property * sym_get_prompt(struct symbol *sym)
@@ -348,6 +361,20 @@ struct property * sym_get_prompt(struct symbol *sym)
 		return prop;
 	
 	return NULL;
+}
+
+/*
+ * return the name of the symbol
+ */
+char * sym_get_name(struct symbol *sym)
+{
+	if (sym_is_choice(sym)) {
+		struct property *prompt = sym_get_prompt(sym);
+		assert(prompt);
+		return strdup(prompt->text);
+	} else {
+		return sym->name;
+	}
 }
 
 /*

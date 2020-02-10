@@ -25,50 +25,6 @@ static void sym_set_changed(struct symbol *sym)
 	}
 }
 
-// TODO function needs a rewrite to reflect changes from RangeFix
-bool sym_tristate_within_range_mod(struct symbol *sym, tristate val)
-{
-	int type = sym->type;
-	
-	if (type != S_BOOLEAN && type != S_TRISTATE) {
-		printf("ERROR: sym %s - wrong type\n", sym->name);
-		return false;
-	}
-
-	if (type == S_BOOLEAN && val == mod) {
-		printf("ERROR: sym %s - boolean cannot be mod\n", sym->name);
-		return false;
-	}
-	
-	if (val < sym->rev_dep.tri) {
-		printf("ERROR: sym %s - val is lower than rev_dep\n", sym->name);
-		return false;
-	}
-	
-	if (sym->implied.tri == yes && val == mod) {
-		printf("ERROR: sym %s - is implied, cannot be mod\n", sym->name);
-		return false;
-	}
-
-// 	if (sym->visible == no)
-// 		return false;
-
-// 	if (sym->visible <= sym->rev_dep.tri)
-// 		return false;
-
-	if (sym_is_choice_value(sym) && sym->visible == yes && val != yes) {
-		printf("ERROR: sym %s - is choice, must be yes\n", sym->name);
-		return false;
-	}
-	
-	if (val > sym->visible) {
-		printf("ERROR: sym %s - val is higher than visiblity\n", sym->name);
-		return false;
-	}
-	
-	return true;
-}
-
 bool sym_set_tristate_value_mod(struct symbol *sym, tristate val)
 {
 	tristate oldval = sym_get_tristate_value(sym);

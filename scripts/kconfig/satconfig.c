@@ -18,8 +18,9 @@
 int main(int argc, char *argv[])
 {
 	printf("\nHello satconfig!\n");
-
+	
 	run_satconf_cli(argv[1]);
+
 // 	PicoSAT *pico = picosat_init();
 // 	picosat_enable_trace_generation(pico);
 // 	

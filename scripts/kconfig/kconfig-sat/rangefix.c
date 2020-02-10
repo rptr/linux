@@ -98,7 +98,6 @@ static GArray * generate_diagnoses(PicoSAT *pico)
 		GArray *c = get_difference(C, E0);
 // 		print_array("Soft constraints", c);
 		
-		
 		set_assumptions(pico, c);
 		
 		int res = picosat_sat(pico, -1);
@@ -119,17 +118,11 @@ static GArray * generate_diagnoses(PicoSAT *pico)
 			perror("Doh brother.");
 		}
 		
-		
-		
 		X = get_unsat_core(pico, c);
 // 		print_array("Unsat core", X);
 		// TODO: possibly minimise the unsat core here, but not necessary
 		
 		for (i = 0; i < E->len; i++) {
-// 		i = 0;
-// 		while (i < E->len) {
-// 			printf("size of E: %d, i = %d\n", E->len, i);
-// 			getchar();
 			/* get partial diagnosis */
 			e = g_array_index(E, GArray *, i);
 // 			print_array("Look at partial diagnosis", e);
@@ -138,7 +131,6 @@ static GArray * generate_diagnoses(PicoSAT *pico)
 			 * if there is, go to the next partial diagnosis */
 			if (has_intersection(e, X)) {
 // 				printf("Intersection with core.\n");
-// 				i++;
 				continue;
 			}
 			
@@ -146,21 +138,15 @@ static GArray * generate_diagnoses(PicoSAT *pico)
 			for (j = 0; j < X->len; j++) {
 				x = g_array_index(X, struct fexpr *, j);
 // 				printf("x = %s\n", str_get(&x->name));
-				
-				
+
 				/* create {x} */
 				x_set = g_array_new(false, false, sizeof(struct fexpr *));
 				g_array_append_val(x_set, x);
 // 				print_array("{x}", x_set);
 				
-				
-				
 				/* create E' = e ∪ {x} */
 				E1 = get_union(e, x_set);
 // 				print_array("E1", E1);
-				
-				
-
 				
 				/* create (E\e) ∪ R */
 				E_R_Union = clone_array(E);
@@ -170,9 +156,6 @@ static GArray * generate_diagnoses(PicoSAT *pico)
 // 					tmp = g_array_index(E_R_Union, GArray *, t);
 // 					print_array("E_R_Union", tmp);
 // 				}
-// 				
-// 				getchar();
-				
 				
 				bool E2_subset_of_E1 = false;
 				
@@ -196,45 +179,27 @@ static GArray * generate_diagnoses(PicoSAT *pico)
 					E = g_array_append_val(E, E1);
 // 					print_array("Add partial diagnosis", E1);
 				}
-				
-// 				for (t = 0; t < E->len; t++) {
-// 					tmp = g_array_index(E, GArray *, t);
-// 					print_array("E", tmp);
-// 				}
-				
-				
-// 				getchar();
-				
 			}
 			
 // 			print_array("Remove partial diagnosis", e);
 			g_array_remove_index(E, i);
+			i--;
 // 			for (t = 0; t < E->len; t++) {
 // 				tmp = g_array_index(E, GArray *, t);
 // 				print_array("E", tmp);
 // 			}
 // 			printf("E.length: %d\n", E->len);
-// 			
-// 			getchar();
-			
-			i--;
-			
 		}
 		
 // 		printf("E.length: %d, i = %d\n", E->len, i);
 		
 	}
 	
-// 	for (t = 0; t < R->len; t++) {
-// 		tmp = g_array_index(R, GArray *, t);
-// 		print_array("R", tmp);
-// 	}
-	
 	return R;
 }
 
 /*
- * add a fexpr to our constraint set C 
+ * add a fexpr to the constraint set C 
  */
 static void add_fexpr_to_constraint_set(gpointer key, gpointer value, gpointer userData)
 {
@@ -243,7 +208,14 @@ static void add_fexpr_to_constraint_set(gpointer key, gpointer value, gpointer u
 	assert(realKey == e->satval);
 	GArray *C = (GArray *) userData;
 	
+	/* fexpr must be associated with a symbol */
+	if (!e->sym) return;
+	
+	/* symbol must be a "proper" symbol */
 	if (e->type != FE_SYMBOL && e->type != FE_NONBOOL) return;
+	
+	/* symbol must have a prompt and a name, user cannot change it otherwise */
+	if (!sym_has_prompt(e->sym) || !e->sym->name) return;
 	
 	g_array_append_val(C, e);
 }
@@ -301,6 +273,7 @@ static void fexpr_add_assumption(PicoSAT *pico, struct fexpr *e)
 		}
 	}
 	
+	// TODO
 	if (sym->type == S_INT) {
 		const char *string_val = sym_get_string_value(sym);
 	
@@ -677,76 +650,107 @@ void apply_fix(GArray *diag)
 {
 	struct symbol_fix *fix;
 	struct symbol *sym;
-	unsigned int i, j;
+	unsigned int i;
+	char *file_sat = ".config_sat";
+	GHashTable *map = g_hash_table_new_full(
+		g_str_hash,
+		g_str_equal,
+		NULL,
+		free
+  	);
 	
-	
-	
-	printf("\nTrying to apply fixes now...");
+	printf("\nTrying to apply fixes now...\n");
 
-// 	printf("\n\n");
+	/* store the current configuration in a hashmap */
+	printf("Backing up old values...");
+	for_all_symbols(i, sym) {
+		if (sym->type == S_UNKNOWN) continue;
+		
+		if (g_hash_table_lookup(map, sym_get_name(sym)) != NULL)
+			printf("Double key found: %s\n", sym_get_name(sym));
+		
+		g_hash_table_insert(map, strdup(sym_get_name(sym)), strdup(sym_get_string_value(sym)));
+	}
+	printf("done.\n");
 	
-	
-	/*
+	/* 
 	 * changes will be applied as a "transaction"
-	 * we allow illegal values temporarily and all values will be 
-	 * checked after each fix has been applied
+	 * we allow illegal values temporarily
 	 */
+	printf("Setting new values...");
 	for (i = 0; i < diag->len; i++) {
 		fix = g_array_index(diag, struct symbol_fix *, i);
-	
-// 		printf("Symbol %s, curr. val %s", fix->sym->name, sym_get_string_value(fix->sym));
-// 		
-// 		printf("\n");
-// 		if (fix->sym->dir_dep.expr) {
-// 			printf("Dep: ");
-// 			print_expr(fix->sym->dir_dep.expr, E_NONE);
-// 			printf(", val %d\n", fix->sym->dir_dep.tri);
-// 		}
 		
 		if (fix->type == SF_BOOLEAN) {
-// 			printf("Symbol %s, val %u\n", fix->sym->name, fix->tri);
 			sym_set_tristate_value_mod(fix->sym, fix->tri);
-			
-		}
-
-		else if (fix->type == SF_NONBOOLEAN)
+		} else if (fix->type == SF_NONBOOLEAN) {
 			sym_set_string_value(fix->sym, str_get(&fix->nb_val));
+		}
 	}
-
+	printf("done.\n");
+	
 	/* Just updating the symbols' does not suffice.
 	 * The values for everything else needs to be updated as well.
 	 * Recalculations must be performed.
 	 * One way of doing it is to save the current configuration and then
 	 * simply reload it, thereby recalculating everything.
 	 */
-	conf_write(".config_sat");
-	conf_read(".config_sat");
-
 	
-	/* check that all values are within range */
+	/* store the changes... */
+	printf("Reloading configuration...\n");
+	conf_write(file_sat);
+	
+	/* ...and reload the configuration */
+	conf_read(file_sat);
+	printf("done.\n");
+	
+	/* check, that all values are within range */
+	printf("Checking range of all symbols...");
 	for (i = 0; i < diag->len; i++) {
 		fix = g_array_index(diag, struct symbol_fix *, i);
 		
-		
-// 		printf("Symbol %s, curr. val %s", fix->sym->name, sym_get_string_value(fix->sym));
-// 		
-// 		printf("\n");
-		
-		
-// 		if (fix->sym->dir_dep.expr) {
-// 			printf("Dep: ");
-// 			print_expr(fix->sym->dir_dep.expr, E_NONE);
-// 			printf(", val %d\n", fix->sym->dir_dep.tri);
-// 		}
-		
-		if (fix->type == SF_BOOLEAN)
+		if (fix->type == SF_BOOLEAN) {
 			if (!sym_tristate_within_range(fix->sym, fix->tri))
-				printf("Symbol %s not within range\n", fix->sym->name);
-		// TODO for non-booleans
+				printf("Symbol %s not within range\n", sym_get_name(fix->sym));
+		} else if (fix->type == SF_NONBOOLEAN) {
+			if (!sym_string_within_range(fix->sym, str_get(&fix->nb_val)))
+				printf("Symbol %s not within range\n", sym_get_name(fix->sym));
+		}	
 	}
-	
-	conf_write(NULL);
 	printf("done.\n");
+	
+	/* 
+	 * check, that only the proposed changes have changed
+	 * exception for symbols without a prompt
+	 */
+	printf("Checking, that only symbols from the diagnosis have changed...");
+	for_all_symbols(i, sym) {
+		char *oldval = g_hash_table_lookup(map, sym_get_name(sym));
+		char *newval = strdup(sym_get_string_value(sym));
+		
+		/* 
+		 * if the symbol is in the diagnosis, it must change
+		 * if the symbol is not in the diagnosis, the value does not change
+		 */
+		if (diagnosis_contains_symbol(diag, sym)) {
+			if (strcmp(oldval, newval) == 0)
+				printf("%s should have changed.\n", sym_get_name(sym));
+		} else {
+			if (strcmp(oldval, newval) != 0)
+				printf("%s should not change.\n", sym_get_name(sym));
+		}
+	}
+	printf("done.\n");
+	
+	/* roll back to original configuration in case of problems */
+	// TODO
+	
+	/* clean up */
+	if (remove(file_sat))
+		printf("Error: could not remove temporary files.\n");
+
+
+	printf("Applying fixes done.\n");
 }
 
 /*
@@ -804,6 +808,7 @@ static const char * calculate_new_string_value(struct fexpr *e, GArray *diagnosi
 {
 	assert(sym_is_nonboolean(e->sym));
 	
+	// TODO
 	if (e->sym->type == S_INT) {
 		/* if assumption was false before, this is the new value because only 1 variable can be true */
 		if (e->assumption == false)
@@ -812,7 +817,7 @@ static const char * calculate_new_string_value(struct fexpr *e, GArray *diagnosi
 		struct fexpr *e2;
 		unsigned int i;
 		
-		/* a diagnosis always contains 2 variable for the same symbol
+		/* a diagnosis always contains 2 variables for the same symbol
 		 * one is set to true, the other to false
 		 * otherwise you'd set 2 variables to true, which is not allowed */
 		for (i = 0; i < diagnosis->len; i++) {
