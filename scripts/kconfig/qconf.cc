@@ -416,6 +416,8 @@ void ConfigList::updateSelection(void)
 	if (selectedItems().count() == 0)
 		return;
 
+	//update current selected item list
+	emit selectionChanged(selectedItems());
 	ConfigItem* item = (ConfigItem*)selectedItems().first();
 	if (!item)
 		return;
@@ -923,6 +925,7 @@ ConfigView*ConfigView::viewList;
 QAction *ConfigView::showNormalAction;
 QAction *ConfigView::showAllAction;
 QAction *ConfigView::showPromptAction;
+QAction *ConfigView::addSymbolsFromContextMenu;
 
 ConfigView::ConfigView(QWidget* parent, const char *name)
 	: Parent(parent)
@@ -932,6 +935,11 @@ ConfigView::ConfigView(QWidget* parent, const char *name)
 	verticalLayout->setContentsMargins(0, 0, 0, 0);
 
 	list = new ConfigList(this);
+	//add right click context menu on config  tree which can add multiple symbols in one click
+	list->setSelectionMode(QAbstractItemView::ExtendedSelection);
+	list->setContextMenuPolicy(Qt::CustomContextMenu);
+	connect(list, SIGNAL(customContextMenuRequested(const QPoint &)),
+        this, SLOT(ShowContextMenu(const QPoint &)));
 	verticalLayout->addWidget(list);
 	lineEdit = new ConfigLineEdit(this);
 	lineEdit->hide();
@@ -939,6 +947,12 @@ ConfigView::ConfigView(QWidget* parent, const char *name)
 
 	this->nextView = viewList;
 	viewList = this;
+}
+void ConfigView::ShowContextMenu(const QPoint& pos){
+   QMenu contextMenu(tr("Context menu"), this);
+
+   contextMenu.addAction(addSymbolsFromContextMenu);
+   contextMenu.exec(mapToGlobal(pos));
 }
 
 ConfigView::~ConfigView(void)
@@ -1158,10 +1172,19 @@ void ConflictsView::menuChanged1(struct menu * m)
 }
 void ConflictsView::addSymbol()
 {
+	addSymbol(currentSelectedMenu);
+}
+void ConflictsView::selectionChanged(QList<QTreeWidgetItem*> selection)
+{
+	currentSelection = selection;
+
+}
+void ConflictsView::addSymbol(struct menu *m)
+{
 	// adds a symbol to the conflict resolver list
-	if (currentSelectedMenu != nullptr){
-		if (currentSelectedMenu->sym != nullptr){
-			struct symbol* sym = currentSelectedMenu->sym;
+	if (m != nullptr){
+		if (m->sym != nullptr){
+			struct symbol* sym = m->sym;
 			tristate currentval = sym_get_tristate_value(sym);
 			//if symbol is not added yet:
 			QAbstractItemModel* tableModel = conflictsTable->model();
@@ -1180,6 +1203,26 @@ void ConflictsView::addSymbol()
 				conflictsTable->item(matches[0].row(),2)->setText(tristate_value_to_string(currentval));
 			}
 		}
+	}
+}
+void ConflictsView::addSymbolFromContextMenu() {
+	std::cerr << "adding multisymbol" << std::endl;
+	struct menu *menu;
+	enum prop_type type;
+
+	if (currentSelection.count() == 0)
+		return;
+
+	for (auto el: currentSelection){
+		ConfigItem* item = (ConfigItem*)el;
+		if (!item)
+		{
+			std::cerr << "no item" << std::endl;
+			continue;
+		}
+
+		menu = item->menu;
+		addSymbol(menu);
 	}
 }
 void ConflictsView::removeSymbol()
@@ -1779,6 +1822,8 @@ ConfigMainWindow::ConfigMainWindow(void)
 	configView->showNormalAction->setCheckable(true);
 	configView->showAllAction->setCheckable(true);
 	configView->showPromptAction->setCheckable(true);
+	configView->addSymbolsFromContextMenu = new QAction("Add symbol from context menu");
+   connect(configView->addSymbolsFromContextMenu, SIGNAL(triggered()),conflictsView, SLOT(addSymbolFromContextMenu()));
 
 	QAction *showDebugAction = new QAction("Show Debug Info", this);
 	  showDebugAction->setCheckable(true);
@@ -1840,6 +1885,11 @@ ConfigMainWindow::ConfigMainWindow(void)
 	connect(menuList, SIGNAL(menuSelected(struct menu *)),
 		SLOT(changeMenu(struct menu *)));
 
+	//pass the list of selected items in configList to conflictsView so that
+	//when right click 'add symbols to conflict' is clicked it will be added
+	//to the list
+	connect(configList, SIGNAL(selectionChanged(QList<QTreeWidgetItem*>)),
+		conflictsView, SLOT(selectionChanged(QList<QTreeWidgetItem*>)));
 	connect(configList, SIGNAL(menuChanged(struct menu *)),
 		conflictsView, SLOT(menuChanged1(struct menu *)));
 	connect(configList, SIGNAL(gotFocus(struct menu *)),
