@@ -79,6 +79,7 @@ signals:
 	void menuSelected(struct menu *menu);
 	void parentSelected(void);
 	void gotFocus(struct menu *);
+	void selectionChanged(QList<QTreeWidgetItem*> selection);
 
 public:
 	void updateListAll(void)
@@ -228,6 +229,7 @@ public slots:
 	void setShowRange(bool);
 	void setShowData(bool);
 	void setOptionMode(QAction *);
+	void ShowContextMenu(const QPoint& p);
 signals:
 	void showNameChanged(bool);
 	void showRangeChanged(bool);
@@ -242,6 +244,7 @@ public:
 	static QAction *showNormalAction;
 	static QAction *showAllAction;
 	static QAction *showPromptAction;
+	static QAction *addSymbolsFromContextMenu;
 };
 class ConflictsView : public QWidget {
 	ConfigLineEdit* lineEdit;
@@ -250,17 +253,21 @@ class ConflictsView : public QWidget {
 public:
 	ConflictsView(QWidget* parent, const char *name = 0);
 	~ConflictsView(void);
+	void addSymbol(struct menu * m);
 
 public slots:
     void cellClicked(int, int);
 	void changeAll();
 	//triggerd by Qactions on the tool bar that adds/remove symbol
 	void addSymbol();
+	//triggered from config list right click -> add symbols
+	void addSymbolFromContextMenu();
 	void removeSymbol();
 	void menuChanged1(struct menu *);
 	void changeToNo();
 	void changeToYes();
 	void changeToModule();
+	void selectionChanged(QList<QTreeWidgetItem*> selection);
 
 
 	void applyFixButtonClick();
@@ -297,6 +304,8 @@ public:
 	QToolBar *conflictsToolBar;
 	struct menu * currentSelectedMenu ;
 	QLabel* numSolutionLabel{nullptr};
+	//currently selected config items in configlist.
+	QList<QTreeWidgetItem*> currentSelection;
 
 
 };
