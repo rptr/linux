@@ -106,8 +106,12 @@ static GArray * generate_diagnoses(PicoSAT *pico)
 // 			print_array("Found diagnosis", E0);
 // 			printf("size %d\n", E0->len);
 			E = g_array_remove_index(E, diagnosis_index);
-			R = g_array_append_val(R, E0);
+			if (E0->len > 0)
+				R = g_array_append_val(R, E0);
+			else
+				g_array_free(E0, false);
 			
+			g_array_free(c, false);
 			continue;
 			
 		} else if (res == PICOSAT_UNSATISFIABLE) {
@@ -174,14 +178,19 @@ static GArray * generate_diagnoses(PicoSAT *pico)
 					}
 				}
 				
+				g_array_free(E_R_Union, false);
+				
 				/* ∄ E" ⊆ E' */
 				if (!E2_subset_of_E1) {
 					E = g_array_append_val(E, E1);
 // 					print_array("Add partial diagnosis", E1);
+				} else {
+					g_array_free(E1, false);
 				}
 			}
 			
 // 			print_array("Remove partial diagnosis", e);
+			g_array_free(e, false);
 			g_array_remove_index(E, i);
 			i--;
 // 			for (t = 0; t < E->len; t++) {
@@ -190,10 +199,15 @@ static GArray * generate_diagnoses(PicoSAT *pico)
 // 			}
 // 			printf("E.length: %d\n", E->len);
 		}
+		g_array_free(X, false);
+		g_array_free(c, false);
 		
 // 		printf("E.length: %d, i = %d\n", E->len, i);
 		
 	}
+	
+	g_array_free(C, false);
+	g_array_free(E, false);
 	
 	return R;
 }
@@ -273,7 +287,7 @@ static void fexpr_add_assumption(PicoSAT *pico, struct fexpr *e)
 		}
 	}
 	
-	// TODO
+	// TODO for string and hex
 	if (sym->type == S_INT) {
 		const char *string_val = sym_get_string_value(sym);
 	
@@ -808,7 +822,7 @@ static const char * calculate_new_string_value(struct fexpr *e, GArray *diagnosi
 {
 	assert(sym_is_nonboolean(e->sym));
 	
-	// TODO
+	// TODO for string and hex
 	if (e->sym->type == S_INT) {
 		/* if assumption was false before, this is the new value because only 1 variable can be true */
 		if (e->assumption == false)

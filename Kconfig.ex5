@@ -10,11 +10,9 @@ config A
 
 config B
 	tristate "CONFIG B"
-	depends on A
 
 choice
 	prompt "CHOICE_1"
-	depends on A && B
 
 config D
 	tristate "CONFIG D"
@@ -29,3 +27,9 @@ config G
 	tristate "CONFIG G"
 
 endchoice
+
+config I
+	int "CONFIG I"
+	default 0
+	range 0 5 if A
+	range 0 2

@@ -16,6 +16,9 @@ extern struct tmp_sat_variable *tmp_sat_vars;
 extern unsigned int nr_of_clauses; /* number of CNF-clauses */
 extern struct fexpr *const_false;
 extern struct fexpr *const_true;
+extern struct fexpr *symbol_yes_fexpr;
+extern struct fexpr *symbol_mod_fexpr;
+extern struct fexpr *symbol_no_fexpr;
 
 /* struct for a CNF-clause */
 struct cnf_clause {
@@ -93,7 +96,8 @@ enum fexpr_type {
 	FE_TRUE,  /* constant of value True */
 	FE_FALSE,  /* constant of value False */
 	FE_NONBOOL,  /* for all non-(boolean/tristate) known values */
-	FE_CHOICE /* symbols of type choice */
+	FE_CHOICE, /* symbols of type choice */
+	FE_TMPSATVAR /* temporary sat-variable (Tseytin) */ 
 };
 
 /* struct for a propositional logic formula */
@@ -155,7 +159,7 @@ struct tmp_sat_variable {
 };
 
 struct default_map {
-	struct gstr val;
+	struct fexpr *val;
 	
 	struct fexpr *e;
 };

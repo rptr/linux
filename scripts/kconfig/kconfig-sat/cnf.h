@@ -4,6 +4,15 @@
 /* construct the CNF-clauses from the constraints */
 void construct_cnf_clauses(void);
 
+/* build a CNF clause with the SAT-variables given */
+struct cnf_clause * build_cnf_clause(struct gstr *reason, int num, ...);
+
+/* create a struct for a CNF clause */
+struct cnf_clause * create_cnf_clause_struct(void);
+
+/* add a literal to a CNF-clause */
+void add_literal_to_clause(struct cnf_clause *cl, int val);
+
 /* check, if a CNF-clause is a tautology */
 bool cnf_is_tautology(struct cnf_clause *cl);
 

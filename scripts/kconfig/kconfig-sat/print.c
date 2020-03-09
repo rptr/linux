@@ -24,8 +24,7 @@ void print_all_symbols(void)
 	printf("\n");
 	
 	for_all_symbols(i, sym) {
-		if (sym->type == S_UNKNOWN)
-			continue;
+		if (sym->type == S_UNKNOWN) continue;
 		
 		print_symbol(sym);
 
@@ -88,6 +87,12 @@ void print_symbol(struct symbol *sym)
 		printf("\tdepends on ");
 		print_expr_util(sym->dir_dep.expr, E_NONE);
 		printf("\n");
+		struct property *prompt = sym_get_prompt(sym);
+		if (prompt != NULL) {
+// 			printf("\tpromptCond: ");
+			print_expr("\tpromptCond:", prompt->visible.expr, E_NONE);
+		}
+		
 	}
 
 	printf("\n");
@@ -161,8 +166,7 @@ void print_imply(struct property *p)
  */
 void print_expr_util(struct expr *e, int prevtoken)
 {
-	if (!e)
-		return;
+	if (!e) return;
 
 	switch (e->type) {
 	case E_SYMBOL:
@@ -176,18 +180,22 @@ void print_expr_util(struct expr *e, int prevtoken)
 		print_expr_util(e->left.expr, E_NOT);
 		break;
 	case E_AND:
-		printf("(");
+		if (prevtoken != E_AND && prevtoken != 0)
+			printf("(");
 		print_expr_util(e->left.expr, E_AND);
 		printf(" && ");
 		print_expr_util(e->right.expr, E_AND);
-		printf(")");
+		if (prevtoken != E_AND && prevtoken != 0)
+			printf(")");
 		break;
 	case E_OR:
-		printf("(");
+		if (prevtoken != E_OR && prevtoken != 0)
+			printf("(");
 		print_expr_util(e->left.expr, E_OR);
 		printf(" || ");
 		print_expr_util(e->right.expr, E_OR);
-		printf(")");
+		if (prevtoken != E_OR && prevtoken != 0)
+			printf(")");
 		break;
 	case E_EQUAL:
 	case E_UNEQUAL:
@@ -240,8 +248,7 @@ void print_expr(char *tag, struct expr *e, int prevtoken)
  */
 static void print_kexpr_util(struct k_expr *e)
 {
-	if (!e)
-		return;
+	if (!e) return;
 
 	switch (e->type) {
 	case KE_SYMBOL:
@@ -294,30 +301,31 @@ void print_kexpr(char *tag, struct k_expr *e)
  */
 static void print_fexpr_util(struct fexpr *e, int parent)
 {
-	if (!e)
-		return;
+	if (!e) return;
 	
 	switch (e->type) {
 	case FE_SYMBOL:
 	case FE_CHOICE:
+	case FE_TMPSATVAR:
 		printf("%s", str_get(&e->name));
 		break;
 	case FE_AND:
-		/* need this hack for the FeatureExpr parser */
-		if (parent != FE_AND)
+		if (parent != FE_AND && parent != -1)
 			printf("(");
 		print_fexpr_util(e->left, FE_AND);
 		printf(" && ");
 		print_fexpr_util(e->right, FE_AND);
-		if (parent != FE_AND)
+		if (parent != FE_AND && parent != -1)
 			printf(")");
 		break;
 	case FE_OR:
-		printf("(");
+		if (parent != FE_OR && parent != -1)
+			printf("(");
 		print_fexpr_util(e->left, FE_OR);
 		printf(" || ");
 		print_fexpr_util(e->right, FE_OR);
-		printf(")");
+		if (parent != FE_OR && parent != -1)
+			printf(")");
 		break;
 	case FE_NOT:
 		printf("!");
@@ -350,8 +358,7 @@ void print_fexpr(char *tag, struct fexpr *e, int parent)
  */
 void debug_print_kexpr(struct k_expr *e)
 {
-	if (!e)
-		return;
+	if (!e) return;
 	
 	#if DEBUG_KEXPR
 		printf("e-type: %s", kexpr_type[e->type]);
@@ -384,8 +391,7 @@ void debug_print_kexpr(struct k_expr *e)
  */
 void kexpr_as_char(struct k_expr *e, struct gstr *s)
 {
-	if (!e)
-		return;
+	if (!e) return;
 	
 	switch (e->type) {
 	case KE_SYMBOL:
@@ -429,8 +435,7 @@ void kexpr_as_char(struct k_expr *e, struct gstr *s)
  */
 void fexpr_as_char(struct fexpr *e, struct gstr *s, int parent)
 {
-	if (!e)
-		return;
+	if (!e) return;
 	
 	switch (e->type) {
 	case FE_SYMBOL:
@@ -479,8 +484,7 @@ void fexpr_as_char(struct fexpr *e, struct gstr *s, int parent)
  */
 void fexpr_as_char_short(struct fexpr *e, struct gstr *s, int parent)
 {
-	if (!e)
-		return;
+	if (!e) return;
 	
 	switch (e->type) {
 	case FE_SYMBOL:
@@ -567,6 +571,7 @@ void print_sym_constraint(struct symbol* sym)
 	for (i = 0; i < sym->constraints->arr->len; i++) {
 		e = g_array_index(sym->constraints->arr, struct fexpr *, i);
 		print_fexpr_util(e, -1);
+		
 		#if PRINT_ALL_CNF
 			printf("\nCNF: ");
 			convert_fexpr_to_cnf(e);
@@ -584,6 +589,25 @@ void print_satmap(gpointer key, gpointer value, gpointer userData)
 	struct fexpr *e = (struct fexpr *) value;
 	printf( "%d => %s\n", *((int *) key), str_get(&e->name));
 }
+
+/*
+ * print a default map
+ */
+void print_default_map(GArray *map)
+{
+	struct default_map *entry;
+	unsigned int i;
+	
+	for (i = 0; i < map->len; i++) {
+		entry = g_array_index(map, struct default_map *, i);
+		struct gstr s = str_new();
+		str_append(&s, "\t");
+		str_append(&s, str_get(&entry->val->name));
+		str_append(&s, " ->");
+		print_fexpr(strdup(str_get(&s)), entry->e, -1);
+	}
+}
+
 
 /*
  * print all variables from the satmap in DIMACS-format

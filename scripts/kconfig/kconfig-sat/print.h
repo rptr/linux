@@ -55,6 +55,9 @@ void print_sym_constraint(struct symbol *sym);
 /* print the satmap */
 void print_satmap(gpointer key, gpointer value, gpointer userData);
 
+/* print a default map */
+void print_default_map(GArray *map); 
+
 /* write all CNF-clauses into a file in DIMACS-format */
 void write_cnf_to_file(GArray *cnf_clauses, int sat_variable_nr, int nr_of_clauses);
 

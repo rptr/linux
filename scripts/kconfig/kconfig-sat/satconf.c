@@ -22,6 +22,9 @@ unsigned int nr_of_clauses = 0; /* number of CNF-clauses */
 
 struct fexpr *const_false; /* constant False */
 struct fexpr *const_true; /* constant True */
+struct fexpr *symbol_yes_fexpr; /* symbol_yes as fexpr */
+struct fexpr *symbol_mod_fexpr; /* symbol_mod as fexpr */
+struct fexpr *symbol_no_fexpr; /* symbol_no_as fexpr */
 
 static bool init_done = false;
 
@@ -53,30 +56,51 @@ int run_satconf_cli(const char *Kconfig_file)
 
 		/* print all symbols and its constraints */
 // 		print_all_symbols();
-		
-		/* construct the CNF clauses */
-		construct_cnf_clauses();
 
 		end = clock();
 		time = ((double) (end - start)) / CLOCKS_PER_SEC;
 		
-		printf("Generating constraints and clauses...done. (%.6f secs.)\n", time);
+		printf("done. (%.6f secs.)\n", time);
+		
+		printf("Building CNF-clauses...");
+		start = clock();
+		
+		/* construct the CNF clauses */
+		construct_cnf_clauses();
+		
+		end = clock();
+		time = ((double) (end - start)) / CLOCKS_PER_SEC;
+		
+		printf("done. (%.6f secs.)\n", time);
 		
 		/* write constraints to file */
-		write_constraints_to_file();
+// 		write_constraints_to_file();
 		
 		init_done = true;
 	}
-
+	
+	unsigned int i, c = 0;
+	struct symbol *sym;
+	for_all_symbols(i, sym) {
+		if (sym->constraints->arr)
+			c += sym->constraints->arr->len;
+	}
+	printf("\nConstraints: %d", c);
+	if (cnf_clauses != NULL)
+		printf("\nCNF-clauses: %d\n", cnf_clauses->len);
+	if (tmp_variable_nr != 1)
+		printf("Temporary SAT-variables: %d\n", tmp_variable_nr - 1);
+	
 // 	return EXIT_SUCCESS;
+	
 	/* print all symbols and its constraints */
 //	print_all_symbols();
-	
 
-	
 	/* print all CNFs */
 // 	printf("All CNFs:\n");
 // 	print_all_cnf_clauses( cnf_clauses );
+
+ 	return EXIT_SUCCESS;
 	
 	/* print the satmap */
 // 	g_hash_table_foreach(satmap, print_satmap, NULL);
@@ -115,11 +139,12 @@ GArray * run_satconf(GArray *arr)
 		/* assign SAT variables & create sat_map */
 		assign_sat_variables();
 		
+		
 		/* get the constraints */
 		get_constraints();
 		
 		/* construct the CNF clauses */
-		construct_cnf_clauses();
+// 		construct_cnf_clauses();
 		
 		end = clock();
 		time = ((double) (end - start)) / CLOCKS_PER_SEC;
@@ -129,6 +154,7 @@ GArray * run_satconf(GArray *arr)
 		init_done = true;
 	}
 	
+	return EXIT_SUCCESS;
 	/* start PicoSAT */
 	PicoSAT *pico = initialize_picosat();
 	picosat_add_clauses(pico);

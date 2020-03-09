@@ -11,6 +11,8 @@
 
 #include "satconf.h"
 
+static struct k_expr * gcc_version_eval(struct expr *e);
+
 /*
  * parse Kconfig-file and read .config
  */
@@ -106,11 +108,24 @@ void create_constants(void)
 	symbol_no.fexpr_y = const_false;
 	symbol_no.fexpr_m = const_false;
 	
+	/* create symbols yes/mod/no as fexpr */
+	symbol_yes_fexpr = create_fexpr(0, FE_SYMBOL, "y");
+	symbol_yes_fexpr->sym = &symbol_yes;
+	symbol_yes_fexpr->tri = yes;
+	
+	symbol_mod_fexpr = create_fexpr(0, FE_SYMBOL, "m");
+	symbol_mod_fexpr->sym = &symbol_mod;
+	symbol_mod_fexpr->tri = mod;
+	
+	symbol_no_fexpr = create_fexpr(0, FE_SYMBOL, "n");
+	symbol_no_fexpr->sym = &symbol_no;
+	symbol_no_fexpr->tri = no;
+	
 	printf("done.\n");
 }
 
 /*
- *  
+ *  create a fexpr
  */
 struct fexpr * create_fexpr(int satval, enum fexpr_type type, char* name)
 {
@@ -124,59 +139,16 @@ struct fexpr * create_fexpr(int satval, enum fexpr_type type, char* name)
 }
 
 /*
- * build a CNF clause with the SAT-variables given
+ * create a temporary SAT-variable
  */
-struct cnf_clause * build_cnf_clause(struct gstr *reason, int num, ...)
+struct fexpr * create_tmpsatvar(void)
 {
-	va_list valist;
-	va_start(valist, num);
-	int i;
+	struct fexpr *t = create_fexpr(sat_variable_nr++, FE_TMPSATVAR, "");
+	str_append(&t->name, get_tmp_var_as_char(tmp_variable_nr++));
+	/* add it to satmap */
+	g_hash_table_insert(satmap, &t->satval, t);
 	
-	struct cnf_clause *cl = create_cnf_clause_struct();
-	
-	for (i = 0; i < num; i++) {
-		int val = va_arg(valist, int);
-		add_literal_to_clause(cl, val);
-	}
-	cl->reason = str_new();
-	str_append(&cl->reason, str_get(reason));
-	
-	g_array_append_val(cnf_clauses, cl);
-
-	nr_of_clauses++;
-
-	va_end(valist);
-	return cl;
-}
-
-
-/*
- * add a literal to a CNF-clause
- */
-void add_literal_to_clause(struct cnf_clause *cl, int val)
-{
-	struct cnf_literal *lit = malloc(sizeof(struct cnf_literal));
-
-	/* get the fexpr */
-	struct fexpr *e = get_fexpr_from_satmap(val);
-	
-	lit->val = val;
-	lit->name = str_new();
-	if (val <= 0)
-		str_append(&lit->name, "-");
-	str_append(&lit->name, str_get(&e->name));
-	
-	g_array_append_val(cl->lits, lit);
-}
-
-/*
- * create a struct for a CNF clause
- */
-struct cnf_clause * create_cnf_clause_struct(void)
-{
-	struct cnf_clause *cl = malloc(sizeof(struct cnf_clause));
-	cl->lits = g_array_new(false, false, sizeof(struct cnf_literal *));
-	return cl;
+	return t;
 }
 
 /*
@@ -184,9 +156,9 @@ struct cnf_clause * create_cnf_clause_struct(void)
  */
 char * get_tmp_var_as_char(int i)
 {
-	char *tv_sval = malloc(sizeof(char) * 17);
-	snprintf(tv_sval, 17,"T%d", i);
-	return tv_sval;
+	char *val = malloc(sizeof(char) * 18);
+	snprintf(val, 18,"T_%d", i);
+	return val;
 }
 
 /*
@@ -211,8 +183,7 @@ char * tristate_get_char(tristate val)
  */
 bool can_evaluate_to_mod(struct k_expr *e)
 {
-	if (!e)
-		return false;
+	if (!e) return false;
 	
 	switch (e->type) {
 	case KE_SYMBOL:
@@ -253,7 +224,8 @@ struct k_expr * get_const_true_as_kexpr()
 }
 
 /*
- * /
+ * given a satval, return the corresponding fexpr from satmap
+ * return NULL, if key is not found
  */
 struct fexpr * get_fexpr_from_satmap(int key)
 {
@@ -263,12 +235,52 @@ struct fexpr * get_fexpr_from_satmap(int key)
 }
 
 /*
+ * evaluate an unequality with GCC_VERSION
+ */
+static struct k_expr * gcc_version_eval(struct expr* e)
+{
+	if (!e) get_const_false_as_kexpr();
+	
+// 	print_expr("expr:", e, 0);
+// 	printf("type: %d\n", e->type);
+// 	print_sym_name(e->left.sym);
+// 	print_sym_name(e->right.sym);
+	long long actual_gcc_ver, sym_gcc_ver;
+	if (e->left.sym == sym_find("GCC_VERSION")) {
+		actual_gcc_ver = strtoll(sym_get_string_value(e->left.sym), NULL, 10);
+		sym_gcc_ver = strtoll(e->right.sym->name, NULL, 10);
+	} else {
+		actual_gcc_ver = strtoll(sym_get_string_value(e->right.sym), NULL, 10);
+		sym_gcc_ver = strtoll(e->left.sym->name, NULL, 10);
+	}
+// 	printf("actual_gcc_ver: %lld, sym_gcc_ver: %lld\n", actual_gcc_ver, sym_gcc_ver);
+	
+	switch (e->type) {
+	case E_LTH:
+		return actual_gcc_ver < sym_gcc_ver ? get_const_true_as_kexpr() : get_const_false_as_kexpr();
+	case E_LEQ:
+		return actual_gcc_ver <= sym_gcc_ver ? get_const_true_as_kexpr() : get_const_false_as_kexpr();
+	case E_GTH:
+		return actual_gcc_ver > sym_gcc_ver ? get_const_true_as_kexpr() : get_const_false_as_kexpr();
+	case E_GEQ:
+		return actual_gcc_ver >= sym_gcc_ver ? get_const_true_as_kexpr() : get_const_false_as_kexpr();
+	default:
+		perror("Wrong type in gcc_version_eval.");
+	}
+	
+	return get_const_false_as_kexpr();
+}
+
+
+/*
  * parse an expr as a k_expr
  */
 struct k_expr * parse_expr(struct expr *e, struct k_expr *parent)
 {
 	struct k_expr *ke = malloc(sizeof(struct k_expr));
 	ke->parent = parent;
+// 	print_expr("expr:", e, E_NONE);
+// 	printf("type: %d\n", e->type);
 
 	switch (e->type) {
 	case E_SYMBOL:
@@ -301,6 +313,17 @@ struct k_expr * parse_expr(struct expr *e, struct k_expr *parent)
 		ke->eqsym = e->left.sym;
 		ke->eqvalue = e->right.sym;
 		return ke;
+	case E_LTH:
+	case E_LEQ:
+	case E_GTH:
+	case E_GEQ:
+		// TODO
+		//print_expr("UNEQUAL:", e, 0);
+		// "special" hack for GCC_VERSION
+		if (!expr_contains_symbol(e, sym_find("GCC_VERSION")))
+			return get_const_false_as_kexpr();
+		
+		return gcc_version_eval(e);
 	default:
 		return NULL;
 	}
@@ -351,7 +374,7 @@ bool sym_has_prompt(struct symbol *sym)
 }
 
 /*
- * return the prompt of the symbol, if there is one
+ * return the prompt of the symbol if there is one, NULL otherwise
  */
 struct property * sym_get_prompt(struct symbol *sym)
 {
@@ -364,7 +387,23 @@ struct property * sym_get_prompt(struct symbol *sym)
 }
 
 /*
- * return the name of the symbol
+ * return the condition for the property, True if there is none
+ */
+struct fexpr * prop_get_condition(struct property *prop)
+{
+	assert(prop != NULL);
+	
+	/* if there is no condition, return True */
+	if (!prop->visible.expr)
+		return const_true;
+	
+	struct k_expr *ke = parse_expr(prop->visible.expr, NULL);
+	
+	return calculate_fexpr_both(ke);
+}
+
+/*
+ * return the name of the symbol or the prompt-text, if it is a choice symbol
  */
 char * sym_get_name(struct symbol *sym)
 {
@@ -383,8 +422,6 @@ char * sym_get_name(struct symbol *sym)
 void sym_add_constraint(struct symbol *sym, struct fexpr *constraint)
 {
 	if (!constraint) return;
-	
-	convert_fexpr_to_nnf(constraint);
 	
 	g_array_append_val(sym->constraints->arr, constraint);
 }

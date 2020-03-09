@@ -18,6 +18,8 @@ void create_constants(void);
 /* create a fexpr */
 struct fexpr * create_fexpr(int satval, enum fexpr_type type, char *name);
 
+/* create a temporary SAT-variable */
+struct fexpr * create_tmpsatvar(void);
 
 /* build a CNF clause with the SAT-variables given */
 struct cnf_clause * build_cnf_clause(struct gstr *reason, int num, ...);
@@ -71,6 +73,9 @@ bool sym_has_prompt(struct symbol *sym);
 
 /* return the prompt of the symbol, if there is one */
 struct property * sym_get_prompt(struct symbol *sym);
+
+/* return the condition for the property, True if there is none */
+struct fexpr * prop_get_condition(struct property *prop);
 
 /* return the name of the symbol */
 char * sym_get_name(struct symbol *sym);

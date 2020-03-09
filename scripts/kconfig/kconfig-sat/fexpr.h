@@ -44,20 +44,19 @@ struct fexpr * sym_get_or_create_nonbool_fexpr(struct symbol *sym, char *value);
 /* macro to construct a fexpr for "A implies B" */
 struct fexpr * implies(struct fexpr *a, struct fexpr *b);
 
-/* check, if the fexpr is a symbol, a True/False-constant or a literal symbolizing a non-boolean */
+/* check, if the fexpr is a symbol, a True/False-constant, a literal symbolizing a non-boolean or a choice symbol */
 bool fexpr_is_symbol(struct fexpr *e);
 
-/* check, if the fexpr is a symbol, a True/False-constant, a literal symbolizing a non-boolean or NOT */
+/* check, if the fexpr is a symbol, a True/False-constant, a literal symbolizing a non-boolean, a choice symbol or NOT */
 bool fexpr_is_symbol_or_not(struct fexpr *e);
+
+/* check, if a fexpr is a symbol, a True/False-constant, a literal symbolizing a non-boolean, a choice symbol or a negated "symbol" */
+bool fexpr_is_symbol_or_neg_atom(struct fexpr *e);
 
 /* convert a fexpr into negation normal form */
 void convert_fexpr_to_nnf(struct fexpr *e);
 
 /* convert a fexpr from negation normal form into conjunctive normal form */
 void convert_fexpr_to_cnf(struct fexpr *e);
-
-
-/* extract the CNF-clauses from an fexpr in CNF */
-void unfold_cnf_clause(struct fexpr *e);
 
 #endif

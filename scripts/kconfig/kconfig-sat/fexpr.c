@@ -159,7 +159,7 @@ static void create_fexpr_choice(struct symbol *sym)
  */
 struct fexpr * calculate_fexpr_both(struct k_expr *e)
 {
-	return fexpr_or(calculate_fexpr_m(e), calculate_fexpr_y(e));
+	return can_evaluate_to_mod(e) ? fexpr_or(calculate_fexpr_m(e), calculate_fexpr_y(e)) : calculate_fexpr_y(e);
 }
 
 
@@ -168,10 +168,8 @@ struct fexpr * calculate_fexpr_both(struct k_expr *e)
  */
 struct fexpr * calculate_fexpr_y(struct k_expr *e)
 {
-	if (!e)
-		return NULL;
-	
-	// TODO
+	if (!e) return NULL;
+
 	switch (e->type) {
 	case KE_SYMBOL:
 		return e->sym->fexpr_y;
@@ -194,16 +192,15 @@ struct fexpr * calculate_fexpr_y(struct k_expr *e)
 	return NULL;
 }
 
-
 /*
  * calculate, when k_expr will evaluate to mod
  */
 struct fexpr * calculate_fexpr_m(struct k_expr *e)
 {
-	if (!e)
-		return NULL;
+	if (!e) return NULL;
 	
-	// TODO
+	if (!can_evaluate_to_mod(e)) return const_false;
+
 	switch (e->type) {
 	case KE_SYMBOL:
 		return e->sym->fexpr_m;
@@ -298,8 +295,8 @@ struct fexpr * sym_create_nonbool_fexpr(struct symbol *sym, char *value)
 {
 	struct fexpr *e = sym_get_nonbool_fexpr(sym, value);
 	
-	if (e != NULL)
-		return e;
+	/* fexpr already exists */
+	if (e != NULL) return e;
 	
 	e = create_fexpr(sat_variable_nr++, FE_NONBOOL, sym->name);
 	e->sym = sym;
@@ -426,7 +423,7 @@ struct fexpr * fexpr_and(struct fexpr *a, struct fexpr *b)
  * macro to create a fexpr of type OR
  */
 struct fexpr * fexpr_or(struct fexpr *a, struct fexpr *b)
-{
+{	
 	if (a == const_false)
 		return b;
 	if (b == const_false)
@@ -477,29 +474,35 @@ struct fexpr * implies(struct fexpr *a, struct fexpr *b)
 }
 
 /*
- * check, if the fexpr is a symbol, a True/False-constant or a literal symbolizing a non-boolean
+ * check, if the fexpr is a symbol, a True/False-constant, a literal symbolizing a non-boolean or a choice symbol
  */
 bool fexpr_is_symbol(struct fexpr *e)
 {
-	return e->type == FE_SYMBOL || e->type == FE_FALSE || e->type == FE_TRUE || e->type == FE_NONBOOL;
+	return e->type == FE_SYMBOL || e->type == FE_FALSE || e->type == FE_TRUE || e->type == FE_NONBOOL || e->type == FE_CHOICE;
 }
 
 /*
- * check, if the fexpr is a symbol, a True/False-constant, a literal symbolizing a non-boolean or NOT
+ * check, if the fexpr is a symbol, a True/False-constant, a literal symbolizing a non-boolean, a choice symbol or NOT
  */
 bool fexpr_is_symbol_or_not(struct fexpr *e)
 {
 	return fexpr_is_symbol(e) || e->type == FE_NOT;
 }
 
+/*
+ * check, if a fexpr is a symbol, a True/False-constant, a literal symbolizing a non-boolean, a choice symbol or a negated "symbol"
+ */
+bool fexpr_is_symbol_or_neg_atom(struct fexpr *e)
+{
+	return fexpr_is_symbol(e) || (e->type == FE_NOT && fexpr_is_symbol(e->left));
+}
 
 /*
  * convert a fexpr into negation normal form
  */
 static bool convert_fexpr_to_nnf_util(struct fexpr *e)
 {
-	if (!e)
-		return false;
+	if (!e) return false;
 	
 	switch (e->type) {
 	case FE_SYMBOL:
@@ -583,6 +586,10 @@ void convert_fexpr_to_nnf(struct fexpr *e) {
  */
 static bool convert_nnf_to_cnf_util(struct fexpr *e)
 {
+// 	print_fexpr("fe:", e, -1);
+// 	printf("Type: %d\n", e->type);
+// 	getchar();
+	
 	switch (e->type) {
 	case FE_SYMBOL:
 	case FE_CHOICE:
@@ -637,60 +644,63 @@ static bool convert_nnf_to_cnf_util(struct fexpr *e)
 	return false;
 }
 void convert_fexpr_to_cnf(struct fexpr *e) {
+// 	printf("\n");
+// 	print_fexpr("fexpr:", e, -1);
+// 	printf("Type: %d\n", e->type);
 	while (convert_nnf_to_cnf_util(e))
 		;
 }
 
-/*
- * helper function to add an expression to a CNF-clause
- */
-static void add_cnf_clause(struct fexpr *e, struct cnf_clause *cl)
-{
-	if (!e || !cl) return;
-	
-	if (e->left->type == FE_SYMBOL || e->left->type == FE_FALSE || e->left->type == FE_TRUE || e->left->type == FE_NONBOOL) {
-		add_literal_to_clause(cl, e->left->satval);
-	} else if (e->left->type == FE_NOT) {
-		add_literal_to_clause(cl, -(e->left->left->satval));
-	} else if (e->left->type == FE_OR) {
-		add_cnf_clause(e->left, cl);
-	}
-	
-	if (e->right->type == FE_SYMBOL || e->right->type == FE_FALSE || e->right->type == FE_TRUE || e->right->type == FE_NONBOOL) {
-		add_literal_to_clause(cl, e->right->satval);
-	} else if (e->right->type == FE_NOT) {
-		add_literal_to_clause(cl, -(e->right->left->satval));
-	} else if (e->right->type == FE_OR) {
-		add_cnf_clause(e->right, cl);
-	}
-}
-
-/*
- * extract the CNF-clauses from an fexpr in CNF
- */
-void unfold_cnf_clause(struct fexpr *e)
-{
-	if (!e) return;
-	
-	struct gstr empty_string = str_new();
-	struct cnf_clause *cl;
-	
-	switch (e->type) {
-	case FE_AND:
-		unfold_cnf_clause(e->left);
-		unfold_cnf_clause(e->right);
-		break;
-	case FE_OR:
-		add_cnf_clause(e, build_cnf_clause(&empty_string, 0));
-		break;
-	case FE_NOT:
-		cl = build_cnf_clause(&empty_string, 0);
-		add_literal_to_clause(cl, -(e->left->satval));
-		break;
-	default:
-		// TODO
-		//print_fexpr(e, -1);
-		//printf("type %d\n", e->type);
-		break;
-	}
-}
+// /*
+//  * helper function to add an expression to a CNF-clause
+//  */
+// static void add_cnf_clause(struct fexpr *e, struct cnf_clause *cl)
+// {
+// 	if (!e || !cl) return;
+// 	
+// 	if (e->left->type == FE_SYMBOL || e->left->type == FE_FALSE || e->left->type == FE_TRUE || e->left->type == FE_NONBOOL) {
+// 		add_literal_to_clause(cl, e->left->satval);
+// 	} else if (e->left->type == FE_NOT) {
+// 		add_literal_to_clause(cl, -(e->left->left->satval));
+// 	} else if (e->left->type == FE_OR) {
+// 		add_cnf_clause(e->left, cl);
+// 	}
+// 	
+// 	if (e->right->type == FE_SYMBOL || e->right->type == FE_FALSE || e->right->type == FE_TRUE || e->right->type == FE_NONBOOL) {
+// 		add_literal_to_clause(cl, e->right->satval);
+// 	} else if (e->right->type == FE_NOT) {
+// 		add_literal_to_clause(cl, -(e->right->left->satval));
+// 	} else if (e->right->type == FE_OR) {
+// 		add_cnf_clause(e->right, cl);
+// 	}
+// }
+// 
+// /*
+//  * extract the CNF-clauses from an fexpr in CNF
+//  */
+// void unfold_cnf_clause(struct fexpr *e)
+// {
+// 	if (!e) return;
+// 	
+// 	struct gstr empty_string = str_new();
+// 	struct cnf_clause *cl;
+// 	
+// 	switch (e->type) {
+// 	case FE_AND:
+// 		unfold_cnf_clause(e->left);
+// 		unfold_cnf_clause(e->right);
+// 		break;
+// 	case FE_OR:
+// 		add_cnf_clause(e, build_cnf_clause(&empty_string, 0));
+// 		break;
+// 	case FE_NOT:
+// 		cl = build_cnf_clause(&empty_string, 0);
+// 		add_literal_to_clause(cl, -(e->left->satval));
+// 		break;
+// 	default:
+// 		TODO
+// 		print_fexpr(e, -1);
+// 		printf("type %d\n", e->type);
+// 		break;
+// 	}
+// }
