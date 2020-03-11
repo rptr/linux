@@ -509,6 +509,7 @@ static bool convert_fexpr_to_nnf_util(struct fexpr *e)
 	case FE_CHOICE:
 	case FE_FALSE:
 	case FE_TRUE:
+	case FE_TMPSATVAR:
 		return false;
 	case FE_AND:
 	case FE_OR:
@@ -546,7 +547,7 @@ static bool convert_fexpr_to_nnf_util(struct fexpr *e)
 		else if (e->left->type == FE_NOT) {
 			if (e->left->left->type == FE_SYMBOL || e->left->left->type == FE_FALSE) {
 				e->type = FE_SYMBOL;
-				str_free(&e->name);
+				//str_free(&e->name);
 				e->name = str_new();
 				str_append(&e->name, str_get(&e->left->left->name));
 				e->satval = e->left->left->satval;

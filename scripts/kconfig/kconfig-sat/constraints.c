@@ -32,6 +32,8 @@ static struct fexpr * get_default_y(GArray *arr);
 static struct fexpr * get_default_m(GArray *arr);
 static long long sym_get_range_val(struct symbol *sym, int base);
 
+static count = 0;
+
 /* -------------------------------------- */
 
 /*
@@ -228,6 +230,8 @@ static void add_selects_new(struct symbol *sym)
 // 		if (p->visible.expr)
 // 			print_expr(" if", p->visible.expr, E_NONE);
 		
+		
+		
 		struct symbol *sel = p->expr->left.sym;
 		
 		struct k_expr *ke = p->visible.expr ? parse_expr(p->visible.expr, NULL) : get_const_true_as_kexpr();
@@ -240,8 +244,11 @@ static void add_selects_new(struct symbol *sym)
 
 		
 		struct fexpr *e1 = implies(sel_y, sel->fexpr_y);
+		convert_fexpr_to_nnf(e1);
 		sym_add_constraint(sel, e1);
+		
 		struct fexpr *e2 = implies(sel_both, sym_get_fexpr_both(sel));
+		convert_fexpr_to_nnf(e2);
 		sym_add_constraint(sel, e2);
 		
 // 		print_fexpr("e1:", e1, -1);
@@ -278,9 +285,12 @@ static void add_dependencies_bool(struct symbol *sym)
 		struct fexpr *dep_y = calculate_fexpr_y(ke_dirdep);
 		struct fexpr *sel_y = calculate_fexpr_y(ke_revdep);
 		struct fexpr *fe_y = implies(sym->fexpr_y, fexpr_or(dep_y, sel_y));
+		
+		convert_fexpr_to_nnf(fe_y);
 		sym_add_constraint(sym, fe_y);
 		
 		struct fexpr *fe_both = implies(sym->fexpr_m, fexpr_or(dep_both, sel_both));
+		convert_fexpr_to_nnf(fe_both);
 		sym_add_constraint(sym, fe_both);
 	} else if (sym->type == S_BOOLEAN) {
 		
@@ -290,11 +300,15 @@ static void add_dependencies_bool(struct symbol *sym)
 		
 		if (!sym_is_choice_value(sym)) {
 			struct fexpr *fe_both = implies(sym->fexpr_y, fexpr_or(dep_both, sel_both));
+			
+			convert_fexpr_to_nnf(fe_both);
 			sym_add_constraint(sym, fe_both);
 		} else {
 			assert(ke_dirdep->type == KE_SYMBOL);
 			struct symbol *ch = ke_dirdep->sym;
 			struct fexpr *fe = implies(sym->fexpr_y, fexpr_and(ch->fexpr_y, fexpr_not(ch->fexpr_m)));
+			
+			convert_fexpr_to_nnf(fe);
 			sym_add_constraint(sym, fe);
 		}
 	}
@@ -335,6 +349,8 @@ static void add_dependencies_nonbool(struct symbol *sym)
 	}
 
 	struct fexpr *fe_both = implies(nb_vals, fexpr_or(dep_both, sel_both));
+	
+	convert_fexpr_to_nnf(fe_both);
 	sym_add_constraint(sym, fe_both);
 }
 
@@ -360,10 +376,14 @@ static void add_choice_prompt_cond(struct symbol* sym)
 	if (!sym_is_optional(sym)) {
 		struct fexpr *req_cond = implies(promptCondition, fe_both);
 // 		print_fexpr("PromptCond:", req_cond, -1);
+		
+// 		convert_fexpr_to_nnf(req_cond);
 		sym_add_constraint(sym, req_cond);
 	}
 	
 	struct fexpr *pr_cond = implies(fe_both, promptCondition);
+	
+// 	convert_fexpr_to_nnf(pr_cond);
 	sym_add_constraint(sym, pr_cond);
 }
 
@@ -395,9 +415,13 @@ static void add_choice_dependencies(struct symbol *sym)
 		//struct fexpr *sel_y = calculate_fexpr_y(ke_revdep);
 		//struct fexpr *fe_y = implies(sym->fexpr_y, fexpr_or(dep_y, sel_y));
 		struct fexpr *fe_y = implies(sym->fexpr_y, dep_y);
+		
+// 		convert_fexpr_to_nnf(fe_y);
 		sym_add_constraint(sym, fe_y);
 		
 		struct fexpr *fe_both = implies(sym->fexpr_m, dep_both);
+		
+// 		convert_fexpr_to_nnf(fe_both);
 		sym_add_constraint(sym, fe_both);
 	} else if (sym->type == S_BOOLEAN) {
 		struct fexpr *fe_both = implies(sym->fexpr_y, dep_both);
