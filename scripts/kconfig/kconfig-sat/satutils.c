@@ -23,9 +23,10 @@ static void sym_desired_value(void);
 PicoSAT * initialize_picosat(void)
 {
 	// TODO
-	printf("\nInitializing PicoSAT...\n");
+	printf("\nInitializing PicoSAT...");
 	PicoSAT *pico = picosat_init();
 	picosat_enable_trace_generation(pico);
+	printf("done.\n");
 	
 	return pico;
 }

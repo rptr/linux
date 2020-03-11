@@ -13,6 +13,7 @@
 
 static void build_tristate_constraint_clause(struct symbol *sym);
 static void add_selects(struct symbol *sym);
+static void add_selects_new(struct symbol *sym);
 static void add_dependencies_bool(struct symbol* sym);
 static void add_dependencies_nonbool(struct symbol *sym);
 static void add_choice_prompt_cond(struct symbol *sym);
@@ -87,8 +88,9 @@ void get_constraints(void)
 // 			printf("\n");
 // 			print_sym_name(sym);
 // 			print_expr("rev_dep.expr:", sym->rev_dep.expr, E_NONE);
-			add_selects(sym);
+// 			add_selects(sym);
 		}
+		add_selects_new(sym);
 		
 		/* build constraints for dependencies for booleans */
 		if (sym->dir_dep.expr && sym_is_boolean(sym) && !sym_is_choice(sym) && !sym_is_choice_value(sym)) {
@@ -168,6 +170,7 @@ void get_constraints(void)
 // 		}
 			
 	}
+
 	
 // 	printf("done.\n");
 }
@@ -214,6 +217,41 @@ static void add_selects(struct symbol *sym)
 }
 
 /*
+ * build the select constraints (simplified)
+ */
+static void add_selects_new(struct symbol *sym)
+{
+	struct property *p;
+	for_all_properties(sym, p, P_SELECT) {
+// 		printf("%s select", sym->name);
+// 		print_expr("", p->expr, 0);
+// 		if (p->visible.expr)
+// 			print_expr(" if", p->visible.expr, E_NONE);
+		
+		struct symbol *sel = p->expr->left.sym;
+		
+		struct k_expr *ke = p->visible.expr ? parse_expr(p->visible.expr, NULL) : get_const_true_as_kexpr();
+		
+		struct fexpr *sel_y = fexpr_and(sym->fexpr_y, calculate_fexpr_y(ke));
+		struct fexpr *sel_both = fexpr_and(sym_get_fexpr_both(sym), calculate_fexpr_both(ke));
+		
+// 		print_fexpr("sel_y:", sel_y, -1);
+// 		print_fexpr("sel_both:", sel_both, -1);
+
+		
+		struct fexpr *e1 = implies(sel_y, sel->fexpr_y);
+		sym_add_constraint(sel, e1);
+		struct fexpr *e2 = implies(sel_both, sym_get_fexpr_both(sel));
+		sym_add_constraint(sel, e2);
+		
+// 		print_fexpr("e1:", e1, -1);
+// 		print_fexpr("e2:", e2, -1);
+		
+	}
+}
+
+
+/*
  * build the dependency constraints for booleans
  */
 static void add_dependencies_bool(struct symbol *sym)
@@ -226,6 +264,7 @@ static void add_dependencies_bool(struct symbol *sym)
 	
 	struct k_expr *ke_dirdep = parse_expr(sym->dir_dep.expr, NULL);
 	struct k_expr *ke_revdep = sym->rev_dep.expr ? parse_expr(sym->rev_dep.expr, NULL) : get_const_false_as_kexpr();
+	ke_revdep = get_const_false_as_kexpr();
 	
 // 	print_kexpr("kexpr:", ke_dirdep);
 	

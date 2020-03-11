@@ -4,37 +4,39 @@ menuconfig MODULES
 	default y
 
 config A
-	bool "A prompt"
+	tristate "A prompt"
 
 config B
-	bool "B prompt"
+	tristate "B prompt"
+	select A if C
 
 config C
 	tristate "C prompt"
+	
 
 config D
 	tristate "D prompt"
-	depends on A	
+	#depends on A	
 	#default m if B
-	default C || B
+	#default C || B
 
-config E
-	tristate "E prompt" if B
-	depends on A
+#config E
+#	tristate "E prompt" if B
+	#depends on A
 
 #if C
-config F
-	bool "F prompt" if B
-	depends on A && B
+#config F
+#	bool "F prompt" if B
+	#depends on A && B
 #endif
 
-config I
-	int "I prompt"
+#config I
+#	int "I prompt"
 	#depends on B
 	#default 4 if C
-	default 1
+#	default 1
 
-config J
-	int "J prompt"
+#config J
+#	int "J prompt"
 	#depends on A
-	default 1
+#	default 1

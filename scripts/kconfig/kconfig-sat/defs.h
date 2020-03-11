@@ -140,24 +140,6 @@ struct fexpr {
 	
 };
 
-/* temporary SAT variables */
-struct tmp_sat_variable {
-	/* temporary variable number */
-	int nr;
-	
-	/* integer value for the SAT solver */
-	int satval;
-	
-	/* string representation for debugging */
-	char sval[STRING_LENGTH];
-	
-	/* parent temporary SAT variable */
-	struct tmp_sat_variable *parent;
-	
-	/* next temporary SAT variable - null if last */
-	struct tmp_sat_variable *next;
-};
-
 struct default_map {
 	struct fexpr *val;
 	

@@ -32,11 +32,12 @@ static bool init_done = false;
 
 int run_satconf_cli(const char *Kconfig_file)
 {
+	clock_t start, end;
+	double time;
+	
 	if (!init_done) {
 		printf("Init...");
 		/* measure time for constructing constraints and clauses */
-		clock_t start, end;
-		double time;
 		start = clock();
 		
 		/* parse Kconfig-file and read .config */
@@ -62,16 +63,16 @@ int run_satconf_cli(const char *Kconfig_file)
 		
 		printf("done. (%.6f secs.)\n", time);
 		
-		printf("Building CNF-clauses...");
-		start = clock();
-		
-		/* construct the CNF clauses */
-		construct_cnf_clauses();
-		
-		end = clock();
-		time = ((double) (end - start)) / CLOCKS_PER_SEC;
-		
-		printf("done. (%.6f secs.)\n", time);
+// 		printf("Building CNF-clauses...");
+// 		start = clock();
+// 		
+// 		/* construct the CNF clauses */
+// 		construct_cnf_clauses();
+// 		
+// 		end = clock();
+// 		time = ((double) (end - start)) / CLOCKS_PER_SEC;
+// 		
+// 		printf("done. (%.6f secs.)\n", time);
 		
 		/* write constraints to file */
 // 		write_constraints_to_file();
@@ -79,17 +80,6 @@ int run_satconf_cli(const char *Kconfig_file)
 		init_done = true;
 	}
 	
-	unsigned int i, c = 0;
-	struct symbol *sym;
-	for_all_symbols(i, sym) {
-		if (sym->constraints->arr)
-			c += sym->constraints->arr->len;
-	}
-	printf("\nConstraints: %d", c);
-	if (cnf_clauses != NULL)
-		printf("\nCNF-clauses: %d\n", cnf_clauses->len);
-	if (tmp_variable_nr != 1)
-		printf("Temporary SAT-variables: %d\n", tmp_variable_nr - 1);
 	
 // 	return EXIT_SUCCESS;
 	
@@ -100,21 +90,42 @@ int run_satconf_cli(const char *Kconfig_file)
 // 	printf("All CNFs:\n");
 // 	print_all_cnf_clauses( cnf_clauses );
 
- 	return EXIT_SUCCESS;
+//  	return EXIT_SUCCESS;
 	
 	/* print the satmap */
 // 	g_hash_table_foreach(satmap, print_satmap, NULL);
 	
 	/* start PicoSAT */
 	PicoSAT *pico = initialize_picosat();
-	picosat_add_clauses(pico);
+	printf("Building CNF-clauses...");
+	start = clock();
+	
+	/* construct the CNF clauses */
+	construct_cnf_clauses(pico);
+	
+	end = clock();
+	time = ((double) (end - start)) / CLOCKS_PER_SEC;
+	
+	printf("done. (%.6f secs.)\n", time);
+// 	picosat_add_clauses(pico);
 	picosat_solve(pico);
+	
+	printf("\n===> STATISTICS <===\n");
+	printf("Constraints  : %d\n", count_counstraints());
+	printf("CNF-clauses  : %d\n", picosat_added_original_clauses(pico));
+	printf("SAT-variables: %d\n", picosat_variables(pico));
+	printf("Temp vars    : %d\n", tmp_variable_nr - 1);
+	printf("PicoSAT time : %.6f secs.\n", picosat_seconds(pico));
 
 	/* 
 	 * write CNF-clauses in DIMACS-format to file 
 	 * NOTE: this output is without the unit-clauses
 	 */
 // 	write_cnf_to_file(cnf_clauses, sat_variable_nr, nr_of_clauses);
+
+// 	FILE *fd = fopen("dimacs.out", "w");
+// 	picosat_print(pico, fd);
+// 	fclose(fd);
 	
 	return EXIT_SUCCESS;
 }

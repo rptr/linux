@@ -83,6 +83,9 @@ char * sym_get_name(struct symbol *sym);
 /* add a constraint for a symbol */
 void sym_add_constraint(struct symbol *sym, struct fexpr *constraint);
 
+/* count the number of all constraints */
+unsigned int count_counstraints(void);
+
 /* print a warning about unmet dependencies */
 void sym_warn_unmet_dep(struct symbol *sym);
 

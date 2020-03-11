@@ -83,7 +83,9 @@ void create_constants(void)
 	
 	struct gstr tmp1 = str_new();
 	str_append(&tmp1, "(#): False constant");
-	build_cnf_clause(&tmp1, 1, -const_false->satval);
+	
+	// TODO
+// 	build_cnf_clause(&tmp1, 1, -const_false->satval);
 
 	
 	const_true = malloc(sizeof(struct fexpr));
@@ -95,7 +97,7 @@ void create_constants(void)
 	
 	struct gstr tmp2 = str_new();
 	str_append(&tmp2, "(#): True constant");
-	build_cnf_clause(&tmp2, 1, const_true->satval);
+// 	build_cnf_clause(&tmp2, 1, const_true->satval);
 	
 	
 	/* add fexpr of constants to tristate constants */
@@ -425,6 +427,22 @@ void sym_add_constraint(struct symbol *sym, struct fexpr *constraint)
 	
 	g_array_append_val(sym->constraints->arr, constraint);
 }
+
+/*
+ * count the number of all constraints
+ */
+unsigned int count_counstraints(void)
+{
+	unsigned int i, c = 0;
+	struct symbol *sym;
+	for_all_symbols(i, sym) {
+		if (sym->constraints->arr)
+			c += sym->constraints->arr->len;
+	}
+	
+	return c;
+}
+
 
 /*
  * print a warning about unmet dependencies
