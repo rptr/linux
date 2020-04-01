@@ -29,6 +29,9 @@ struct fexpr * fexpr_not(struct fexpr *a);
 /* return fexpr_both for a symbol */
 struct fexpr * sym_get_fexpr_both(struct symbol *sym);
 
+/* return fexpr_sel_both for a symbol */
+struct fexpr * sym_get_fexpr_sel_both(struct symbol *sym);
+
 /* create the fexpr of a non-boolean symbol for a specific value */
 struct fexpr * sym_create_nonbool_fexpr(struct symbol *sym, char *value);
 

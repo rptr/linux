@@ -68,7 +68,7 @@ void picosat_add_clauses(PicoSAT *pico)
 	time = ((double) (end - start)) / CLOCKS_PER_SEC;
 	printf("%d clauses added. (%.6f secs.)\n", tmp_clauses, time);
 
-	assert(tmp_clauses == picosat_added_original_clauses(pico));
+// 	assert(tmp_clauses == picosat_added_original_clauses(pico));
 }
 
 /*
@@ -133,6 +133,7 @@ void picosat_solve(PicoSAT *pico)
 		
 	} else if (res == PICOSAT_UNSATISFIABLE) {
 		printf("===> PROBLEM IS UNSATISFIABLE <===\n");
+		return;
 		printf("\n");
 		run_unsat_problem(pico);
 	}
@@ -229,6 +230,8 @@ void sym_add_assumption(PicoSAT *pico, struct symbol *sym)
 	if (sym_is_boolean(sym)) {
 // 		int tri_val = sym->def[S_DEF_USER].tri;
 		int tri_val = sym_get_tristate_value(sym);
+		
+// 		printf("Adding assumption: %s -> %s\n", sym_get_name(sym), tristate_get_char(tri_val));
 		
 		sym_add_assumption_tri(pico, sym, tri_val);
 	}

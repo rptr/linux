@@ -31,6 +31,30 @@ void sym_create_fexpr(struct symbol *sym)
 		create_fexpr_unknown(sym);
 }
 
+/*
+ * create the fexpr for symbols with reverse dependencies
+ */
+static void create_fexpr_selected(struct symbol *sym)
+{
+	/* fexpr_sel_y */
+	struct fexpr *fexpr_sel_y = create_fexpr(sat_variable_nr++, FE_SYMBOL, sym->name);
+	str_append(&fexpr_sel_y->name, "_sel_y");
+	fexpr_sel_y->sym = sym;
+	/* add it to satmap */
+	g_hash_table_insert(satmap, &fexpr_sel_y->satval, fexpr_sel_y);
+	
+	sym->fexpr_sel_y = fexpr_sel_y;
+	
+	/* fexpr_sel_m */
+	if (sym->type == S_BOOLEAN) return;
+	struct fexpr *fexpr_sel_m = create_fexpr(sat_variable_nr++, FE_SYMBOL, sym->name);
+	str_append(&fexpr_sel_m->name, "_sel_m");
+	fexpr_sel_m->sym = sym;
+	/* add it to satmap */
+	g_hash_table_insert(satmap, &fexpr_sel_m->satval, fexpr_sel_m);
+	
+	sym->fexpr_sel_m = fexpr_sel_m;
+}
 
 /*
  * create the fexpr for a boolean/tristate symbol
@@ -58,6 +82,9 @@ static void create_fexpr_bool(struct symbol *sym)
 	}
 	
 	sym->fexpr_m = fexpr_m;
+	
+// 	if (sym->rev_dep.expr)
+// 		create_fexpr_selected(sym);
 }
 
 /*
@@ -463,6 +490,17 @@ struct fexpr * fexpr_not(struct fexpr *a)
 struct fexpr * sym_get_fexpr_both(struct symbol *sym)
 {
 	return sym->type == S_TRISTATE ? fexpr_or(sym->fexpr_m, sym->fexpr_y) : sym->fexpr_y;
+}
+
+/*
+ * return fexpr_sel_both for a symbol
+ */
+struct fexpr * sym_get_fexpr_sel_both(struct symbol *sym)
+{
+	if (!sym->rev_dep.expr)
+		return const_false;
+	
+	return sym->type == S_TRISTATE ? fexpr_or(sym->fexpr_sel_m, sym->fexpr_sel_y) : sym->fexpr_sel_y;
 }
 
 /*

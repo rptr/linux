@@ -135,6 +135,10 @@ struct symbol {
 	 */
 	struct fexpr *fexpr_y;
 	struct fexpr *fexpr_m;
+	struct fexpr *fexpr_sel_y;
+	struct fexpr *fexpr_sel_m;
+	struct fexpr *list_sel_y;
+	struct fexpr *list_sel_m;
 	struct garray_wrapper *fexpr_nonbool; /* used for non-booleans */
 	struct garray_wrapper *constraints; /* list of constraints for symbol */
 };

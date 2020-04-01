@@ -31,6 +31,10 @@ void construct_cnf_clauses(PicoSAT *p)
 	unsigned int i, j;
 	struct symbol *sym;
 	
+	/* adding unit-clauses for constants */
+	picosat_add_arg(pico, -(const_false->satval), 0);
+	picosat_add_arg(pico, const_true->satval, 0);
+	
 // 	printf("Constructing CNF-clauses...");
 	
 // 	printf("\n");
@@ -50,6 +54,8 @@ void construct_cnf_clauses(PicoSAT *p)
 		struct fexpr *e;
 		for (j = 0; j < sym->constraints->arr->len; j++) {
 			e = g_array_index(sym->constraints->arr, struct fexpr *, j);
+			
+// 			print_fexpr("e:", e, -1);
 			
 			if (fexpr_is_cnf(e)) {
 // 				print_fexpr("CNF:", e, -1);

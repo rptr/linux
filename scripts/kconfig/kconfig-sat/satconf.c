@@ -28,6 +28,8 @@ struct fexpr *symbol_no_fexpr; /* symbol_no_as fexpr */
 
 static bool init_done = false;
 
+static bool sym_is_sdv(GArray *arr, struct symbol *sym);
+
 /* -------------------------------------- */
 
 int run_satconf_cli(const char *Kconfig_file)
@@ -84,7 +86,7 @@ int run_satconf_cli(const char *Kconfig_file)
 // 	return EXIT_SUCCESS;
 	
 	/* print all symbols and its constraints */
-//	print_all_symbols();
+// 	print_all_symbols();
 
 	/* print all CNFs */
 // 	printf("All CNFs:\n");
@@ -130,6 +132,9 @@ int run_satconf_cli(const char *Kconfig_file)
 	return EXIT_SUCCESS;
 }
 
+/*
+ * called from satdvconfig
+ */
 GArray * run_satconf(GArray *arr)
 {
 	clock_t start, end;
@@ -138,6 +143,7 @@ GArray * run_satconf(GArray *arr)
 	if (!init_done) {
 		printf("\n");
 		printf("Init...");
+		
 		/* measure time for constructing constraints and clauses */
 		start = clock();
 
@@ -150,31 +156,51 @@ GArray * run_satconf(GArray *arr)
 		/* assign SAT variables & create sat_map */
 		assign_sat_variables();
 		
-		
 		/* get the constraints */
 		get_constraints();
-		
-		/* construct the CNF clauses */
-// 		construct_cnf_clauses();
+
 		
 		end = clock();
 		time = ((double) (end - start)) / CLOCKS_PER_SEC;
-		
-		printf("Generating constraints and clauses...done. (%.6f secs.)\n", time);
+
+		printf("done. (%.6f secs.)\n", time);
 		
 		init_done = true;
 	}
 	
-	return EXIT_SUCCESS;
+// 	return EXIT_SUCCESS;
+	
 	/* start PicoSAT */
 	PicoSAT *pico = initialize_picosat();
-	picosat_add_clauses(pico);
+	printf("Building CNF-clauses...");
+	start = clock();
 	
+	/* construct the CNF clauses */
+	construct_cnf_clauses(pico);
+	
+	end = clock();
+	time = ((double) (end - start)) / CLOCKS_PER_SEC;
+	
+	printf("done. (%.6f secs.)\n", time);
+	
+// 	printf("CNF-clauses added: %d\n", picosat_added_original_clauses(pico));
+
 	/* add unit clauses for each symbol */
 	unsigned int i;
 	struct symbol_dvalue *sdv;
 	for (i = 0; i < arr->len; i++) {
 		sdv = g_array_index(arr, struct symbol_dvalue *, i);
+// 		printf("Adding unit-clause: %s -> %s\n", sym_get_name(sdv->sym), tristate_get_char(sdv->tri));
+		
+// 		if (sdv->sym->rev_dep.expr) {
+// 			int eval = expr_calc_value(sdv->sym->rev_dep.expr);
+// 			printf("Rev.dep value: %s\n", tristate_get_char(eval));
+// 			if (eval == no)
+// 				picosat_assume(pico, -sdv->sym->fexpr_sel_y->satval);
+// 			else if (eval == yes)
+// 				picosat_assume(pico, sdv->sym->fexpr_sel_y->satval);
+// 		}
+		
 		if (sdv->sym->type == S_BOOLEAN) {
 			switch (sdv->tri) {
 			case yes:
@@ -202,9 +228,22 @@ GArray * run_satconf(GArray *arr)
 			}
 		}
 	}
-
 	
-// 	picosat_solve(pico);
+	printf("CNF-clauses added: %d\n", picosat_added_original_clauses(pico));
+	
+	/* add assumptions for all other symbols */
+	struct symbol *sym;
+	for_all_symbols(i, sym) {
+		if (sym->type == S_UNKNOWN) continue;
+		
+		if (!sym_is_sdv(arr, sym))
+			sym_add_assumption(pico, sym);
+	}
+	
+	FILE *fd = fopen("cnf.out", "w");
+	picosat_print(pico, fd);
+	fclose(fd);
+
 	printf("Solving SAT-problem...");
 	start = clock();
 	
@@ -282,4 +321,18 @@ int apply_satfix(GArray *fix)
 	apply_fix(fix);
 	
 	return EXIT_SUCCESS;
+}
+
+static bool sym_is_sdv(GArray *arr, struct symbol *sym)
+{
+	unsigned int i;
+	struct symbol_dvalue *sdv;
+	for (i = 0; i < arr->len; i++) {
+		sdv = g_array_index(arr, struct symbol_dvalue *, i);
+		
+		if (sym == sdv->sym)
+			return true;
+	}
+	
+	return false;
 }
