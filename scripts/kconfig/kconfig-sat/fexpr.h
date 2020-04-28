@@ -29,6 +29,12 @@ struct fexpr * fexpr_not(struct fexpr *a);
 /* return fexpr_both for a symbol */
 struct fexpr * sym_get_fexpr_both(struct symbol *sym);
 
+/* return fexpr_sel_y for a symbol */
+struct fexpr * sym_get_fexpr_sel_y(struct symbol *sym);
+
+/* return fexpr_sel_m for a symbol */
+struct fexpr * sym_get_fexpr_sel_m(struct symbol *sym);
+
 /* return fexpr_sel_both for a symbol */
 struct fexpr * sym_get_fexpr_sel_both(struct symbol *sym);
 

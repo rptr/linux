@@ -222,6 +222,8 @@ static void add_fexpr_to_constraint_set(gpointer key, gpointer value, gpointer u
 	assert(realKey == e->satval);
 	GArray *C = (GArray *) userData;
 	
+// 	print_fexpr("e:", e, -1);
+	
 	/* fexpr must be associated with a symbol */
 	if (!e->sym) return;
 	
@@ -232,6 +234,7 @@ static void add_fexpr_to_constraint_set(gpointer key, gpointer value, gpointer u
 	if (!sym_has_prompt(e->sym) || !e->sym->name) return;
 	
 	g_array_append_val(C, e);
+// 	printf("ADDED\n");
 }
 
 /*
@@ -288,14 +291,34 @@ static void fexpr_add_assumption(PicoSAT *pico, struct fexpr *e)
 	}
 	
 	// TODO for string and hex
-	if (sym->type == S_INT) {
+	if (sym->type == S_INT || sym->type == S_HEX || sym->type == S_STRING) {
 		const char *string_val = sym_get_string_value(sym);
-	
+		
 		if (strcmp(str_get(&e->nb_val), string_val) == 0) {
 			picosat_assume(pico, e->satval);
 			e->assumption = true;
 		} else {
 			picosat_assume(pico, -(e->satval));
+			e->assumption = false;
+		}
+		
+		/* need to take care of X=n */
+		bool assumption_set = false;
+		int i;
+		struct fexpr *e2;
+		for (i = 1; i < sym->fexpr_nonbool->arr->len; i++) {
+			e2 = g_array_index(sym->fexpr_nonbool->arr, struct fexpr *, i);
+		
+			if (e2->assumption == true)
+				assumption_set = true;
+		}
+		
+		e2 = g_array_index(sym->fexpr_nonbool->arr, struct fexpr *, 0);
+		if (!assumption_set) {
+			picosat_assume(pico, e2->satval);
+			e->assumption = true;
+		} else {
+			picosat_assume(pico, -(e2->satval));
 			e->assumption = false;
 		}
 	}
@@ -823,7 +846,7 @@ static const char * calculate_new_string_value(struct fexpr *e, GArray *diagnosi
 	assert(sym_is_nonboolean(e->sym));
 	
 	// TODO for string and hex
-	if (e->sym->type == S_INT) {
+	if (e->sym->type == S_INT || e->sym->type == S_HEX || e->sym->type == S_STRING) {
 		/* if assumption was false before, this is the new value because only 1 variable can be true */
 		if (e->assumption == false)
 			return str_get(&e->nb_val);

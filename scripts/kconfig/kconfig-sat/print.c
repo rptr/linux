@@ -137,7 +137,9 @@ void print_select(struct property *p)
 	assert(p->type == P_SELECT);
 	struct expr *e = p->expr;
 
-	print_expr("\tselect", e, E_NONE);
+	printf("\tselect ");
+	print_expr_util(e, E_NONE);
+// 	print_expr("\tselect", e, E_NONE);
 	if (p->visible.expr)
 		print_expr(" if", p->visible.expr, E_NONE);
 	

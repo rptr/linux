@@ -14,13 +14,9 @@
 static bool fexpr_is_cnf(struct fexpr *e);
 static void unfold_cnf_clause(struct fexpr *e);
 static void build_cnf_tseytin(struct fexpr *e);
-static void build_cnf_tseytin_util(struct fexpr *e, struct fexpr *t);
-static void build_cnf_tseytin_and(struct fexpr *e);
-static void build_cnf_tseytin_and_util(struct fexpr *e, struct fexpr *t);
-static void build_cnf_tseytin_or(struct fexpr *e);
-static void build_cnf_tseytin_or_util(struct fexpr *e, struct fexpr *t);
-static void build_cnf_tseytin_not(struct fexpr *e);
-static void build_cnf_tseytin_not_util(struct fexpr *e, struct fexpr *t);
+static void build_cnf_tseytin_and(struct fexpr *e, struct fexpr *t);
+static void build_cnf_tseytin_or(struct fexpr *e, struct fexpr *t);
+static void build_cnf_tseytin_not(struct fexpr *e, struct fexpr *t);
 
 static struct fexpr * get_fexpr_tseytin(struct fexpr *e);
 
@@ -41,7 +37,7 @@ void construct_cnf_clauses(PicoSAT *p)
 	
 // 	printf("Constructing CNF-clauses...");
 	
-// 	printf("\n");
+	printf("\n");
 	
 	unsigned int k, l;
 
@@ -65,7 +61,7 @@ void construct_cnf_clauses(PicoSAT *p)
 // 				print_fexpr("CNF:", e, -1);
 				unfold_cnf_clause(e);
 			} else {
-// 				print_fexpr("!Not CNF:", e, -1);
+				print_fexpr("!Not CNF:", e, -1);
 // 				k = tmp_variable_nr;
 				build_cnf_tseytin(e);
 // 				l = tmp_variable_nr;
@@ -93,7 +89,6 @@ static bool fexpr_is_cnf(struct fexpr *e)
 	case FE_TRUE:
 	case FE_FALSE:
 	case FE_NONBOOL:
-	case FE_SELECT:
 	case FE_CHOICE:
 		return true;
 	case FE_AND:
@@ -118,7 +113,6 @@ static void unfold_cnf_clause_util(struct cnf_clause *cl, struct fexpr *e)
 	case FE_TRUE:
 	case FE_FALSE:
 	case FE_NONBOOL:
-	case FE_SELECT:
 	case FE_CHOICE:
 		picosat_add(pico, e->satval);
 // 		add_literal_to_clause(cl, e->satval);
@@ -215,120 +209,23 @@ static void build_cnf_tseytin(struct fexpr *e)
 	assert(!fexpr_is_cnf(e));
 	
 // 	print_fexpr("e:", e, -1);
-
+	struct fexpr *t;
 	switch (e->type) {
 	case FE_AND:
-		build_cnf_tseytin_and(e);
+// 		printf("TYPE AND\n");
+		t = create_tmpsatvar();
+		build_cnf_tseytin_and(e, t);
 		break;
 	case FE_OR:
-		build_cnf_tseytin_or(e);
+		printf("TYPE OR\n");
+		t = create_tmpsatvar();
+		build_cnf_tseytin_or(e, t);
 		break;
 	case FE_NOT:
-		build_cnf_tseytin_not(e);
-		break;
-	default:
-		perror("Expression not a propositional logic formula. root.");
-	}
-}
-
-/*
- * build CNF-clauses for a fexpr of type AND
- */
-static void build_cnf_tseytin_and(struct fexpr *e)
-{
-	struct fexpr *t1, *t2;
-	
-	/* set left side */
-	if (fexpr_is_symbol_or_neg_atom(e->left)) {
-		t1 = e->left;
-	} else {
-		t1 = create_tmpsatvar();
-		build_cnf_tseytin_util(e->left, t1);
-	}
-	
-	/* set right side */
-	if (fexpr_is_symbol_or_neg_atom(e->right)) {
-		t2 = e->right;
-	} else {
-		t2 = create_tmpsatvar();
-		build_cnf_tseytin_util(e->right, t2);
-	}
-	
-	int a = t1->type == FE_NOT ? -(t1->left->satval) : t1->satval;
-	int b = t2->type == FE_NOT ? -(t2->left->satval) : t2->satval;
-	
-	picosat_add_arg(pico, a, 0);
-	picosat_add_arg(pico, b, 0);
-	
-	printf("\nWARNING!!\nCNF-CLAUSE JUST AND!!\n");
-	print_fexpr("e:", e, -1);
-}
-
-/*
- * build CNF-clauses for a fexpr of type OR
- */
-static void build_cnf_tseytin_or(struct fexpr *e)
-{
-	struct fexpr *t1, *t2;
-	
-	/* set left side */
-	if (fexpr_is_symbol_or_neg_atom(e->left)) {
-		t1 = e->left;
-	} else {
-		t1 = create_tmpsatvar();
-		build_cnf_tseytin_util(e->left, t1);
-	}
-	
-	/* set right side */
-	if (fexpr_is_symbol_or_neg_atom(e->right)) {
-		t2 = e->right;
-	} else {
-		t2 = create_tmpsatvar();
-		build_cnf_tseytin_util(e->right, t2);
-	}
-	
-	int a = t1->type == FE_NOT ? -(t1->left->satval) : t1->satval;
-	int b = t2->type == FE_NOT ? -(t2->left->satval) : t2->satval;
-	
-	picosat_add_arg(pico, a, b, 0);
-}
-
-/*
- * build CNF-clauses for a fexpr of type OR
- */
-static void build_cnf_tseytin_not(struct fexpr *e)
-{
-	struct fexpr *t1;
-	
-	/* set left side */
-	if (fexpr_is_symbol_or_neg_atom(e->left)) {
-		t1 = e->left;
-	} else {
-		t1 = create_tmpsatvar();
-		build_cnf_tseytin_util(e->left, t1);
-	}
-	
-	int a = t1->type == FE_NOT ? -(t1->left->satval) : t1->satval;
-	
-	picosat_add_arg(pico, a, 0);
-	
-	printf("\nWARNING!!\nCNF-CLAUSE JUST NOT!!\n");
-}
-
-/*
- * helper switch for Tseytin util-functions
- */
-static void build_cnf_tseytin_util(struct fexpr *e, struct fexpr *t)
-{
-	switch (e->type) {
-	case FE_AND:
-		build_cnf_tseytin_and_util(e, t);
-		break;
-	case FE_OR:
-		build_cnf_tseytin_or_util(e, t);
-		break;
-	case FE_NOT:
-		build_cnf_tseytin_not_util(e, t);
+// 		printf("TYPE NOT\n");
+// 		print_fexpr("e:", e, -1);
+		t = create_tmpsatvar();
+		build_cnf_tseytin_not(e, t);
 		break;
 	default:
 		perror("Expression not a propositional logic formula.");
@@ -336,9 +233,9 @@ static void build_cnf_tseytin_util(struct fexpr *e, struct fexpr *t)
 }
 
 /*
- * build Tseytin CNF-clauses for a fexpr of type AND
+ * build CNF-clauses for a fexpr of type AND
  */
-static void build_cnf_tseytin_and_util(struct fexpr *e, struct fexpr *t)
+static void build_cnf_tseytin_and(struct fexpr *e, struct fexpr *t)
 {
 	assert(e->type == FE_AND);
 	
@@ -365,22 +262,25 @@ static void build_cnf_tseytin_and_util(struct fexpr *e, struct fexpr *t)
 }
 
 /*
- * build Tseytin CNF-clauses for a fexpr of type OR
+ * build CNF-clauses for a fexpr of type OR
  */
-static void build_cnf_tseytin_or_util(struct fexpr *e, struct fexpr *t)
+static void build_cnf_tseytin_or(struct fexpr *e, struct fexpr *t)
 {
 	assert(e->type == FE_OR);
 
 	struct fexpr *left = get_fexpr_tseytin(e->left);
 	struct fexpr *right = get_fexpr_tseytin(e->right);
 	
-// 	print_fexpr("Left:", left, -1);
-// 	print_fexpr("Right:", right, -1);
+	print_fexpr("Left:", left, -1);
+	print_fexpr("Right:", right, -1);
 	
 	int a = left->type == FE_NOT ? -(left->left->satval) : left->satval;
 	int b = right->type == FE_NOT ? -(right->left->satval) : right->satval;
 	int c = t->satval;
 // 	struct gstr empty_string = str_new();
+	
+    picosat_add_arg(pico, a, b, 0);
+    return;
     
 	/* A v B v -C */
 	picosat_add_arg(pico, a, b, -c, 0);
@@ -394,9 +294,9 @@ static void build_cnf_tseytin_or_util(struct fexpr *e, struct fexpr *t)
 }
 
 /*
- * build Tseytin CNF-clauses for a fexpr of type NOT
+ * build CNF-clauses for a fexpr of type NOT
  */
-static void build_cnf_tseytin_not_util(struct fexpr *e, struct fexpr *t)
+static void build_cnf_tseytin_not(struct fexpr *e, struct fexpr *t)
 {
 	assert(e->type == FE_NOT);
 
@@ -416,25 +316,18 @@ static void build_cnf_tseytin_not_util(struct fexpr *e, struct fexpr *t)
 // 	build_cnf_clause(&empty_string, 2, a, c);
 }
 
-/*
- * return the SAT-variable/fexpr for a fexpr of type NOT.
- * If it is a symbol/atom, return that. Otherwise return the auxiliary SAT-variable.
- */
+
 static struct fexpr * get_fexpr_tseytin_not(struct fexpr *e)
 {
 	if (fexpr_is_symbol_or_neg_atom(e))
 		return e;
 	
 	struct fexpr *t = create_tmpsatvar();
-	build_cnf_tseytin_not_util(e, t);
+	build_cnf_tseytin_not(e, t);
 	
 	return t;
 }
 
-/*
- * return the SAT-variable/fexpr needed for the CNF-clause.
- * If it is a symbol/atom, return that. Otherwise return the auxiliary SAT-variable.
- */
 static struct fexpr * get_fexpr_tseytin(struct fexpr *e)
 {
 	if (!e) perror("Empty fexpr.");
@@ -447,16 +340,15 @@ static struct fexpr * get_fexpr_tseytin(struct fexpr *e)
 	case FE_TRUE:
 	case FE_FALSE:
 	case FE_NONBOOL:
-	case FE_SELECT:
 	case FE_CHOICE:
 		return e;
 	case FE_AND:
 		t = create_tmpsatvar();
-		build_cnf_tseytin_and_util(e, t);
+		build_cnf_tseytin_and(e, t);
 		return t;
 	case FE_OR:
 		t = create_tmpsatvar();
-		build_cnf_tseytin_or_util(e, t);
+		build_cnf_tseytin_or(e, t);
 		return t;
 	case FE_NOT:
 		return get_fexpr_tseytin_not(e);

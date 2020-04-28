@@ -110,6 +110,25 @@ int run_satconf_cli(const char *Kconfig_file)
 	
 	printf("done. (%.6f secs.)\n", time);
 // 	picosat_add_clauses(pico);
+	
+	/* add assumptions for all other symbols */
+	printf("Adding assumptions...");
+	start = clock();
+	
+	unsigned int i;
+	struct symbol *sym;
+	for_all_symbols(i, sym) {
+		if (sym->type == S_UNKNOWN) continue;
+
+		sym_add_assumption(pico, sym);
+	}
+	
+	end = clock();
+	time = ((double) (end - start)) / CLOCKS_PER_SEC;
+	
+	printf("done. (%.6f secs.)\n", time);
+
+	
 	picosat_solve(pico);
 	
 	printf("\n===> STATISTICS <===\n");
@@ -240,9 +259,10 @@ GArray * run_satconf(GArray *arr)
 			sym_add_assumption(pico, sym);
 	}
 	
-	FILE *fd = fopen("cnf.out", "w");
-	picosat_print(pico, fd);
-	fclose(fd);
+	/* print CNF-problem into file */
+// 	FILE *fd = fopen("satdv.out", "w");
+// 	picosat_print(pico, fd);
+// 	fclose(fd);
 
 	printf("Solving SAT-problem...");
 	start = clock();
@@ -254,9 +274,10 @@ GArray * run_satconf(GArray *arr)
 	printf("done. (%.6f secs.)\n\n", time);
 	
 	if (res == PICOSAT_SATISFIABLE) {
-		printf("===> Problem is satisfiable <===\n");
+		printf("===> PROBLEM IS SATISFIABLE <===\n");
 		
 		GArray *ret = g_array_new(false, false, sizeof(GArray *));
+// 		GArray *ret = rangefix_init(pico);
 		free(pico);
 		return ret;
 		

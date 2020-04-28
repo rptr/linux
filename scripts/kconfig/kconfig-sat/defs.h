@@ -97,6 +97,7 @@ enum fexpr_type {
 	FE_FALSE,  /* constant of value False */
 	FE_NONBOOL,  /* for all non-(boolean/tristate) known values */
 	FE_CHOICE, /* symbols of type choice */
+	FE_SELECT, /* auxiliary variable for selected symbols */
 	FE_TMPSATVAR /* temporary sat-variable (Tseytin) */ 
 };
 

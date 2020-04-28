@@ -37,7 +37,7 @@ void sym_create_fexpr(struct symbol *sym)
 static void create_fexpr_selected(struct symbol *sym)
 {
 	/* fexpr_sel_y */
-	struct fexpr *fexpr_sel_y = create_fexpr(sat_variable_nr++, FE_SYMBOL, sym->name);
+	struct fexpr *fexpr_sel_y = create_fexpr(sat_variable_nr++, FE_SELECT, sym->name);
 	str_append(&fexpr_sel_y->name, "_sel_y");
 	fexpr_sel_y->sym = sym;
 	/* add it to satmap */
@@ -47,7 +47,7 @@ static void create_fexpr_selected(struct symbol *sym)
 	
 	/* fexpr_sel_m */
 	if (sym->type == S_BOOLEAN) return;
-	struct fexpr *fexpr_sel_m = create_fexpr(sat_variable_nr++, FE_SYMBOL, sym->name);
+	struct fexpr *fexpr_sel_m = create_fexpr(sat_variable_nr++, FE_SELECT, sym->name);
 	str_append(&fexpr_sel_m->name, "_sel_m");
 	fexpr_sel_m->sym = sym;
 	/* add it to satmap */
@@ -83,8 +83,8 @@ static void create_fexpr_bool(struct symbol *sym)
 	
 	sym->fexpr_m = fexpr_m;
 	
-// 	if (sym->rev_dep.expr)
-// 		create_fexpr_selected(sym);
+	if (sym->rev_dep.expr)
+		create_fexpr_selected(sym);
 }
 
 /*
@@ -493,6 +493,28 @@ struct fexpr * sym_get_fexpr_both(struct symbol *sym)
 }
 
 /*
+ * return fexpr_sel_y for a symbol
+ */
+struct fexpr * sym_get_fexpr_sel_y(struct symbol *sym)
+{
+	if (!sym->rev_dep.expr)
+		return const_false;
+	
+	return sym->fexpr_sel_y;
+}
+
+/*
+ * return fexpr_sel_m for a symbol
+ */
+struct fexpr * sym_get_fexpr_sel_m(struct symbol *sym)
+{
+	if (!sym->rev_dep.expr || sym->type == S_TRISTATE)
+		return const_false;
+	
+	return sym->fexpr_sel_m;
+}
+
+/*
  * return fexpr_sel_both for a symbol
  */
 struct fexpr * sym_get_fexpr_sel_both(struct symbol *sym)
@@ -516,7 +538,7 @@ struct fexpr * implies(struct fexpr *a, struct fexpr *b)
  */
 bool fexpr_is_symbol(struct fexpr *e)
 {
-	return e->type == FE_SYMBOL || e->type == FE_FALSE || e->type == FE_TRUE || e->type == FE_NONBOOL || e->type == FE_CHOICE;
+	return e->type == FE_SYMBOL || e->type == FE_FALSE || e->type == FE_TRUE || e->type == FE_NONBOOL || e->type == FE_CHOICE || e->type == FE_SELECT;
 }
 
 /*
@@ -547,6 +569,7 @@ static bool convert_fexpr_to_nnf_util(struct fexpr *e)
 	case FE_CHOICE:
 	case FE_FALSE:
 	case FE_TRUE:
+	case FE_SELECT:
 	case FE_TMPSATVAR:
 		return false;
 	case FE_AND:
@@ -634,6 +657,8 @@ static bool convert_nnf_to_cnf_util(struct fexpr *e)
 	case FE_CHOICE:
 	case FE_FALSE:
 	case FE_TRUE:
+	case FE_SELECT:
+	case FE_TMPSATVAR:
 		return false;
 	case FE_AND:
 		return convert_nnf_to_cnf_util(e->left) || convert_nnf_to_cnf_util(e->right);

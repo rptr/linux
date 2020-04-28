@@ -5,24 +5,14 @@ menuconfig MODULES
 
 config A
 	bool "A"
-#	select B
 
 config B
 	bool "B"
-	depends on C
 
 config C
 	bool "C"
+	depends on A || B
 
 config D
 	bool "D"
-	depends on A
-	#select B if E
-	select F
-
-config E
-	bool "E"
-
-config F
-	bool "F"
-	depends on C
+	depends on !A
