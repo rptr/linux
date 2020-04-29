@@ -15,7 +15,8 @@ static GArray *diagnoses, *diagnoses_symbol;
 
 static GArray * generate_diagnoses(PicoSAT *pico);
 
-static void add_fexpr_to_constraint_set(gpointer key, gpointer value, gpointer userData);
+// static void add_fexpr_to_constraint_set(gpointer key, gpointer value, gpointer userData);
+static void add_fexpr_to_constraint_set(GArray *C);
 static void set_assumptions(PicoSAT *pico, GArray *c);
 static void fexpr_add_assumption(PicoSAT *pico, struct fexpr *e);
 static GArray * get_unsat_core(PicoSAT *pico, GArray *c);
@@ -81,7 +82,9 @@ static GArray * generate_diagnoses(PicoSAT *pico)
 // 	GArray *tmp;
 	
 	/* create constraint set C */
-	g_hash_table_foreach(satmap, add_fexpr_to_constraint_set, C);
+// 	g_hash_table_foreach(satmap, add_fexpr_to_constraint_set, C);
+	add_fexpr_to_constraint_set(C);
+
 	
 	/* init E with an empty diagnosis */
 	GArray *empty_diagnosis = g_array_new(false, false, sizeof(struct fexpr *));
@@ -123,7 +126,7 @@ static GArray * generate_diagnoses(PicoSAT *pico)
 		}
 		
 		X = get_unsat_core(pico, c);
-// 		print_array("Unsat core", X);
+		print_array("Unsat core", X);
 		// TODO: possibly minimise the unsat core here, but not necessary
 		
 		for (i = 0; i < E->len; i++) {
@@ -215,27 +218,59 @@ static GArray * generate_diagnoses(PicoSAT *pico)
 /*
  * add a fexpr to the constraint set C 
  */
-static void add_fexpr_to_constraint_set(gpointer key, gpointer value, gpointer userData)
+static void add_fexpr_to_constraint_set(GArray *C)
 {
-	int realKey = *( (int*)key );
-	struct fexpr *e = (struct fexpr *) value;
-	assert(realKey == e->satval);
-	GArray *C = (GArray *) userData;
-	
-// 	print_fexpr("e:", e, -1);
-	
-	/* fexpr must be associated with a symbol */
-	if (!e->sym) return;
-	
-	/* symbol must be a "proper" symbol */
-	if (e->type != FE_SYMBOL && e->type != FE_NONBOOL) return;
-	
-	/* symbol must have a prompt and a name, user cannot change it otherwise */
-	if (!sym_has_prompt(e->sym) || !e->sym->name) return;
-	
-	g_array_append_val(C, e);
-// 	printf("ADDED\n");
+	unsigned int i;
+	struct symbol *sym;
+	for_all_symbols(i, sym) {
+		/* must be a proper symbol */
+		if (sym->type == S_UNKNOWN) continue;
+		
+		/* must have a prompt and a name */
+		if (!sym->name || !sym_has_prompt(sym)) continue;
+
+		if (sym->type == S_BOOLEAN) {
+			g_array_append_val(C, sym->fexpr_y);
+		}
+		else if (sym->type == S_TRISTATE) {
+			g_array_append_val(C, sym->fexpr_y);
+			g_array_append_val(C, sym->fexpr_m);
+		}
+		else if (sym->type == S_INT || sym->type == S_HEX || sym->type == S_STRING) {
+			unsigned int i;
+			struct fexpr *e;
+			for (i = 0; i < sym->fexpr_nonbool->arr->len; i++) {
+				e = g_array_index(sym->fexpr_nonbool->arr, struct fexpr *, i);
+				g_array_append_val(C, e);
+			}
+			
+		}
+		else {
+			perror("Error getting unsat core for unknown symbol.");
+		}
+	}
 }
+// static void add_fexpr_to_constraint_set(gpointer key, gpointer value, gpointer userData)
+// {
+// 	int realKey = *( (int*)key );
+// 	struct fexpr *e = (struct fexpr *) value;
+// 	assert(realKey == e->satval);
+// 	GArray *C = (GArray *) userData;
+// 	
+// 	print_fexpr("e:", e, -1);
+// 	
+// 	/* fexpr must be associated with a symbol */
+// 	if (!e->sym) return;
+// 	
+// 	/* symbol must be a "proper" symbol */
+// 	if (e->type != FE_SYMBOL && e->type != FE_NONBOOL) return;
+// 	
+// 	/* symbol must have a prompt and a name, user cannot change it otherwise */
+// 	if (!sym_has_prompt(e->sym) || !e->sym->name) return;
+// 	
+// 	g_array_append_val(C, e);
+// 	printf("ADDED\n");
+// }
 
 /*
  * set the assumptions for the next run of Picosat
