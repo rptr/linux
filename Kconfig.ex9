@@ -16,3 +16,6 @@ config C
 config D
 	bool "D"
 	depends on !A
+
+config S
+	int "S"

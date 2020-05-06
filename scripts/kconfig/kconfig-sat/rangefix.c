@@ -15,12 +15,11 @@ static GArray *diagnoses, *diagnoses_symbol;
 
 static GArray * generate_diagnoses(PicoSAT *pico);
 
-// static void add_fexpr_to_constraint_set(gpointer key, gpointer value, gpointer userData);
+
 static void add_fexpr_to_constraint_set(GArray *C);
 static void set_assumptions(PicoSAT *pico, GArray *c);
 static void fexpr_add_assumption(PicoSAT *pico, struct fexpr *e);
 static GArray * get_unsat_core(PicoSAT *pico, GArray *c);
-
 
 static GArray * get_difference(GArray *C, GArray *E0);
 static bool has_intersection(GArray *e, GArray *X);
@@ -29,6 +28,7 @@ static GArray * clone_array(GArray *arr);
 static bool is_subset_of(GArray *A, GArray *B);
 static void print_array(char *title, GArray *arr);
 static void print_array_symbol(char *title, GArray *arr);
+static void print_unsat_core(GArray *arr);
 static bool diagnosis_contains_fexpr(GArray *diagnosis, struct fexpr *e);
 static bool diagnosis_contains_symbol(GArray *diagnosis, struct symbol *sym);
 
@@ -40,6 +40,9 @@ static struct symbol_fix * symbol_fix_create(struct fexpr *e, enum symbolfix_typ
 
 static tristate calculate_new_tri_val(struct fexpr *e, GArray *diagnosis);
 static const char * calculate_new_string_value(struct fexpr *e, GArray *diagnosis);
+
+/* count assumptions, only used for debugging */
+static unsigned int nr_of_assumptions = 0, nr_of_assumptions_true = 0;
 
 /* -------------------------------------- */
 
@@ -81,11 +84,11 @@ static GArray * generate_diagnoses(PicoSAT *pico)
 // 	unsigned int t;
 // 	GArray *tmp;
 	
+// 	printf("\n");
+	
 	/* create constraint set C */
-// 	g_hash_table_foreach(satmap, add_fexpr_to_constraint_set, C);
 	add_fexpr_to_constraint_set(C);
 
-	
 	/* init E with an empty diagnosis */
 	GArray *empty_diagnosis = g_array_new(false, false, sizeof(struct fexpr *));
 	g_array_append_val(E, empty_diagnosis);
@@ -98,10 +101,15 @@ static GArray * generate_diagnoses(PicoSAT *pico)
 		GArray *E0 = g_array_index(E, GArray *, diagnosis_index);
 // 		print_array("Select partial diagnosis", E0);
 		
+		/* calculate C\E0 */
 		GArray *c = get_difference(C, E0);
 // 		print_array("Soft constraints", c);
 		
+		/* set assumptions */
+		nr_of_assumptions = 0;
+		nr_of_assumptions_true = 0;
 		set_assumptions(pico, c);
+// 		printf("Asuumptions: %d (true: %d)\n", nr_of_assumptions, nr_of_assumptions_true);
 		
 		int res = picosat_sat(pico, -1);
 		if (res == PICOSAT_SATISFIABLE) {
@@ -126,7 +134,8 @@ static GArray * generate_diagnoses(PicoSAT *pico)
 		}
 		
 		X = get_unsat_core(pico, c);
-		print_array("Unsat core", X);
+// 		print_unsat_core(X);
+// 		print_array("Unsat core", X);
 		// TODO: possibly minimise the unsat core here, but not necessary
 		
 		for (i = 0; i < E->len; i++) {
@@ -216,11 +225,11 @@ static GArray * generate_diagnoses(PicoSAT *pico)
 }
 
 /*
- * add a fexpr to the constraint set C 
+ * add the fexpr to the constraint set C 
  */
 static void add_fexpr_to_constraint_set(GArray *C)
 {
-	unsigned int i;
+	unsigned int i, nr_sym = 0, nr_fexpr = 0;
 	struct symbol *sym;
 	for_all_symbols(i, sym) {
 		/* must be a proper symbol */
@@ -228,13 +237,17 @@ static void add_fexpr_to_constraint_set(GArray *C)
 		
 		/* must have a prompt and a name */
 		if (!sym->name || !sym_has_prompt(sym)) continue;
+		
+		nr_sym++;
 
 		if (sym->type == S_BOOLEAN) {
 			g_array_append_val(C, sym->fexpr_y);
+			nr_fexpr++;
 		}
 		else if (sym->type == S_TRISTATE) {
 			g_array_append_val(C, sym->fexpr_y);
 			g_array_append_val(C, sym->fexpr_m);
+			nr_fexpr += 2;
 		}
 		else if (sym->type == S_INT || sym->type == S_HEX || sym->type == S_STRING) {
 			unsigned int i;
@@ -242,35 +255,25 @@ static void add_fexpr_to_constraint_set(GArray *C)
 			for (i = 0; i < sym->fexpr_nonbool->arr->len; i++) {
 				e = g_array_index(sym->fexpr_nonbool->arr, struct fexpr *, i);
 				g_array_append_val(C, e);
+				nr_fexpr++;
 			}
-			
 		}
 		else {
-			perror("Error getting unsat core for unknown symbol.");
+			perror("Error adding variables to constraint set C.");
 		}
 	}
+// 	printf("Added %d symbols, %d variables.\n", nr_sym, nr_fexpr);
 }
-// static void add_fexpr_to_constraint_set(gpointer key, gpointer value, gpointer userData)
-// {
-// 	int realKey = *( (int*)key );
-// 	struct fexpr *e = (struct fexpr *) value;
-// 	assert(realKey == e->satval);
-// 	GArray *C = (GArray *) userData;
-// 	
-// 	print_fexpr("e:", e, -1);
-// 	
-// 	/* fexpr must be associated with a symbol */
-// 	if (!e->sym) return;
-// 	
-// 	/* symbol must be a "proper" symbol */
-// 	if (e->type != FE_SYMBOL && e->type != FE_NONBOOL) return;
-// 	
-// 	/* symbol must have a prompt and a name, user cannot change it otherwise */
-// 	if (!sym_has_prompt(e->sym) || !e->sym->name) return;
-// 	
-// 	g_array_append_val(C, e);
-// 	printf("ADDED\n");
-// }
+
+/*
+ * check, if the fexpr symbolises the no-value-set fexpr for a non-boolean symbol
+ */
+static bool fexpr_is_novalue(struct fexpr *e)
+{
+	assert(sym_is_nonboolean(e->sym));
+
+	return e == g_array_index(e->sym->fexpr_nonbool->arr, struct fexpr *, 0);
+}
 
 /*
  * set the assumptions for the next run of Picosat
@@ -285,6 +288,9 @@ static void set_assumptions(PicoSAT *pico, GArray *c)
 	}
 }
 
+/*
+ * set the assumtption for a fexpr for the next run of Picosat
+ */
 static void fexpr_add_assumption(PicoSAT *pico, struct fexpr *e)
 {
 	struct symbol *sym = e->sym;
@@ -296,10 +302,12 @@ static void fexpr_add_assumption(PicoSAT *pico, struct fexpr *e)
 		if (tri_val == yes) {
 			picosat_assume(pico, e->satval);
 			e->assumption = true;
+			nr_of_assumptions_true++;
 		} else {
 			picosat_assume(pico, -(e->satval));
 			e->assumption = false;
 		}
+		nr_of_assumptions++;
 	}
 	
 	if (sym->type == S_TRISTATE) {
@@ -310,6 +318,7 @@ static void fexpr_add_assumption(PicoSAT *pico, struct fexpr *e)
 			if (tri_val == yes) {
 				picosat_assume(pico, e->satval);
 				e->assumption = true;
+				nr_of_assumptions_true++;
 			} else {
 				picosat_assume(pico, -(e->satval));
 				e->assumption = false;
@@ -318,44 +327,41 @@ static void fexpr_add_assumption(PicoSAT *pico, struct fexpr *e)
 			if (tri_val == mod) {
 				picosat_assume(pico, e->satval);
 				e->assumption = true;
+				nr_of_assumptions_true++;
 			} else {
 				picosat_assume(pico, -(e->satval));
 				e->assumption = false;
 			}
 		}
+		nr_of_assumptions++;
 	}
-	
-	// TODO for string and hex
+
 	if (sym->type == S_INT || sym->type == S_HEX || sym->type == S_STRING) {
-		const char *string_val = sym_get_string_value(sym);
+// 		const char *string_val = sym_get_string_value(sym);
 		
-		if (strcmp(str_get(&e->nb_val), string_val) == 0) {
+		/* check, if e symbolises the no-value-set fexpr */
+		if (fexpr_is_novalue(e)) {
+			if (sym_has_value(e->sym)) {
+				picosat_assume(pico, -(e->satval));
+				e->assumption = false;
+			} else {
+				picosat_assume(pico, e->satval);
+				e->assumption = true;
+				nr_of_assumptions_true++;
+			}
+			nr_of_assumptions++;
+			return;
+		}
+		
+		if (sym_has_value(e->sym) && strcmp(str_get(&e->nb_val), sym_get_string_value(sym)) == 0) {
 			picosat_assume(pico, e->satval);
 			e->assumption = true;
+			nr_of_assumptions_true++;
 		} else {
 			picosat_assume(pico, -(e->satval));
 			e->assumption = false;
 		}
-		
-		/* need to take care of X=n */
-		bool assumption_set = false;
-		int i;
-		struct fexpr *e2;
-		for (i = 1; i < sym->fexpr_nonbool->arr->len; i++) {
-			e2 = g_array_index(sym->fexpr_nonbool->arr, struct fexpr *, i);
-		
-			if (e2->assumption == true)
-				assumption_set = true;
-		}
-		
-		e2 = g_array_index(sym->fexpr_nonbool->arr, struct fexpr *, 0);
-		if (!assumption_set) {
-			picosat_assume(pico, e2->satval);
-			e->assumption = true;
-		} else {
-			picosat_assume(pico, -(e2->satval));
-			e->assumption = false;
-		}
+		nr_of_assumptions++;
 	}
 }
 
@@ -534,6 +540,27 @@ static void print_array_symbol(char *title, GArray *arr)
 	
 	printf("]\n");
 }
+
+/*
+ * print an unsat core
+ */
+static void print_unsat_core(GArray *arr)
+{
+	struct fexpr *e;
+	unsigned int i;
+	printf("Unsat core: [");
+	
+	for (i = 0; i < arr->len; i++) {
+		e = g_array_index(arr, struct fexpr *, i);
+		printf("%s", str_get(&e->name));
+		printf(" <%s>", e->assumption ? "T" : "F");
+		if (i != arr->len - 1)
+			printf(", ");
+	}
+	
+	printf("]\n");
+}
+
 
 /*
  * check if a diagnosis contains a fexpr

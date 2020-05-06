@@ -34,8 +34,8 @@ source "lib/Kconfig.debug"
 source "Documentation/Kconfig"
 
 config CUSTABC
-	bool "custabc"
+	tristate "custabc"
 
 config qwer
-	bool "custabc2"
+	tristate "custabc2"
 	depends on CUSTABC

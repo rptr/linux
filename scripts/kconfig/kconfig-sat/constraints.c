@@ -34,6 +34,23 @@ static long long sym_get_range_val(struct symbol *sym, int base);
 
 /* -------------------------------------- */
 
+static void debug()
+{
+	unsigned int i;
+	struct symbol *sym;
+	for_all_symbols(i, sym) {
+		if (sym->name && strcmp(sym->name, "MTRR_SANITIZER_SPARE_REG_NR_DEFAULT") == 0) {
+			printf("PRINTING MTRR_SANITIZER_SPARE_REG_NR_DEFAULT\n");
+			print_symbol(sym);
+			print_sym_constraint(sym);
+		}
+// 		if (sym_has_value(sym))
+// 			printf("%s has value.\n", sym_get_name(sym));
+// 		else
+// 			printf("%s has NO value.\n", sym_get_name(sym));
+	}
+}
+
 /*
  * build the constraints for each symbol
  */
@@ -41,6 +58,8 @@ void get_constraints(void)
 {
 	unsigned int i;
 	struct symbol *sym;
+	
+// 	debug();
 	
 	printf("Building constraints...");
 	
@@ -65,6 +84,8 @@ void get_constraints(void)
 		/* build constraints for dependencies for booleans */
 		if (sym->dir_dep.expr && sym_is_boolean(sym) && !sym_is_choice(sym) && !sym_is_choice_value(sym)) {
 // 		if (sym->dir_dep.expr && sym_is_boolean(sym) && !sym_is_choice(sym)) {
+			
+			
 			add_dependencies_bool(sym);
 		}
 				

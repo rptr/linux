@@ -37,7 +37,7 @@ int main(int argc, char *argv[])
 		/* ask for user input */
 		struct symbol *sym = read_symbol_from_stdin();
 		
-		printf("Found symbol %s, type %s\n", sym->name, sym_type_name(sym->type));
+		printf("Found symbol %s, type %s\n\n", sym->name, sym_type_name(sym->type));
 		printf("Current value: %s\n", sym_get_string_value(sym));
 		printf("Desired value: ");
 		
