@@ -189,7 +189,7 @@ bool can_evaluate_to_mod(struct k_expr *e)
 	
 	switch (e->type) {
 	case KE_SYMBOL:
-		return e->sym->type == S_TRISTATE ? true : false;
+		return e->sym == &symbol_mod || e->sym->type == S_TRISTATE ? true : false;
 	case KE_AND:
 	case KE_OR:
 		return can_evaluate_to_mod(e->left) || can_evaluate_to_mod(e->right);

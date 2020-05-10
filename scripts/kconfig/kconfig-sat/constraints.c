@@ -44,10 +44,6 @@ static void debug()
 			print_symbol(sym);
 			print_sym_constraint(sym);
 		}
-// 		if (sym_has_value(sym))
-// 			printf("%s has value.\n", sym_get_name(sym));
-// 		else
-// 			printf("%s has NO value.\n", sym_get_name(sym));
 	}
 }
 
@@ -65,7 +61,7 @@ void get_constraints(void)
 	
 	/* build constraints for boolean symbols */
 	for_all_symbols(i, sym) {
-
+		
 		if (!sym_is_boolean(sym)) continue;
 
 		/* build tristate constraints */
@@ -84,8 +80,6 @@ void get_constraints(void)
 		/* build constraints for dependencies for booleans */
 		if (sym->dir_dep.expr && sym_is_boolean(sym) && !sym_is_choice(sym) && !sym_is_choice_value(sym)) {
 // 		if (sym->dir_dep.expr && sym_is_boolean(sym) && !sym_is_choice(sym)) {
-			
-			
 			add_dependencies_bool(sym);
 		}
 				
@@ -102,8 +96,8 @@ void get_constraints(void)
 		if (sym_is_choice(sym))
 			add_choice_constraints(sym);
 		
-// 		if (sym->name && strcmp(sym->name, "X86_EXTENDED_PLATFORM") == 0) {
-// 			printf("PRINTING X86_EXTENDED_PLATFORM\n");
+// 		if (sym->name && strcmp(sym->name, "CRAMFS_MTD") == 0) {
+// 			printf("PRINTING CRAMFS_MTD\n");
 // 			print_symbol(sym);
 // 			print_sym_constraint(sym);
 // 		}
@@ -302,7 +296,7 @@ static void add_dependencies_bool(struct symbol *sym)
 {
 	assert(sym_is_boolean(sym));
 	assert(sym->dir_dep.expr);
-	
+
 // 	print_sym_name(sym);
 // 	print_expr("dir_dep expr:", sym->dir_dep.expr, E_NONE);
 	

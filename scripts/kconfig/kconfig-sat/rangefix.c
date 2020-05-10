@@ -84,7 +84,7 @@ static GArray * generate_diagnoses(PicoSAT *pico)
 // 	unsigned int t;
 // 	GArray *tmp;
 	
-// 	printf("\n");
+	printf("\n");
 	
 	/* create constraint set C */
 	add_fexpr_to_constraint_set(C);
@@ -134,7 +134,7 @@ static GArray * generate_diagnoses(PicoSAT *pico)
 		}
 		
 		X = get_unsat_core(pico, c);
-// 		print_unsat_core(X);
+		print_unsat_core(X);
 // 		print_array("Unsat core", X);
 		// TODO: possibly minimise the unsat core here, but not necessary
 		
@@ -678,7 +678,7 @@ static GArray * convert_diagnoses(GArray *diag_arr)
 		for (j = 0; j < diagnosis->len; j++) {
 			e = g_array_index(diagnosis, struct fexpr *, j);
 			
-			/* diagnosis contains symbol, so continue */
+			/* diagnosis already contains symbol, so continue */
 			if (diagnosis_contains_symbol(diagnosis_symbol, e->sym)) continue;
 			
 			// TODO for disallowed
@@ -906,30 +906,26 @@ static tristate calculate_new_tri_val(struct fexpr *e, GArray *diagnosis)
 static const char * calculate_new_string_value(struct fexpr *e, GArray *diagnosis)
 {
 	assert(sym_is_nonboolean(e->sym));
+
+	/* if assumption was false before, this is the new value because only 1 variable can be true */
+	if (e->assumption == false)
+		return str_get(&e->nb_val);
 	
-	// TODO for string and hex
-	if (e->sym->type == S_INT || e->sym->type == S_HEX || e->sym->type == S_STRING) {
-		/* if assumption was false before, this is the new value because only 1 variable can be true */
-		if (e->assumption == false)
-			return str_get(&e->nb_val);
+	struct fexpr *e2;
+	unsigned int i;
+	
+	/* a diagnosis always contains 2 variables for the same symbol
+	* one is set to true, the other to false
+	* otherwise you'd set 2 variables to true, which is not allowed */
+	for (i = 0; i < diagnosis->len; i++) {
+		e2 = g_array_index(diagnosis, struct fexpr *, i);
 		
-		struct fexpr *e2;
-		unsigned int i;
+		/* not interested in other symbols or the same fexpr */
+		if (e->sym != e2->sym || e == e2) continue;
 		
-		/* a diagnosis always contains 2 variables for the same symbol
-		 * one is set to true, the other to false
-		 * otherwise you'd set 2 variables to true, which is not allowed */
-		for (i = 0; i < diagnosis->len; i++) {
-			e2 = g_array_index(diagnosis, struct fexpr *, i);
-			
-			/* not interested in other symbols or the same fexpr */
-			if (e->sym != e2->sym || e == e2) continue;
-			
-			return str_get(&e2->nb_val);
-		}
-		
+		return str_get(&e2->nb_val);
 	}
-	
+
 	perror("Error calculating new string value.\n");
 	return "";
 }
