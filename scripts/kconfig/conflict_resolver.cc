@@ -5,41 +5,6 @@
 #include <iostream>
 #include <QList>
 #include "conflict_resolver.h"
-#if 0
-QList<Constraint> get_constraints()
-{
-    /*
-    	- Example candidate symbols:
-		  -DMI_SYSFS (tristate example)
-		  	- under Firmware drivers -> DMI table support in sysfs
-		  -DMIID (boolean example)
-		  	- under Firmware drivers -> Export DMI identification
-		  - EDD (tristate example with a hierarchy within )
-		  - NET_KEY_MIGRATE and XFRM_MIGRATE
-    */
-    Constraint tc;
-    tc.symbol = "DMI_SYSFS";
-    tc.change_needed = "Requries change to yes";
-    tc.status = UNSATISFIED;
-    tc.req = yes;
-
-    Constraint tc2;
-    tc2.symbol = "DMIID";
-    tc2.change_needed = "Requires change to no";
-    tc2.status = UNSATISFIED;
-    tc2.req = no;
-
-    Constraint tc3;
-    tc3.symbol = "EDD";
-    tc3.change_needed = "Requires change to module";
-    tc3.status = UNSATISFIED;
-    tc3.req = mod;
-
-    QList<Constraint> x = {tc, tc2, tc3};
-    return x;
-
-}
-#endif
 
 QString tristate_value_to_string(tristate x)
 {

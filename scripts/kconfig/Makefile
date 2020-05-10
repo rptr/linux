@@ -24,8 +24,6 @@ endif
 unexport CONFIG_
 
 xconfig: $(obj)/qconf
-	# $(Q)cd scripts/kconfig/picosat && ./configure.sh
-	# $(Q)cd scripts/kconfig/picosat && make
 	$< $(silent) $(Kconfig)
 
 gconfig: $(obj)/gconf

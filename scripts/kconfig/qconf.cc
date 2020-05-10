@@ -336,7 +336,6 @@ ConfigList::ConfigList(ConfigView* p, const char *name)
 	connect(this, SIGNAL(itemSelectionChanged(void)),
 		SLOT(updateSelection(void)));
 
-	setDragEnabled(true);
 	if (name) {
 		configSettings->beginGroup(name);
 		showName = configSettings->value("/showName", false).toBool();
@@ -1108,8 +1107,6 @@ ConflictsView::ConflictsView(QWidget* parent, const char *name)
 	solutionLayout->addWidget(applyFixButton);
 
 	horizontalLayout->addLayout(solutionLayout);
-	// QString charx{get_test_char()};
-	// solution->setText(charx);
 
 }
 void QTableWidget::dropEvent(QDropEvent *event)
@@ -1119,7 +1116,6 @@ void ConflictsView::changeToNo(){
 	QItemSelectionModel *select = conflictsTable->selectionModel();
 	if (select->hasSelection()){
 		QModelIndexList rows = select->selectedRows();
-		std::cerr << " has rows selected" << std::endl;
 		for (int i = 0;i < rows.count(); i++)
 		{
 			conflictsTable->item(rows[i].row(),1)->setText("NO");
@@ -1127,7 +1123,6 @@ void ConflictsView::changeToNo(){
 	}
 }
 void ConflictsView::applyFixButtonClick(){
-	// std::cerr << "solution selected = " << signed(solutionSelector->currentIndex()) << std::endl;
 	signed int solution_number = solutionSelector->currentIndex();
 
 	if (solution_number == -1 || solution_output == NULL) {
@@ -1136,15 +1131,11 @@ void ConflictsView::applyFixButtonClick(){
 
 	GArray* selected_solution = g_array_index(solution_output,GArray * , solution_number);
 	apply_satfix(selected_solution);
-	// std::cout << "solution length =" << unsigned(selected_solution->len) << std::endl;
-	// std::cerr << "solution selected = "  << std::endl;
-	// solutionSelector->currentIndex
 }
 void ConflictsView::changeToYes(){
 	QItemSelectionModel *select = conflictsTable->selectionModel();
 	if (select->hasSelection()){
 		QModelIndexList rows = select->selectedRows();
-		std::cerr << " has rows selected" << std::endl;
 		for (int i = 0;i < rows.count(); i++)
 		{
 			conflictsTable->item(rows[i].row(),1)->setText("YES");
@@ -1156,7 +1147,6 @@ void ConflictsView::changeToModule() {
 	QItemSelectionModel *select = conflictsTable->selectionModel();
 	if (select->hasSelection()){
 		QModelIndexList rows = select->selectedRows();
-		std::cerr << " has rows selected" << std::endl;
 		for (int i = 0;i < rows.count(); i++)
 		{
 			conflictsTable->item(rows[i].row(),1)->setText("MODULE");
@@ -1166,8 +1156,6 @@ void ConflictsView::changeToModule() {
 }
 void ConflictsView::menuChanged1(struct menu * m)
 {
-
-	std::cerr << "menu changed 1" << std::endl;
 	currentSelectedMenu = m;
 }
 void ConflictsView::addSymbol()
@@ -1206,7 +1194,6 @@ void ConflictsView::addSymbol(struct menu *m)
 	}
 }
 void ConflictsView::addSymbolFromContextMenu() {
-	std::cerr << "adding multisymbol" << std::endl;
 	struct menu *menu;
 	enum prop_type type;
 
@@ -1231,14 +1218,11 @@ void ConflictsView::removeSymbol()
 	QAbstractItemModel *itemModel = select->model();
 	if (select->hasSelection()){
 		QModelIndexList rows = select->selectedRows();
-		// std::cerr << "removing starting index = " << unsigned (rows[0].row()) << std::endl;
 		itemModel->removeRows(rows[0].row(),rows.size());
 	}
 }
 void ConflictsView::cellClicked(int row, int column)
 {
-	std::cerr << "clicked :: " << row << ", column:: " << column << std::endl;
-	std::cerr << "parents type:: " <<  typeid(parent()).name() << std::endl;
 
 	auto itemText = conflictsTable->item(row,0)->text().toUtf8().data();
 
@@ -1293,7 +1277,7 @@ void ConflictsView::changeSolutionTable(int solution_number){
 }
 void ConflictsView::calculateFixes(void)
 {
-	std::cout << "clicked calculate fixes" << std::endl;
+	std::cout << "calculating fixes" << std::endl;
 	// call satconf to get a solution by looking at the grid and taking the symbol and their desired value.
 	//get the symbols from  grid:
 	if(conflictsTable->rowCount() == 0)
@@ -1342,6 +1326,7 @@ void ConflictsView::calculateFixes(void)
 void ConflictsView::changeAll(void)
 {
 	return;
+	// not implemented for now
 	// std::cerr << "change all clicked" << std::endl;
 	// std::cerr << constraints[0].symbol.toStdString() << std::endl;
 	// if (constraints.length() == 0)
@@ -1366,15 +1351,6 @@ void ConflictsView::changeAll(void)
 
 	// emit(refreshMenu());
 }
-/*
-void ConflictsView::conflictSelected(struct menu * men)
-{
-	std::cerr << "help:::: " <<  men->help << std::endl;
-
-	//configList->clearSelection();
-	//menuList->clearSelection();
-	//emit(setMenuLink(men));
-}*/
 
 ConflictsView::~ConflictsView(void)
 {
@@ -1823,7 +1799,7 @@ ConfigMainWindow::ConfigMainWindow(void)
 	configView->showAllAction->setCheckable(true);
 	configView->showPromptAction->setCheckable(true);
 	configView->addSymbolsFromContextMenu = new QAction("Add symbol from context menu");
-   connect(configView->addSymbolsFromContextMenu, SIGNAL(triggered()),conflictsView, SLOT(addSymbolFromContextMenu()));
+    connect(configView->addSymbolsFromContextMenu, SIGNAL(triggered()),conflictsView, SLOT(addSymbolFromContextMenu()));
 
 	QAction *showDebugAction = new QAction("Show Debug Info", this);
 	  showDebugAction->setCheckable(true);
