@@ -1283,6 +1283,14 @@ void ConflictsView::calculateFixes(void)
 	if(conflictsTable->rowCount() == 0)
 		return;
 
+	numSolutionLabel->setText(QString("Solutions: "));
+	solutionSelector->clear();
+	solutionTable->setRowCount(0);
+	solutionTable->repaint();
+	solutionSelector->repaint();
+	numSolutionLabel->repaint();
+
+
 	GArray* wanted_symbols = g_array_sized_new(FALSE,TRUE,sizeof(struct symbol_dvalue *),conflictsTable->rowCount());
 	//loop through the rows in conflicts table adding each row into the array:
 	struct symbol_dvalue* p = nullptr;
