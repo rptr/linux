@@ -4,18 +4,22 @@ menuconfig MODULES
 	default y
 
 config A
-	bool "A"
+	tristate "A" if E
+	depends on C
+	default y
 
 config B
 	bool "B"
+	depends on A && D
 
 config C
-	bool "C"
-	depends on A || B
+	tristate "C"
+	depends on D
+	default y if E
+	default m
 
 config D
 	bool "D"
-	depends on !A
 
-config S
-	int "S"
+config E
+	bool "E"
