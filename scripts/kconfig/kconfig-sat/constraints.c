@@ -45,14 +45,14 @@ static long long sym_get_range_val(struct symbol *sym, int base);
 
 static void debug_info(void)
 {
-	unsigned int i;
+	unsigned int i, no = 0, dep = 0;
 	struct symbol *sym;
 	for_all_symbols(i, sym) {
-		if (sym->name && strcmp(sym->name, "MTRR_SANITIZER_SPARE_REG_NR_DEFAULT") == 0) {
-			printf("PRINTING MTRR_SANITIZER_SPARE_REG_NR_DEFAULT\n");
-			print_symbol(sym);
-			print_sym_constraint(sym);
-		}
+// 		if (sym->name && strcmp(sym->name, "MTRR_SANITIZER_SPARE_REG_NR_DEFAULT") == 0) {
+// 			printf("PRINTING MTRR_SANITIZER_SPARE_REG_NR_DEFAULT\n");
+// 			print_symbol(sym);
+// 			print_sym_constraint(sym);
+// 		}
 	}
 }
 
@@ -75,8 +75,7 @@ void get_constraints(void)
 	for_all_symbols(i, sym) {
 		
 		if (!sym_is_boolean(sym)) continue;
-		
-		
+
 // 		if (sym->name && strcmp(sym->name, "FIRMWARE_MEMMAP") == 0) {
 // 			printf("PRINTING CRAMFS_MTD\n");
 // 			print_symbol(sym);
@@ -197,8 +196,8 @@ void get_constraints(void)
 // 			add_invisible_constraints(sym, prompt);
 
 		/* the symbol must have a value, if there is a prompt */
-// 		if (sym_has_prompt(sym))
-// 			sym_add_nonbool_prompt_constraint(sym);
+		if (sym_has_prompt(sym))
+			sym_add_nonbool_prompt_constraint(sym);
 		
 		/* add current value to possible values */
 		if (!sym->flags || !(sym->flags & SYMBOL_VALID))
@@ -206,11 +205,17 @@ void get_constraints(void)
 		const char *curr = sym_get_string_value(sym);
 		if (strcmp(curr, "") != 0)
 			sym_create_nonbool_fexpr(sym, (char *) curr);
+	}
+	
+	/* build the "exactly 1"-constraint for non-booleans
+	 * must be the last constraint */
+	for_all_symbols(i, sym) {
+		
+		if (!sym_is_nonboolean(sym)) continue;
 		
 		/* exactly one of the symbols must be true */
 		sym_nonbool_at_least_1(sym);
 		sym_nonbool_at_most_1(sym);
-		
 	}
 
 	

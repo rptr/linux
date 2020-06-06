@@ -1,19 +1,20 @@
 menuconfig MODULES
-        bool "Enable loadable module support"
-        option modules
+	bool "Enable loadable module support"
+	option modules
 	default y
 
 config A
-	tristate "A" if E
+	bool "A"
 	depends on C
-	default y
+	#select S
+	#default y
 
 config B
 	bool "B"
 	depends on A && D
 
 config C
-	tristate "C"
+	bool "C"
 	depends on D
 	default y if E
 	default m
@@ -23,3 +24,11 @@ config D
 
 config E
 	bool "E"
+	select D
+
+config S
+	tristate "S"
+	depends on D && I=16
+
+config I
+	int "I"
