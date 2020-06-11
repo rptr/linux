@@ -38,7 +38,7 @@ config CUSTABC
 
 config qwer
 	tristate "qwer"
-	depends on CUSTABC && qwer2=16
+	depends on CUSTABC
 
 config qwer2
 	int "qwer2"

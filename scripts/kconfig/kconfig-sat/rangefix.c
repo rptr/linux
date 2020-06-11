@@ -11,7 +11,7 @@
 
 #include "satconf.h"
 
-#define PRINT_UNSAT_CORE false
+#define PRINT_UNSAT_CORE true
 #define PRINT_DIAGNOSES false
 #define MINIMISE_DIAGNOSES false
 #define MAX_DIAGNOSES 5
