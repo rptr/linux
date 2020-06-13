@@ -355,6 +355,9 @@ public:
 public slots:
 	void saveSettings(void);
 	void search(void);
+	void UpdateConflictsViewColorizationFowarder();
+signals:
+	void UpdateConflictsViewColorization();
 
 protected:
 	QLineEdit* editField;

@@ -1680,6 +1680,7 @@ ConfigSearchWindow::ConfigSearchWindow(ConfigMainWindow* parent, const char *nam
 	connect(list->list, SIGNAL(menuChanged(struct menu *)),
 		parent, SLOT(conflictSelected(struct menu *)));
 
+	connect(list->list,SIGNAL(UpdateConflictsViewColorization()),SLOT(UpdateConflictsViewColorizationFowarder()));
 	layout1->addWidget(split);
 
 	if (name) {
@@ -1703,6 +1704,9 @@ ConfigSearchWindow::ConfigSearchWindow(ConfigMainWindow* parent, const char *nam
 	}
 }
 
+void ConfigSearchWindow::UpdateConflictsViewColorizationFowarder(void){
+	emit UpdateConflictsViewColorization();
+}
 void ConfigSearchWindow::saveSettings(void)
 {
 	if (!objectName().isEmpty()) {
@@ -2011,8 +2015,10 @@ void ConfigMainWindow::saveConfigAs(void)
 
 void ConfigMainWindow::searchConfig(void)
 {
-	if (!searchWindow)
+	if (!searchWindow){
 		searchWindow = new ConfigSearchWindow(this, "search");
+		connect(searchWindow,SIGNAL(UpdateConflictsViewColorization()),conflictsView,SLOT(UpdateConflictsViewColorization()));
+	}
 	searchWindow->show();
 }
 
