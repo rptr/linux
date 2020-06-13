@@ -80,6 +80,7 @@ signals:
 	void parentSelected(void);
 	void gotFocus(struct menu *);
 	void selectionChanged(QList<QTreeWidgetItem*> selection);
+	void UpdateConflictsViewColorization();
 
 public:
 	void updateListAll(void)
@@ -271,6 +272,7 @@ public slots:
 
 
 	void applyFixButtonClick();
+	void UpdateConflictsViewColorization();
 
 
 
@@ -306,6 +308,9 @@ public:
 	QLabel* numSolutionLabel{nullptr};
 	//currently selected config items in configlist.
 	QList<QTreeWidgetItem*> currentSelection;
+
+	//colorize the symbols
+	// void ColorizeSolutionTable();
 
 
 };

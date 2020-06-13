@@ -48,6 +48,8 @@
 #include "conflict_resolver.h"
 #include <QAbstractItemView>
 #include <QMimeData>
+#include <QBrush>
+#include <QColor>
 static QApplication *configApp;
 static ConfigSettings *configSettings;
 
@@ -532,6 +534,7 @@ void ConfigList::changeValue(ConfigItem* item)
 		}
 		if (oldexpr != newexpr)
 			parent()->updateList(item);
+			emit UpdateConflictsViewColorization();
 		break;
 	case S_INT:
 	case S_HEX:
@@ -1260,20 +1263,41 @@ void ConflictsView::changeSolutionTable(int solution_number){
 	{
 		solutionTable->insertRow(solutionTable->rowCount());
 		struct symbol_fix* cur_symbol = g_array_index(selected_solution,struct symbol_fix*,i);
-		solutionTable->setItem(solutionTable->rowCount()-1,0,new QTableWidgetItem(cur_symbol->sym->name));
+
+		QTableWidgetItem* symbol_name = new QTableWidgetItem(cur_symbol->sym->name);
+		auto green = QColor(0,255,0);
+		auto red = QColor(255,0,0);
+
+		// if(sym_string_within_range(cur_symbol->sym,cur_symbol->sym->name)){
+		// 	symbol_name->setForeground(QBrush(green));
+		// } else{
+		// 	symbol_name->setForeground(QBrush(red));
+		// }
+		solutionTable->setItem(solutionTable->rowCount()-1,0,symbol_name);
 
 		if (cur_symbol->type == symbolfix_type::SF_BOOLEAN){
 			std::cout << "adding boolean symbol " << std::endl;
-			solutionTable->setItem(solutionTable->rowCount()-1,1,new QTableWidgetItem(tristate_value_to_string(cur_symbol->tri)));
+			QTableWidgetItem* symbol_value = new QTableWidgetItem(tristate_value_to_string(cur_symbol->tri));
+			symbol_name->setForeground( sym_string_within_range(cur_symbol->sym, tristate_value_to_string(cur_symbol->tri).toStdString().c_str())? green : red);
+			solutionTable->setItem(solutionTable->rowCount()-1,1,symbol_value);
 		} else if(cur_symbol->type == symbolfix_type::SF_NONBOOLEAN){
 			std::cout << "adding non boolean symbol " << std::endl;
-			solutionTable->setItem(solutionTable->rowCount()-1,1,new QTableWidgetItem(cur_symbol->nb_val.s));
+			QTableWidgetItem* symbol_value = new QTableWidgetItem(cur_symbol->nb_val.s);
+			symbol_name->setForeground( sym_string_within_range(cur_symbol->sym, tristate_value_to_string(cur_symbol->tri).toStdString().c_str())? green : red);
+			solutionTable->setItem(solutionTable->rowCount()-1,1,symbol_value);
 		} else {
+			QTableWidgetItem* symbol_value = new QTableWidgetItem(cur_symbol->disallowed.s);
+			symbol_name->setForeground( sym_string_within_range(cur_symbol->sym, tristate_value_to_string(cur_symbol->tri).toStdString().c_str())? green : red);
 			std::cout << "adding disalllowed symbol " << std::endl;
-			solutionTable->setItem(solutionTable->rowCount()-1,1,new QTableWidgetItem(cur_symbol->disallowed.s));
+			solutionTable->setItem(solutionTable->rowCount()-1,1,symbol_value);
 		}
 		std::cout << "Adding " << cur_symbol->sym->name << " to list " << std::endl;
 	}
+}
+void ConflictsView::UpdateConflictsViewColorization(void)
+{
+		std::cout << "helloooooooooooooooooo " << std::endl;
+
 }
 void ConflictsView::calculateFixes(void)
 {
@@ -1741,6 +1765,8 @@ ConfigMainWindow::ConfigMainWindow(void)
 	*/
 	connect(conflictsView,SIGNAL(conflictSelected(struct menu *)),SLOT(conflictSelected(struct menu *)));
 	connect(conflictsView,SIGNAL(refreshMenu()),SLOT(refreshMenu()));
+	connect(menuList,SIGNAL(UpdateConflictsViewColorization()),conflictsView,SLOT(UpdateConflictsViewColorization()));
+	connect(configList,SIGNAL(UpdateConflictsViewColorization()),conflictsView,SLOT(UpdateConflictsViewColorization()));
 	setTabOrder(configList, helpText);
 
 	configList->setFocus();
