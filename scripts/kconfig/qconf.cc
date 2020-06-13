@@ -1256,6 +1256,7 @@ void ConflictsView::changeSolutionTable(int solution_number){
 		return;
 	}
 	GArray* selected_solution = g_array_index(solution_output,GArray * , solution_number);
+	current_solution_number = solution_number;
 	std::cout << "solution length =" << unsigned(selected_solution->len) << std::endl;
 	// solutionTable->clearContents();
 	solutionTable->setRowCount(0);
@@ -1296,7 +1297,29 @@ void ConflictsView::changeSolutionTable(int solution_number){
 }
 void ConflictsView::UpdateConflictsViewColorization(void)
 {
-		std::cout << "helloooooooooooooooooo " << std::endl;
+	auto green = QColor(0,255,0);
+	auto red = QColor(255,0,0);
+
+	if (solutionTable->rowCount() == 0 || current_solution_number < 0)
+		return;
+
+	for (int i=0;i< solutionTable->rowCount();i++) {
+		//text from gui
+		QTableWidgetItem *symbol =  solutionTable->item(i,0);
+
+		//symbol from solution list
+		GArray* selected_solution = g_array_index(solution_output,GArray * ,current_solution_number);
+		struct symbol_fix* cur_symbol = g_array_index(selected_solution,struct symbol_fix*,i);
+
+		if (sym_string_within_range(cur_symbol->sym, tristate_value_to_string(cur_symbol->tri).toStdString().c_str()))
+		{
+			symbol->setForeground(green);
+
+		} else {
+			symbol->setForeground(red);
+		}
+
+    }
 
 }
 void ConflictsView::calculateFixes(void)

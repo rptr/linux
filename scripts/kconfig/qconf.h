@@ -255,6 +255,7 @@ public:
 	ConflictsView(QWidget* parent, const char *name = 0);
 	~ConflictsView(void);
 	void addSymbol(struct menu * m);
+	int current_solution_number = -1;
 
 public slots:
     void cellClicked(int, int);
