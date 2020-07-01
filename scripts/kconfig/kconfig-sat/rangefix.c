@@ -13,6 +13,7 @@
 
 #define PRINT_UNSAT_CORE true
 #define PRINT_DIAGNOSES false
+#define PRINT_DIAGNOSIS_FOUND true
 #define MINIMISE_DIAGNOSES false
 #define MAX_DIAGNOSES 5
 #define MAX_SECONDS 30
@@ -102,6 +103,9 @@ static GArray * generate_diagnoses(PicoSAT *pico)
 	
 	/* create constraint set C */
 	add_fexpr_to_constraint_set(C);
+	
+	if (PRINT_UNSAT_CORE)
++               printf("\n");
 
 	/* init E with an empty diagnosis */
 	GArray *empty_diagnosis = g_array_new(false, false, sizeof(struct fexpr *));
@@ -133,8 +137,9 @@ static GArray * generate_diagnoses(PicoSAT *pico)
 		int res = picosat_sat(pico, -1);
 		if (res == PICOSAT_SATISFIABLE) {
 // 			printf("SATISFIABLE\n");
-// 			print_array("Found diagnosis", E0);
-// 			printf("size %d\n", E0->len);
+			if (PRINT_DIAGNOSIS_FOUND)
+				print_array("DIAGNOSIS FOUND", E0);
+			
 			E = g_array_remove_index(E, diagnosis_index);
 			if (E0->len > 0)
 				R = g_array_append_val(R, E0);
