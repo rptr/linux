@@ -36,8 +36,10 @@ void construct_cnf_clauses(PicoSAT *p)
 	struct symbol *sym;
 	
 	/* adding unit-clauses for constants */
-	picosat_add_arg(pico, -(const_false->satval), 0);
-	picosat_add_arg(pico, const_true->satval, 0);
+// 	picosat_add_arg(pico, -(const_false->satval), 0);
+// 	picosat_add_arg(pico, const_true->satval, 0);
+	sat_add_clause(2, pico, -(const_false->satval));
+	sat_add_clause(2, pico, const_true->satval);
 	
 // 	printf("\n");
 
@@ -94,7 +96,7 @@ static bool fexpr_is_cnf(struct fexpr *e)
 /*
  * helper function to add an expression to a CNF-clause
  */
-static void unfold_cnf_clause_util(struct cnf_clause *cl, struct fexpr *e)
+static void unfold_cnf_clause_util(GArray *arr, struct fexpr *e)
 {
 	switch (e->type) {
 	case FE_SYMBOL:
@@ -103,16 +105,16 @@ static void unfold_cnf_clause_util(struct cnf_clause *cl, struct fexpr *e)
 	case FE_NONBOOL:
 	case FE_SELECT:
 	case FE_CHOICE:
-		picosat_add(pico, e->satval);
-// 		add_literal_to_clause(cl, e->satval);
+// 		picosat_add(pico, e->satval);
+		g_array_add_ints(2, arr, e->satval);
 		break;
 	case FE_OR:
-		unfold_cnf_clause_util(cl, e->left);
-		unfold_cnf_clause_util(cl, e->right);
+		unfold_cnf_clause_util(arr, e->left);
+		unfold_cnf_clause_util(arr, e->right);
 		break;
 	case FE_NOT:
-		picosat_add(pico, -(e->left->satval));
-// 		add_literal_to_clause(cl, -(e->left->satval));
+// 		picosat_add(pico, -(e->left->satval));
+		g_array_add_ints(2, arr, -(e->left->satval));
 		break;
 	default:
 		perror("Not in CNF, FE_EQUALS.");
@@ -125,13 +127,12 @@ static void unfold_cnf_clause_util(struct cnf_clause *cl, struct fexpr *e)
 static void unfold_cnf_clause(struct fexpr *e)
 {
 	assert(fexpr_is_cnf(e));
+
+	GArray *arr = g_array_new(false, false, sizeof(int *));
 	
-// 	struct gstr empty_string = str_new();
-	struct cnf_clause *cl = NULL;// = build_cnf_clause(&empty_string, 0);
-	
-	unfold_cnf_clause_util(cl, e);
-	
-	picosat_add(pico, 0);
+	unfold_cnf_clause_util(arr, e);
+
+	sat_add_clause_garray(pico, arr);
 }
 
 /*
@@ -240,11 +241,13 @@ static void build_cnf_tseytin_and(struct fexpr *e)
 	int a = t1->type == FE_NOT ? -(t1->left->satval) : t1->satval;
 	int b = t2->type == FE_NOT ? -(t2->left->satval) : t2->satval;
 	
-	picosat_add_arg(pico, a, 0);
-	picosat_add_arg(pico, b, 0);
+// 	picosat_add_arg(pico, a, 0);
+	sat_add_clause(2, pico, a);
+// 	picosat_add_arg(pico, b, 0);
+	sat_add_clause(2, pico, b);
 	
-	printf("\nWARNING!!\nCNF-CLAUSE JUST AND!!\n");
-	print_fexpr("e:", e, -1);
+// 	printf("\nWARNING!!\nCNF-CLAUSE JUST AND!!\n");
+// 	print_fexpr("e:", e, -1);
 }
 
 /*
@@ -273,7 +276,8 @@ static void build_cnf_tseytin_or(struct fexpr *e)
 	int a = t1->type == FE_NOT ? -(t1->left->satval) : t1->satval;
 	int b = t2->type == FE_NOT ? -(t2->left->satval) : t2->satval;
 	
-	picosat_add_arg(pico, a, b, 0);
+// 	picosat_add_arg(pico, a, b, 0);
+	sat_add_clause(3, pico, a, b);
 }
 
 /*
@@ -293,7 +297,8 @@ static void build_cnf_tseytin_not(struct fexpr *e)
 	
 	int a = t1->type == FE_NOT ? -(t1->left->satval) : t1->satval;
 	
-	picosat_add_arg(pico, a, 0);
+// 	picosat_add_arg(pico, a, 0);
+	sat_add_clause(2, pico, a);
 	
 	printf("\nWARNING!!\nCNF-CLAUSE JUST NOT!!\n");
 }
@@ -334,17 +339,16 @@ static void build_cnf_tseytin_and_util(struct fexpr *e, struct fexpr *t)
 	int a = left->type == FE_NOT ? -(left->left->satval) : left->satval;
 	int b = right->type == FE_NOT ? -(right->left->satval) : right->satval;
 	int c = t->satval;
-// 	struct gstr empty_string = str_new();
 	
 	/* -A v -B v C */
-	picosat_add_arg(pico, -a, -b, c, 0);
-// 	build_cnf_clause(&empty_string, 3, -a, -b, c);
+// 	picosat_add_arg(pico, -a, -b, c, 0);
+	sat_add_clause(4, pico, -a, -b, c);
 	/* A v -C */
-	picosat_add_arg(pico, a, -c, 0);
-// 	build_cnf_clause(&empty_string, 2, a, -c);
+// 	picosat_add_arg(pico, a, -c, 0);
+	sat_add_clause(3, pico, a, -c);
 	/* B v -C */
-	picosat_add_arg(pico, b, -c, 0);
-// 	build_cnf_clause(&empty_string, 2, b, -c);
+// 	picosat_add_arg(pico, b, -c, 0);
+	sat_add_clause(3, pico, b, -c);
 }
 
 /*
@@ -363,17 +367,16 @@ static void build_cnf_tseytin_or_util(struct fexpr *e, struct fexpr *t)
 	int a = left->type == FE_NOT ? -(left->left->satval) : left->satval;
 	int b = right->type == FE_NOT ? -(right->left->satval) : right->satval;
 	int c = t->satval;
-// 	struct gstr empty_string = str_new();
     
 	/* A v B v -C */
-	picosat_add_arg(pico, a, b, -c, 0);
-// 	build_cnf_clause(&empty_string, 3, a, b, -c);
+// 	picosat_add_arg(pico, a, b, -c, 0);
+	sat_add_clause(4, pico, a, b, -c);
 	/* -A v C */
-	picosat_add_arg(pico, -a, c, 0);
-// 	build_cnf_clause(&empty_string, 2, -a, c);
+// 	picosat_add_arg(pico, -a, c, 0);
+	sat_add_clause(3, pico, -a, c);
 	/* -B v C */
-	picosat_add_arg(pico, -b, c, 0);
-// 	build_cnf_clause(&empty_string, 2, -b , c);
+// 	picosat_add_arg(pico, -b, c, 0);
+	sat_add_clause(3, pico, -b, c);
 }
 
 /*
@@ -389,14 +392,13 @@ static void build_cnf_tseytin_not_util(struct fexpr *e, struct fexpr *t)
 	
 	int a = left->type == FE_NOT ? -(left->left->satval) : left->satval;
 	int c = t->satval;
-// 	struct gstr empty_string = str_new();
 	
 	/* -A v -C */
-	picosat_add_arg(pico, -a, -c, 0);
-// 	build_cnf_clause(&empty_string, 2, -a, -c);
+// 	picosat_add_arg(pico, -a, -c, 0);
+	sat_add_clause(3, pico, -a, -c);
 	/* A v C */
-	picosat_add_arg(pico, a, c, 0);
-// 	build_cnf_clause(&empty_string, 2, a, c);
+// 	picosat_add_arg(pico, a, c, 0);
+	sat_add_clause(3, pico, a, c);
 }
 
 /*

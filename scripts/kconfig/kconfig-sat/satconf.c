@@ -15,7 +15,7 @@ unsigned int sat_variable_nr = 1;
 unsigned int tmp_variable_nr = 1;
 
 GHashTable *satmap = NULL; /* hash table with all SAT-variables and their fexpr */
-GArray *cnf_clauses; /* array with all CNF-clauses */
+GHashTable *cnf_clauses; /* array with all CNF-clauses */
 struct tmp_sat_variable *tmp_sat_vars;
 
 unsigned int nr_of_clauses = 0; /* number of CNF-clauses */
@@ -159,6 +159,8 @@ GArray * run_satconf(GArray *arr)
 	clock_t start, end;
 	double time;
 	
+	// check whether all values can be applied -> no need to run
+	
 	if (!init_done) {
 		printf("\n");
 		printf("Init...");
@@ -208,30 +210,41 @@ GArray * run_satconf(GArray *arr)
 	for (i = 0; i < arr->len; i++) {
 		sdv = g_array_index(arr, struct symbol_dvalue *, i);
 		
+		int lit_y = sdv->sym->fexpr_y->satval;
+		
 		if (sdv->sym->type == S_BOOLEAN) {
 			switch (sdv->tri) {
 			case yes:
-				picosat_add_arg(pico, sdv->sym->fexpr_y->satval, 0);
+// 				picosat_add_arg(pico, sdv->sym->fexpr_y->satval, 0);
+				sat_add_clause(2, pico, lit_y);
 				break;
 			case no:
-				picosat_add_arg(pico, -(sdv->sym->fexpr_y->satval), 0);
+// 				picosat_add_arg(pico, -(sdv->sym->fexpr_y->satval), 0);
+				sat_add_clause(2, pico, -lit_y);
 				break;
 			case mod:
 				perror("Should not happen.\n");
 			}
 		} else if (sdv->sym->type == S_TRISTATE) {
+			int lit_m = sdv->sym->fexpr_m->satval;
 			switch (sdv->tri) {
 			case yes:
-				picosat_add_arg(pico, sdv->sym->fexpr_y->satval, 0);
-				picosat_add_arg(pico, -(sdv->sym->fexpr_m->satval), 0);
+// 				picosat_add_arg(pico, sdv->sym->fexpr_y->satval, 0);
+// 				picosat_add_arg(pico, -(sdv->sym->fexpr_m->satval), 0);
+				sat_add_clause(2, pico, lit_y);
+				sat_add_clause(2, pico, -lit_m);
 				break;
 			case mod:
-				picosat_add_arg(pico, -(sdv->sym->fexpr_y->satval), 0);
-				picosat_add_arg(pico, sdv->sym->fexpr_m->satval, 0);
+// 				picosat_add_arg(pico, -(sdv->sym->fexpr_y->satval), 0);
+// 				picosat_add_arg(pico, sdv->sym->fexpr_m->satval, 0);
+				sat_add_clause(2, pico, -lit_y);
+				sat_add_clause(2, pico, lit_m);
 				break;
 			case no:
-				picosat_add_arg(pico, -(sdv->sym->fexpr_y->satval), 0);
-				picosat_add_arg(pico, -(sdv->sym->fexpr_m->satval), 0);
+// 				picosat_add_arg(pico, -(sdv->sym->fexpr_y->satval), 0);
+// 				picosat_add_arg(pico, -(sdv->sym->fexpr_m->satval), 0);
+				sat_add_clause(2, pico, -lit_y);
+				sat_add_clause(2, pico, -lit_m);
 			}
 		}
 	}
@@ -276,7 +289,6 @@ GArray * run_satconf(GArray *arr)
 		printf("\n");
 		
 		GArray *ret = rangefix_init(pico);
-// 		free(pico);
 		picosat_reset(pico);
 // 		free(pico);
 		return ret;

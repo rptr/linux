@@ -89,4 +89,7 @@ unsigned int count_counstraints(void);
 /* print a warning about unmet dependencies */
 void sym_warn_unmet_dep(struct symbol *sym);
 
+/* add an integer to a GArray */
+void g_array_add_ints(int num, ...);
+
 #endif

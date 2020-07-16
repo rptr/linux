@@ -11,7 +11,7 @@
 extern unsigned int sat_variable_nr;
 extern unsigned int tmp_variable_nr;
 extern GHashTable *satmap;
-extern GArray *cnf_clauses; /* array with all CNF-clauses */
+extern GHashTable *cnf_clauses; /* hash-table with all CNF-clauses */
 extern struct tmp_sat_variable *tmp_sat_vars;
 extern unsigned int nr_of_clauses; /* number of CNF-clauses */
 extern struct fexpr *const_false;

@@ -32,44 +32,100 @@ PicoSAT * initialize_picosat(void)
 }
 
 /*
+ * add a clause to PicoSAT
+ * First argument is the SAT solver
+ */
+void sat_add_clause(int num, ...)
+{
+	if (num <= 1) return;
+	
+	va_list valist;
+	int i, *id, *lit;
+	PicoSAT *pico;
+	GArray *arr = g_array_new(false, false, sizeof(int *));
+	
+	/* initialize valist for num number of arguments */
+	va_start(valist, num);
+	
+	pico = va_arg(valist, PicoSAT *);
+	
+	/* access all the arguments assigned to valist */
+	for (i = 1; i < num; i++) {
+		lit = malloc(sizeof(int));
+		*lit = va_arg(valist, int);
+		picosat_add(pico, *lit);
+		g_array_append_val(arr, lit);
+	}
+	id = malloc(sizeof(int));
+	*id = picosat_add(pico, 0);
+	
+	/* add clause to hashmap */
+	g_hash_table_insert(cnf_clauses, id, arr);
+	
+// 	printf("Clause added, id %d\n", id);
+	
+	/* clean memory reserved for valist */
+	va_end(valist);
+}
+
+/* 
+ * add a clause from a GArray to PicoSAT 
+ */
+void sat_add_clause_garray(PicoSAT *pico, GArray *arr)
+{
+	int i, *id, *lit;
+
+	for (i = 0; i < arr->len; i++) {
+		lit = g_array_index(arr, int *, i);
+		picosat_add(pico, *lit);
+	}
+	id = malloc(sizeof(int));
+	*id = picosat_add(pico, 0);
+	
+	/* add clause to hashmap if not done yet */
+	if (!g_hash_table_contains(cnf_clauses, id))
+		g_hash_table_insert(cnf_clauses, id, arr);
+}
+
+/*
  * add clauses to the PicoSAT
  */
-void picosat_add_clauses(PicoSAT *pico)
-{
-	printf("Adding clauses...");
-	
-	int tmp_clauses = nr_of_clauses;
-	
-	clock_t start, end;
-	double time;
-	start = clock();
-
-	/* add CNF-clauses to PicoSAT
-	 * ignore tautologies */
-	struct cnf_clause *cl;
-	unsigned int i, j;
-	for (i = 0; i < cnf_clauses->len; i++) {
-		cl = g_array_index(cnf_clauses, struct cnf_clause *, i);
-		if (cnf_is_tautology(cl)) {
-			tmp_clauses--;
-			continue;
-		}
-		
-		struct cnf_literal *lit;
-		for (j = 0; j < cl->lits->len; j++) {
-			lit = g_array_index(cl->lits, struct cnf_literal *, j);
-			picosat_add(pico, lit->val);
-			if (j == cl->lits->len - 1)
-				picosat_add(pico, 0);
-		}
-	}
-	
-	end = clock();
-	time = ((double) (end - start)) / CLOCKS_PER_SEC;
-	printf("%d clauses added. (%.6f secs.)\n", tmp_clauses, time);
-
+// void picosat_add_clauses(PicoSAT *pico)
+// {
+// 	printf("Adding clauses...");
+// 	
+// 	int tmp_clauses = nr_of_clauses;
+// 	
+// 	clock_t start, end;
+// 	double time;
+// 	start = clock();
+// 
+// 	/* add CNF-clauses to PicoSAT
+// 	 * ignore tautologies */
+// 	struct cnf_clause *cl;
+// 	unsigned int i, j;
+// 	for (i = 0; i < cnf_clauses->len; i++) {
+// 		cl = g_array_index(cnf_clauses, struct cnf_clause *, i);
+// 		if (cnf_is_tautology(cl)) {
+// 			tmp_clauses--;
+// 			continue;
+// 		}
+// 		
+// 		struct cnf_literal *lit;
+// 		for (j = 0; j < cl->lits->len; j++) {
+// 			lit = g_array_index(cl->lits, struct cnf_literal *, j);
+// 			picosat_add(pico, lit->val);
+// 			if (j == cl->lits->len - 1)
+// 				picosat_add(pico, 0);
+// 		}
+// 	}
+// 	
+// 	end = clock();
+// 	time = ((double) (end - start)) / CLOCKS_PER_SEC;
+// 	printf("%d clauses added. (%.6f secs.)\n", tmp_clauses, time);
+// 
 // 	assert(tmp_clauses == picosat_added_original_clauses(pico));
-}
+// }
 
 /*
  * start PicoSAT

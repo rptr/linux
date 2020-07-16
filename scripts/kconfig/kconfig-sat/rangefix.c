@@ -11,23 +11,33 @@
 
 #include "satconf.h"
 
+#define MAX_DIAGNOSES 3
+#define MAX_SECONDS 30
+#define SLICE_PROBLEM true
 #define PRINT_UNSAT_CORE true
 #define PRINT_DIAGNOSES false
 #define PRINT_DIAGNOSIS_FOUND true
 #define MINIMISE_DIAGNOSES false
 #define MINIMISE_UNSAT_CORE true
-#define MAX_DIAGNOSES 5
-#define MAX_SECONDS 30
+
 
 static GArray *diagnoses, *diagnoses_symbol;
 
 static GArray * generate_diagnoses(PicoSAT *pico);
+static GArray * generate_diagnoses_sliced(PicoSAT *pico);
 
 static void add_fexpr_to_constraint_set(GArray *C);
 static void set_assumptions(PicoSAT *pico, GArray *c);
-static void fexpr_add_assumption(PicoSAT *pico, struct fexpr *e);
-static GArray * get_unsat_core(PicoSAT *pico, GArray *c);
+static void set_assumptions_mapped(PicoSAT *pico, GArray *c, GHashTable *satvarmap);
+static void fexpr_add_assumption(PicoSAT *pico, struct fexpr *e, int satval);
+static GArray * get_unsat_core_soft(PicoSAT *pico);
+static GArray * get_unsat_core_soft_mapped(PicoSAT *pico, GHashTable *satvarmap);
+static void extract_unsat_core_hard(PicoSAT *pico, PicoSAT *pico_cur, GHashTable *clauses_added, GHashTable *satvarmap);
 static GArray * minimise_unsat_core(PicoSAT *pico, GArray *C);
+static GArray * minimise_unsat_core_mapped(PicoSAT *pico, GArray *C, GHashTable *satvarmap);
+static bool diagnosis_satisfies_entire_problem(PicoSAT *pico, GArray *c);
+static int * g_hash_table_find_key(GHashTable *satvarmap, int *keyvalue);
+static GArray * map_oldclause_to_newclause(GHashTable *satvarmap, GArray *oldc);
 
 static GArray * get_difference(GArray *C, GArray *E0);
 static bool has_intersection(GArray *e, GArray *X);
@@ -64,7 +74,10 @@ GArray * rangefix_init(PicoSAT *pico)
 	start = clock();
 	
 	/* generate the diagnoses */
-	diagnoses = generate_diagnoses(pico);
+	if (SLICE_PROBLEM)
+		diagnoses = generate_diagnoses_sliced(pico);
+	else
+		diagnoses = generate_diagnoses(pico);
 
 	end = clock();
 	time = ((double) (end - start)) / CLOCKS_PER_SEC;
@@ -107,7 +120,7 @@ static GArray * generate_diagnoses(PicoSAT *pico)
 	add_fexpr_to_constraint_set(C);
 	
 	if (PRINT_UNSAT_CORE)
-+               printf("\n");
+		printf("\n");
 
 	/* init E with an empty diagnosis */
 	GArray *empty_diagnosis = g_array_new(false, false, sizeof(struct fexpr *));
@@ -136,7 +149,17 @@ static GArray * generate_diagnoses(PicoSAT *pico)
 		set_assumptions(pico, c);
 // 		printf("Asuumptions: %d (true: %d)\n", nr_of_assumptions, nr_of_assumptions_true);
 		
+// 		clock_t start_t2, end_t2;
+// 		double time_t2;
+// 		start_t2 = clock();
+		
 		int res = picosat_sat(pico, -1);
+		
+// 		end_t2 = clock();
+// 		time_t2 = ((double) (end_t2 - start_t2)) / CLOCKS_PER_SEC;
+// 		printf("PicoSAT time : %.6f secs.\n", time_t2);
+		
+// 		int res = picosat_sat(pico, -1);
 		if (res == PICOSAT_SATISFIABLE) {
 // 			printf("SATISFIABLE\n");
 			if (PRINT_DIAGNOSIS_FOUND)
@@ -170,7 +193,7 @@ static GArray * generate_diagnoses(PicoSAT *pico)
 			goto DIAGNOSES_FOUND;
 		
 		/* get unsat core from SAT solver */
-		X = get_unsat_core(pico, c);
+		X = get_unsat_core_soft(pico);
 		
 		/* minimise the unsat core */
 		if (MINIMISE_UNSAT_CORE)
@@ -258,6 +281,235 @@ DIAGNOSES_FOUND:
 	return R;
 }
 
+// void print_clause(GArray *arr)
+// {
+// 	int i, *lit;
+// 	struct fexpr *e;
+// 	printf("Core clause: ");
+// 	for (i = 0; i < arr->len; i++) {
+// 		lit = g_array_index(arr, int *, i);
+// 		if (*lit < 0) printf("-");
+// 		*lit = abs(*lit);
+// 		e = (struct fexpr *) g_hash_table_lookup(satmap, lit);
+// 		printf("%s ", str_get(&e->name));
+// 	}
+// 	printf("\n");
+// }
+
+/*
+ * generate the diagnoses
+ */
+static GArray * generate_diagnoses_sliced(PicoSAT *pico)
+{
+	GArray *C = g_array_new(false, false, sizeof(struct fexpr *));
+	GArray *E = g_array_new(false, false, sizeof(GArray *));
+	GArray *R = g_array_new(false, false, sizeof(GArray *));
+	GArray *X, *e, *x_set, *E1, *E_R_Union, *E2;
+	struct fexpr *x;
+	unsigned int i, j, k, diagnosis_index;
+	
+	/* SAT solver */
+	PicoSAT *pico_cur = picosat_init();
+	picosat_enable_trace_generation(pico_cur);
+	
+	/* HashSet to keep track which clauses have been added */
+	GHashTable *clauses_added = g_hash_table_new_full(
+		g_int_hash, g_int_equal, //< This is an integer hash.
+		free, //< Call "free" on the key (made with "malloc").
+		NULL //< Call "free" on the value (made with "strdup").
+	);
+	
+	/* HashMap to map old sat variables to new satvariables */
+	GHashTable *satvarmap = g_hash_table_new_full(
+		g_int_hash, g_int_equal, //< This is an integer hash.
+		free, //< Call "free" on the key (made with "malloc").
+		free //< Call "free" on the value (made with "strdup").
+	);
+	
+	/* create constraint set C */
+	add_fexpr_to_constraint_set(C);
+	
+	if (PRINT_UNSAT_CORE)
+		printf("\n");
+
+	/* init E with an empty diagnosis */
+	GArray *empty_diagnosis = g_array_new(false, false, sizeof(struct fexpr *));
+	g_array_append_val(E, empty_diagnosis);
+	
+	/* start the clock */
+	clock_t start_t, end_t;
+	double time_t;
+	start_t = clock();
+	
+	/* extract unsat core and add it to the SAT solver */
+	extract_unsat_core_hard(pico, pico_cur, clauses_added, satvarmap);
+	
+	//num = (rand() % (upper – lower + 1)) + lower
+	while (E->len > 0) {
+// 		printf("start while, E.length: %d\n", E->len);
+		/* get random diagnosis */
+		diagnosis_index = rand() % (E->len);
+		GArray *E0 = g_array_index(E, GArray *, diagnosis_index);
+// 		print_array("Select partial diagnosis", E0);
+		
+		/* calculate C\E0 */
+		GArray *c = get_difference(C, E0);
+// 		print_array("Soft constraints", c);
+		
+	CONTINUE_ALT1:
+		/* set assumptions */
+		nr_of_assumptions = 0;
+		nr_of_assumptions_true = 0;
+		set_assumptions_mapped(pico_cur, c, satvarmap);
+// 		printf("Asuumptions: %d (true: %d)\n", nr_of_assumptions, nr_of_assumptions_true);
+		
+// 		clock_t start_t2, end_t2;
+// 		double time_t2;
+// 		start_t2 = clock();
+		
+		int res = picosat_sat(pico_cur, -1);
+		
+// 		end_t2 = clock();
+// 		time_t2 = ((double) (end_t2 - start_t2)) / CLOCKS_PER_SEC;
+// 		printf("CNF-clauses  : %d\n", picosat_added_original_clauses(pico_cur));
+// 		printf("SAT-variables: %d\n", picosat_variables(pico_cur));
+// 		printf("PicoSAT time : %.6f secs.\n", time_t2);
+		
+		
+		if (res == PICOSAT_SATISFIABLE) {
+// 			printf("SATISFIABLE\n");
+			
+			/* Does diagnosis solve entire problem? */
+			if (!diagnosis_satisfies_entire_problem(pico, c)) {
+				extract_unsat_core_hard(pico, pico_cur, clauses_added, satvarmap);
+				
+				goto CONTINUE_ALT1;
+			}
+			
+			if (PRINT_DIAGNOSIS_FOUND)
+				print_array("DIAGNOSIS FOUND", E0);
+			
+			E = g_array_remove_index(E, diagnosis_index);
+			if (E0->len > 0)
+				R = g_array_append_val(R, E0);
+			else
+				g_array_free(E0, false);
+			
+			g_array_free(c, false);
+			
+			if (R->len >= MAX_DIAGNOSES)
+				goto DIAGNOSES_FOUND;
+			
+			continue;
+			
+		} else if (res == PICOSAT_UNSATISFIABLE) {
+// 			printf("UNSATISFIABLE\n");
+		} else if (res == PICOSAT_UNKNOWN) {
+			printf("UNKNOWN\n");
+		} else {
+			perror("Doh brother.");
+		}
+		
+		/* check elapsed time */
+		end_t = clock();
+		time_t = ((double) (end_t - start_t)) / CLOCKS_PER_SEC;
+		if (time_t > (double) MAX_SECONDS)
+			goto DIAGNOSES_FOUND;
+		
+		/* get unsat core from SAT solver */
+		X = get_unsat_core_soft_mapped(pico_cur, satvarmap);
+		
+		/* minimise the unsat core */
+		if (MINIMISE_UNSAT_CORE)
+			X = minimise_unsat_core_mapped(pico_cur, X, satvarmap);
+		
+		if (PRINT_UNSAT_CORE)
+			print_unsat_core(X);
+		
+		for (i = 0; i < E->len; i++) {
+			/* get partial diagnosis */
+			e = g_array_index(E, GArray *, i);
+// 			print_array("Look at partial diagnosis", e);
+			
+			/* check, if there is an intersection between e and X
+			 * if there is, go to the next partial diagnosis */
+			if (has_intersection(e, X)) {
+// 				printf("Intersection with core.\n");
+				continue;
+			}
+			
+			/* for each fexpr in the core */
+			for (j = 0; j < X->len; j++) {
+				x = g_array_index(X, struct fexpr *, j);
+// 				printf("x = %s\n", str_get(&x->name));
+
+				/* create {x} */
+				x_set = g_array_new(false, false, sizeof(struct fexpr *));
+				g_array_append_val(x_set, x);
+// 				print_array("{x}", x_set);
+				
+				/* create E' = e ∪ {x} */
+				E1 = get_union(e, x_set);
+// 				print_array("E1", E1);
+				
+				/* create (E\e) ∪ R */
+				E_R_Union = clone_array(E);
+				g_array_remove_index(E_R_Union, i);
+				E_R_Union = get_union(E_R_Union, R);
+				
+				bool E2_subset_of_E1 = false;
+				
+				/* E" ∈ (E\e) ∪ R */
+				for (k = 0; k < E_R_Union->len; k++) {
+					E2 = g_array_index(E_R_Union, GArray *, k);
+// 					print_array("E2", E2);
+// 					getchar();
+					
+					/* E" ⊆ E' ? */
+					if (is_subset_of(E2, E1)) {
+						E2_subset_of_E1 = true;
+// 						print_array("E\"", E2);
+// 						print_array("E'", E1);
+						break;
+					}
+				}
+				
+				g_array_free(E_R_Union, false);
+				
+				/* ∄ E" ⊆ E' */
+				if (!E2_subset_of_E1) {
+					E = g_array_append_val(E, E1);
+// 					print_array("Add partial diagnosis", E1);
+				} else {
+					g_array_free(E1, false);
+				}
+			}
+			
+// 			print_array("Remove partial diagnosis", e);
+			g_array_free(e, false);
+			g_array_remove_index(E, i);
+			i--;
+
+		}
+		g_array_free(X, false);
+		g_array_free(c, false);
+		
+// 		printf("E.length: %d, i = %d\n", E->len, i);
+		
+	}
+
+DIAGNOSES_FOUND:
+	g_array_free(C, false);
+	g_array_free(E, false);
+	
+	g_hash_table_destroy(clauses_added);
+	g_hash_table_destroy(satvarmap);
+	
+	picosat_reset(pico_cur);
+	
+	return R;
+}
+
 /*
  * add the fexpr to the constraint set C 
  */
@@ -300,7 +552,7 @@ static void add_fexpr_to_constraint_set(GArray *C)
 }
 
 /*
- * check, if the fexpr symbolises the no-value-set fexpr for a non-boolean symbol
+ * check whether the fexpr symbolises the no-value-set fexpr for a non-boolean symbol
  */
 static bool fexpr_is_novalue(struct fexpr *e)
 {
@@ -318,14 +570,34 @@ static void set_assumptions(PicoSAT *pico, GArray *c)
 	unsigned int i;
 	for (i = 0; i < c->len; i++) {
 		e = g_array_index(c, struct fexpr *, i);
-		fexpr_add_assumption(pico, e);
+		fexpr_add_assumption(pico, e, e->satval);
+	}
+}
+
+/*
+ * set the assumptions for the next run of Picosat_cur
+ * but check whether the fexpr needs to be added first
+ */
+static void set_assumptions_mapped(PicoSAT* pico, GArray* c, GHashTable* satvarmap)
+{
+	struct fexpr *e;
+	unsigned int i;
+	int *satval;
+	for (i = 0; i < c->len; i++) {
+		e = g_array_index(c, struct fexpr *, i);
+		if (g_hash_table_contains(satvarmap, &e->satval)) {
+			satval = g_hash_table_lookup(satvarmap, &e->satval);
+			fexpr_add_assumption(pico, e, *satval);
+// 			printf("Adding assumption for %s (%d)\n", str_get(&e->name), *satval);
+		}
+		
 	}
 }
 
 /*
  * set the assumtption for a fexpr for the next run of Picosat
  */
-static void fexpr_add_assumption(PicoSAT *pico, struct fexpr *e)
+static void fexpr_add_assumption(PicoSAT *pico, struct fexpr *e, int satval)
 {
 	struct symbol *sym = e->sym;
 	
@@ -334,11 +606,11 @@ static void fexpr_add_assumption(PicoSAT *pico, struct fexpr *e)
 		tri_val = sym_get_tristate_value(sym);
 	
 		if (tri_val == yes) {
-			picosat_assume(pico, e->satval);
+			picosat_assume(pico, satval);
 			e->assumption = true;
 			nr_of_assumptions_true++;
 		} else {
-			picosat_assume(pico, -(e->satval));
+			picosat_assume(pico, -satval);
 			e->assumption = false;
 		}
 		nr_of_assumptions++;
@@ -350,20 +622,20 @@ static void fexpr_add_assumption(PicoSAT *pico, struct fexpr *e)
 		
 		if (e->tri == yes) {
 			if (tri_val == yes) {
-				picosat_assume(pico, e->satval);
+				picosat_assume(pico, satval);
 				e->assumption = true;
 				nr_of_assumptions_true++;
 			} else {
-				picosat_assume(pico, -(e->satval));
+				picosat_assume(pico, -satval);
 				e->assumption = false;
 			}
 		} else if (e->tri == mod) {
 			if (tri_val == mod) {
-				picosat_assume(pico, e->satval);
+				picosat_assume(pico, satval);
 				e->assumption = true;
 				nr_of_assumptions_true++;
 			} else {
-				picosat_assume(pico, -(e->satval));
+				picosat_assume(pico, -satval);
 				e->assumption = false;
 			}
 		}
@@ -376,10 +648,10 @@ static void fexpr_add_assumption(PicoSAT *pico, struct fexpr *e)
 		/* check, if e symbolises the no-value-set fexpr */
 		if (fexpr_is_novalue(e)) {
 			if (sym_has_value(e->sym)) {
-				picosat_assume(pico, -(e->satval));
+				picosat_assume(pico, -satval);
 				e->assumption = false;
 			} else {
-				picosat_assume(pico, e->satval);
+				picosat_assume(pico, satval);
 				e->assumption = true;
 				nr_of_assumptions_true++;
 			}
@@ -388,11 +660,11 @@ static void fexpr_add_assumption(PicoSAT *pico, struct fexpr *e)
 		}
 		
 		if (sym_has_value(e->sym) && strcmp(str_get(&e->nb_val), sym_get_string_value(sym)) == 0) {
-			picosat_assume(pico, e->satval);
+			picosat_assume(pico, satval);
 			e->assumption = true;
 			nr_of_assumptions_true++;
 		} else {
-			picosat_assume(pico, -(e->satval));
+			picosat_assume(pico, -satval);
 			e->assumption = false;
 		}
 		nr_of_assumptions++;
@@ -400,21 +672,76 @@ static void fexpr_add_assumption(PicoSAT *pico, struct fexpr *e)
 }
 
 /*
- * get the unsat core from the last run of Picosat
+ * get the unsatisfiable soft constraints from the last run of Picosat
  */
-static GArray * get_unsat_core(PicoSAT *pico, GArray *c)
+static GArray * get_unsat_core_soft(PicoSAT *pico)
 {
 	GArray *ret = g_array_new(false, false, sizeof(struct fexpr *));
 	struct fexpr *e;
-	unsigned int i;
 	
-	for (i = 0; i < c->len; i++) {
-		e = g_array_index(c, struct fexpr *, i);
-		if (picosat_failed_assumption(pico, e->satval))
-			g_array_append_val(ret, e);
+	int *lit = malloc(sizeof(int));
+	const int *i = picosat_failed_assumptions(pico);
+	*lit = abs(*i++);
+	
+	while (*lit != 0) {
+		e = g_hash_table_lookup(satmap, lit);
+		g_array_append_val(ret, e);
+		*lit = abs(*i++);
 	}
 	
 	return ret;
+}
+
+/*
+ * get the unsatisfiable soft constraints from the last run of Picosat
+ * (used for the smaller problem)
+ */
+static GArray * get_unsat_core_soft_mapped(PicoSAT *pico, GHashTable *satvarmap)
+{
+	GArray *ret = g_array_new(false, false, sizeof(struct fexpr *));
+	struct fexpr *e;
+	
+	int *lit = malloc(sizeof(int));
+	int *mapped;
+	const int *i = picosat_failed_assumptions(pico);
+	*lit = abs(*i++);
+	
+	while (*lit != 0) {
+		mapped = g_hash_table_find_key(satvarmap, lit);
+		e = g_hash_table_lookup(satmap, mapped);
+		g_array_append_val(ret, e);
+		*lit = abs(*i++);
+	}
+
+	return ret;
+}
+
+/*
+ * extract the unsatisfiable hard constraints from the entire problem 
+ * and add the clauses to the second SAT solver
+ */
+static void extract_unsat_core_hard(PicoSAT *pico, PicoSAT *pico_cur, GHashTable *clauses_added, GHashTable *satvarmap)
+{
+	int i;
+	GArray *clause, *newclause;
+	
+	for (i = 0; i < picosat_added_original_clauses(pico); i++) {
+		/* clause was part of an unsat core before */
+		if (g_hash_table_contains(clauses_added, &i)) continue;
+		
+		/* clause is not part of the unsat core */
+		if (picosat_coreclause(pico, i) == 0) continue; 
+		
+		/* get clause */
+		clause = (GArray *) g_hash_table_lookup(cnf_clauses, &i);
+		newclause = map_oldclause_to_newclause(satvarmap, clause);
+		
+		/* add clause to pico_cur/clauses_added if not done yet */
+		sat_add_clause_garray(pico_cur, newclause);
+		int *j = malloc(sizeof(int));
+		*j = i;
+		g_hash_table_insert(clauses_added, j, j);
+	}
 }
 
 /*
@@ -452,6 +779,112 @@ static GArray * minimise_unsat_core(PicoSAT *pico, GArray *C)
 	}
 	
 	return C;
+}
+
+/*
+ * minimise the unsat core C
+ */
+static GArray * minimise_unsat_core_mapped(PicoSAT *pico, GArray *C, GHashTable *satvarmap)
+{
+	/* no need to check further */
+	if (C->len == 1) return C;
+	
+	GArray * c_set;
+	unsigned int i;
+	struct fexpr * c;
+	
+	for (i = 0; i < C->len; i++) {
+		c = g_array_index(C, struct fexpr *, i);
+		
+		/* create C\c */
+		c_set = g_array_new(false, false, sizeof(struct fexpr *));
+		g_array_append_val(c_set, c);
+		GArray *t = get_difference(C, c_set);
+		
+		/* invoke PicoSAT */
+		set_assumptions_mapped(pico, t, satvarmap);
+		
+		int res = picosat_sat(pico, -1);
+		
+		if (res == PICOSAT_UNSATISFIABLE) {
+			g_array_remove_index(C, i);
+			i--;
+		}
+		
+		g_array_free(c_set, false);
+		g_array_free(t, false);
+	}
+	
+	return C;
+}
+
+/*
+ * check whether a diagnosis that solves the smaller problem
+ * actually solves the entire problem
+ */
+static bool diagnosis_satisfies_entire_problem(PicoSAT *pico, GArray *c)
+{
+	set_assumptions(pico, c);
+	
+	int res = picosat_sat(pico, -1);
+	
+	if (res == PICOSAT_SATISFIABLE)
+		return true;
+	else if (res == PICOSAT_UNSATISFIABLE)
+		return false;
+	else
+		perror("Cannot satisfy entire problem.");
+	
+	return false;
+}
+
+/*
+ * find a key in satvarmap given a value
+ */
+static int * g_hash_table_find_key(GHashTable *satvarmap, int *keyvalue)
+{
+	GHashTableIter iter;
+	gpointer key, value;
+
+	g_hash_table_iter_init(&iter, satvarmap);
+	while (g_hash_table_iter_next(&iter, &key, &value))
+	{
+		if (*((int *) value) == *keyvalue) 
+			return (int *) key;
+	}
+	
+	return NULL;
+}
+
+/*
+ * convert a clause from pico to a clause for pico_cur
+ */
+static GArray * map_oldclause_to_newclause(GHashTable *satvarmap, GArray *oldc)
+{
+	GArray *newc = g_array_new(false, false, sizeof(int *));
+	int i, *newval, *oldval, *newabsval, *oldabsval;
+	for (i = 0; i < oldc->len; i++) {
+		oldval = g_array_index(oldc, int *, i);
+		if (*oldval < 0) {
+			oldabsval = malloc(sizeof(int));
+			*oldabsval = abs(*oldval);
+		} else {
+			oldabsval = oldval;
+		}
+		if (!g_hash_table_contains(satvarmap, oldabsval)) {
+			newabsval = malloc(sizeof(int));
+			*newabsval = g_hash_table_size(satvarmap) + 1;
+			g_hash_table_insert(satvarmap, oldabsval, newabsval);
+		} else {
+			newabsval = g_hash_table_lookup(satvarmap, oldabsval);
+		}
+
+		newval = malloc(sizeof(int));
+		*newval = *oldval < 0 ? *newabsval * -1 : *newabsval;
+		g_array_append_val(newc, newval);
+	}
+	
+	return newc;
 }
 
 /*
@@ -752,31 +1185,10 @@ static GArray * convert_diagnoses(GArray *diag_arr)
 	diagnoses_symbol = g_array_new(false, false, sizeof(GArray *));
 	
 	GArray *diagnosis, *diagnosis_symbol;
-	struct fexpr *e;
-	struct symbol_fix *fix;
-	unsigned i, j;
+	unsigned int i;
 	
 	for (i = 0; i < diag_arr->len; i++) {
 		diagnosis = g_array_index(diag_arr, GArray *, i);
-// 		diagnosis_symbol = g_array_new(false, false, sizeof(struct symbol_fix *));
-// 		for (j = 0; j < diagnosis->len; j++) {
-// 			e = g_array_index(diagnosis, struct fexpr *, j);
-// 			
-// 			/* diagnosis already contains symbol, so continue */
-// 			if (diagnosis_contains_symbol(diagnosis_symbol, e->sym)) continue;
-// 			
-// 			TODO for disallowed
-// 			enum symbolfix_type type;
-// 			if (sym_is_boolean(e->sym))
-// 				type = SF_BOOLEAN;
-// 			else if (sym_is_nonboolean(e->sym))
-// 				type = SF_NONBOOLEAN;
-// 			else
-// 				type = SF_DISALLOWED;
-// 			fix = symbol_fix_create(e, type, diagnosis);
-// 			
-// 			g_array_append_val(diagnosis_symbol, fix);
-// 		}
 		diagnosis_symbol = convert_diagnosis(diagnosis);
 		g_array_append_val(diagnoses_symbol, diagnosis_symbol);
 	}
@@ -913,7 +1325,6 @@ GArray * choose_fix(GArray *diag)
 void apply_fix(GArray *diag)
 {
 	struct symbol_fix *fix;
-	struct symbol *sym;
 	unsigned int i, no_symbols_set = 0;
 	GArray *tmp = g_array_copy(diag);
 
