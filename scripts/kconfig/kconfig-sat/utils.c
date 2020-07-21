@@ -29,7 +29,7 @@ void init_config(const char *Kconfig_file)
 void init_data(void)
 {
 	/* initialize array with all CNF clauses */
-	cnf_clauses = g_hash_table_new_full(
+	cnf_clauses_map = g_hash_table_new_full(
 		g_int_hash, g_int_equal, //< This is an integer hash.
 		free, //< Call "free" on the key (made with "malloc").
 		NULL //< Call "free" on the value (made with "strdup").
@@ -477,29 +477,21 @@ unsigned int count_counstraints(void)
 	return c;
 }
 
-
-/*
- * print a warning about unmet dependencies
+/* 
+ * check whether symbol is to be changed 
  */
-void sym_warn_unmet_dep(struct symbol *sym)
+bool sym_is_sdv(GArray *arr, struct symbol *sym)
 {
-	struct gstr gs = str_new();
-
-	str_printf(&gs,
-		   "\nWARNING: unmet direct dependencies detected for %s\n",
-		   sym->name);
-	str_printf(&gs,
-		   "  Depends on [%c]: ",
-		   sym->dir_dep.tri == mod ? 'm' : 'n');
-	expr_gstr_print(sym->dir_dep.expr, &gs);
-	str_printf(&gs, "\n");
-
-	expr_gstr_print_revdep(sym->rev_dep.expr, &gs, yes,
-			       "  Selected by [y]:\n");
-	expr_gstr_print_revdep(sym->rev_dep.expr, &gs, mod,
-			       "  Selected by [m]:\n");
-
-	fputs(str_get(&gs), stderr);
+	unsigned int i;
+	struct symbol_dvalue *sdv;
+	for (i = 0; i < arr->len; i++) {
+		sdv = g_array_index(arr, struct symbol_dvalue *, i);
+		
+		if (sym == sdv->sym)
+			return true;
+	}
+	
+	return false;
 }
 
 /*

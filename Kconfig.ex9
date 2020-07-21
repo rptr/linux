@@ -20,7 +20,8 @@ config C
 #	default m
 
 config D
-	bool "D"
+	tristate "D"
+	depends on C
 
 #config E
 #	bool "E"

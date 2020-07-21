@@ -187,10 +187,10 @@ $(addprefix $(obj)/lxdialog/, $(lxdialog)): $(obj)/mconf-cfg
 # qconf: Used for the xconfig target based on Qt
 
 ### satconfig ###
-hostprogs-y	+= satconfig satdvconfig
-satconf-objs	:= kconfig-sat/cnf.o kconfig-sat/constraints.o kconfig-sat/fexpr.o kconfig-sat/picosat.o kconfig-sat/print.o kconfig-sat/rangefix.o kconfig-sat/satconf.o kconfig-sat/satutils.o kconfig-sat/symbol_mod.o kconfig-sat/utils.o
+hostprogs-y		+= satconfig satdvconfig
+satconf-objs		:= kconfig-sat/cnf.o kconfig-sat/constraints.o kconfig-sat/fexpr.o kconfig-sat/picosat.o kconfig-sat/print.o kconfig-sat/rangefix.o kconfig-sat/satconf.o kconfig-sat/satutils.o kconfig-sat/utils.o
 
-satconfig-objs	:= satconfig.o $(satconf-objs) $(common-objs)
+satconfig-objs		:= satconfig.o $(satconf-objs) $(common-objs)
 satdvconfig-objs	:= satdvconfig.o $(satconf-objs) $(common-objs)
 
 HOSTLDLIBS_satconfig	= $(shell pkg-config --libs glib-2.0)
@@ -206,7 +206,6 @@ HOSTCFLAGS_print.o	= $(shell pkg-config --cflags glib-2.0)
 HOSTCFLAGS_rangefix.o	= $(shell pkg-config --cflags glib-2.0)
 HOSTCFLAGS_satconf.o	= $(shell pkg-config --cflags glib-2.0)
 HOSTCFLAGS_satutils.o	= $(shell pkg-config --cflags glib-2.0)
-HOSTCFLAGS_symbol_mod.o	= $(shell pkg-config --cflags glib-2.0)
 HOSTCFLAGS_utils.o	= $(shell pkg-config --cflags glib-2.0)
 ### satconfig end ###
 

@@ -13,7 +13,7 @@
 
 #define MAX_DIAGNOSES 3
 #define MAX_SECONDS 30
-#define SLICE_PROBLEM true
+#define SLICE_PROBLEM false
 #define PRINT_UNSAT_CORE true
 #define PRINT_DIAGNOSES false
 #define PRINT_DIAGNOSIS_FOUND true
@@ -142,6 +142,7 @@ static GArray * generate_diagnoses(PicoSAT *pico)
 		/* calculate C\E0 */
 		GArray *c = get_difference(C, E0);
 // 		print_array("Soft constraints", c);
+// 		getchar();
 		
 		/* set assumptions */
 		nr_of_assumptions = 0;
@@ -162,6 +163,7 @@ static GArray * generate_diagnoses(PicoSAT *pico)
 // 		int res = picosat_sat(pico, -1);
 		if (res == PICOSAT_SATISFIABLE) {
 // 			printf("SATISFIABLE\n");
+// 			getchar();
 			if (PRINT_DIAGNOSIS_FOUND)
 				print_array("DIAGNOSIS FOUND", E0);
 			
@@ -180,6 +182,7 @@ static GArray * generate_diagnoses(PicoSAT *pico)
 			
 		} else if (res == PICOSAT_UNSATISFIABLE) {
 // 			printf("UNSATISFIABLE\n");
+// 			getchar();
 		} else if (res == PICOSAT_UNKNOWN) {
 			printf("UNKNOWN\n");
 		} else {
@@ -322,7 +325,7 @@ static GArray * generate_diagnoses_sliced(PicoSAT *pico)
 	/* HashMap to map old sat variables to new satvariables */
 	GHashTable *satvarmap = g_hash_table_new_full(
 		g_int_hash, g_int_equal, //< This is an integer hash.
-		free, //< Call "free" on the key (made with "malloc").
+		NULL, //< Call "free" on the key (made with "malloc").
 		free //< Call "free" on the value (made with "strdup").
 	);
 	
@@ -502,8 +505,10 @@ DIAGNOSES_FOUND:
 	g_array_free(C, false);
 	g_array_free(E, false);
 	
-	g_hash_table_destroy(clauses_added);
-	g_hash_table_destroy(satvarmap);
+// 	g_hash_table_destroy(clauses_added);
+	g_hash_table_remove_all(clauses_added);
+// 	g_hash_table_destroy(satvarmap);
+	g_hash_table_remove_all(satvarmap);
 	
 	picosat_reset(pico_cur);
 	
@@ -520,6 +525,10 @@ static void add_fexpr_to_constraint_set(GArray *C)
 	for_all_symbols(i, sym) {
 		/* must be a proper symbol */
 		if (sym->type == S_UNKNOWN) continue;
+		
+		/* don't need the conflict symbols
+		 * they are handled seperately */
+		if (sym_is_sdv(sdv_arr, sym)) continue;
 		
 		/* must have a prompt and a name */
 		if (!sym->name || !sym_has_prompt(sym)) continue;
@@ -561,6 +570,140 @@ static bool fexpr_is_novalue(struct fexpr *e)
 	return e == g_array_index(e->sym->fexpr_nonbool->arr, struct fexpr *, 0);
 }
 
+static void set_assumptions_sdv(PicoSAT *pico, GArray *arr)
+{
+	unsigned int i;
+	struct symbol_dvalue *sdv;
+	struct symbol *sym;
+	
+	for (i = 0; i < arr->len; i++) {
+		sdv = g_array_index(arr, struct symbol_dvalue *, i);
+		sym = sdv->sym;
+		
+		int lit_y = sym->fexpr_y->satval;
+		
+		if (sdv->sym->type == S_BOOLEAN) {
+			switch (sdv->tri) {
+			case yes:
+				picosat_assume(pico, lit_y);
+				sym->fexpr_y->assumption = true;
+				nr_of_assumptions_true++;
+				break;
+			case no:
+				picosat_assume(pico, -lit_y);
+				sym->fexpr_y->assumption = false;
+				break;
+			case mod:
+				perror("Should not happen.\n");
+			}
+			nr_of_assumptions++;
+		} else if (sdv->sym->type == S_TRISTATE) {
+			int lit_m = sdv->sym->fexpr_m->satval;
+			switch (sdv->tri) {
+			case yes:
+				picosat_assume(pico, lit_y);
+				sym->fexpr_y->assumption = true;
+				picosat_assume(pico, -lit_m);
+				sym->fexpr_m->assumption = false;
+				nr_of_assumptions_true++;
+				break;
+			case mod:
+				picosat_assume(pico, -lit_y);
+				sym->fexpr_y->assumption = false;
+				picosat_assume(pico, lit_m);
+				sym->fexpr_m->assumption = true;
+				nr_of_assumptions_true++;
+				break;
+			case no:
+				picosat_assume(pico, -lit_y);
+				sym->fexpr_y->assumption = false;
+				picosat_assume(pico, -lit_m);
+				sym->fexpr_y->assumption = false;
+			}
+			nr_of_assumptions += 2;
+		}
+	}
+}
+
+static void set_assumptions_sdv_mapped(PicoSAT *pico, GArray *arr, GHashTable* satvarmap)
+{
+	unsigned int i;
+	struct symbol_dvalue *sdv;
+	struct symbol *sym;
+	
+	for (i = 0; i < arr->len; i++) {
+		sdv = g_array_index(arr, struct symbol_dvalue *, i);
+		sym = sdv->sym;
+		
+		int tmp_y = sym->fexpr_y->satval;
+		int lit_y;
+		if (!g_hash_table_contains(satvarmap, &tmp_y)) {
+			int *newval = malloc(sizeof(int));
+			*newval = g_hash_table_size(satvarmap) + 1;
+			int *oldval = malloc(sizeof(int));
+			*oldval = tmp_y;
+			g_hash_table_insert(satvarmap, oldval, newval);
+			lit_y = *newval;
+		} else {
+			int *tmp = g_hash_table_lookup(satvarmap, &tmp_y);
+			lit_y = *tmp;
+		}
+		
+		if (sdv->sym->type == S_BOOLEAN) {
+			switch (sdv->tri) {
+			case yes:
+				picosat_assume(pico, lit_y);
+				sym->fexpr_y->assumption = true;
+				nr_of_assumptions_true++;
+				break;
+			case no:
+				picosat_assume(pico, -lit_y);
+				sym->fexpr_y->assumption = false;
+				break;
+			case mod:
+				perror("Should not happen.\n");
+			}
+			nr_of_assumptions++;
+		} else if (sdv->sym->type == S_TRISTATE) {
+			int tmp_m = sym->fexpr_m->satval;
+			int *tmpval2;
+			if (!g_hash_table_contains(satvarmap, &tmp_m)) {
+				int *newval2 = malloc(sizeof(int));
+				*newval2 = g_hash_table_size(satvarmap) + 1;
+				int *oldval2 = malloc(sizeof(int));
+				*oldval2 = tmp_m;
+				g_hash_table_insert(satvarmap, oldval2, newval2);
+				tmpval2 = newval2;
+			} else {
+				tmpval2 = g_hash_table_lookup(satvarmap, &tmp_m);
+			}
+			int lit_m = *tmpval2;
+			switch (sdv->tri) {
+			case yes:
+				picosat_assume(pico, lit_y);
+				sym->fexpr_y->assumption = true;
+				picosat_assume(pico, -lit_m);
+				sym->fexpr_m->assumption = false;
+				nr_of_assumptions_true++;
+				break;
+			case mod:
+				picosat_assume(pico, -lit_y);
+				sym->fexpr_y->assumption = false;
+				picosat_assume(pico, lit_m);
+				sym->fexpr_m->assumption = true;
+				nr_of_assumptions_true++;
+				break;
+			case no:
+				picosat_assume(pico, -lit_y);
+				sym->fexpr_y->assumption = false;
+				picosat_assume(pico, -lit_m);
+				sym->fexpr_y->assumption = false;
+			}
+			nr_of_assumptions += 2;
+		}
+	}
+}
+
 /*
  * set the assumptions for the next run of Picosat
  */
@@ -572,6 +715,9 @@ static void set_assumptions(PicoSAT *pico, GArray *c)
 		e = g_array_index(c, struct fexpr *, i);
 		fexpr_add_assumption(pico, e, e->satval);
 	}
+	
+	/* set assumptions for the conflict-symbols */
+	set_assumptions_sdv(pico, sdv_arr);
 }
 
 /*
@@ -592,6 +738,9 @@ static void set_assumptions_mapped(PicoSAT* pico, GArray* c, GHashTable* satvarm
 		}
 		
 	}
+	
+	/* set assumptions for the conflict-symbols */
+	set_assumptions_sdv_mapped(pico, sdv_arr, satvarmap);
 }
 
 /*
@@ -685,7 +834,10 @@ static GArray * get_unsat_core_soft(PicoSAT *pico)
 	
 	while (*lit != 0) {
 		e = g_hash_table_lookup(satmap, lit);
-		g_array_append_val(ret, e);
+		
+		if (!sym_is_sdv(sdv_arr, e->sym))
+			g_array_append_val(ret, e);
+		
 		*lit = abs(*i++);
 	}
 	
@@ -709,7 +861,10 @@ static GArray * get_unsat_core_soft_mapped(PicoSAT *pico, GHashTable *satvarmap)
 	while (*lit != 0) {
 		mapped = g_hash_table_find_key(satvarmap, lit);
 		e = g_hash_table_lookup(satmap, mapped);
-		g_array_append_val(ret, e);
+		
+		if (!sym_is_sdv(sdv_arr, e->sym))
+			g_array_append_val(ret, e);
+
 		*lit = abs(*i++);
 	}
 
@@ -733,7 +888,7 @@ static void extract_unsat_core_hard(PicoSAT *pico, PicoSAT *pico_cur, GHashTable
 		if (picosat_coreclause(pico, i) == 0) continue; 
 		
 		/* get clause */
-		clause = (GArray *) g_hash_table_lookup(cnf_clauses, &i);
+		clause = (GArray *) g_hash_table_lookup(cnf_clauses_map, &i);
 		newclause = map_oldclause_to_newclause(satvarmap, clause);
 		
 		/* add clause to pico_cur/clauses_added if not done yet */
@@ -1152,6 +1307,17 @@ static GArray * convert_diagnosis(GArray *diagnosis)
 	unsigned int i;
 	struct fexpr *e;
 	struct symbol_fix *fix;
+	struct symbol_dvalue *sdv;
+	
+	/* set the values for the conflict symbols */
+	for (i = 0; i < sdv_arr->len; i++) {
+		sdv = g_array_index(sdv_arr, struct symbol_dvalue *, i);
+		fix = malloc(sizeof(struct symbol_fix));
+		fix->sym = sdv->sym;
+		fix->type = SF_BOOLEAN;
+		fix->tri = sdv->tri;
+		g_array_append_val(diagnosis_symbol, fix);
+	}
 	
 	for (i = 0; i < diagnosis->len; i++) {
 		e = g_array_index(diagnosis, struct fexpr *, i);
@@ -1325,13 +1491,18 @@ GArray * choose_fix(GArray *diag)
 void apply_fix(GArray *diag)
 {
 	struct symbol_fix *fix;
-	unsigned int i, no_symbols_set = 0;
+	unsigned int i, no_symbols_set = 0, iterations = 0;
 	GArray *tmp = g_array_copy(diag);
 
 	
 	printf("\nTrying to apply fixes now...\n");
 	
 	while (no_symbols_set < diag->len) {
+		if (iterations > diag->len * 2) {
+			printf("\nCould not apply all values :-(.\n");
+			return;
+		}
+		
 		for (i = 0; i < tmp->len; i++) {
 			fix = g_array_index(tmp, struct symbol_fix *, i);
 			
@@ -1346,7 +1517,7 @@ void apply_fix(GArray *diag)
 					continue;
 				}
 			} else if (fix->type == SF_NONBOOLEAN) {
-				if (str_get(&fix->nb_val) == sym_get_string_value(fix->sym)) {
+				if (strcmp(str_get(&fix->nb_val),sym_get_string_value(fix->sym)) == 0) {
 					g_array_remove_index(tmp, i--);
 					no_symbols_set++;
 					continue;
@@ -1381,9 +1552,10 @@ void apply_fix(GArray *diag)
 			g_array_remove_index(tmp, i--);
 			no_symbols_set++;
 		}
+		iterations++;
 	}
 
-	printf("Applying fixes done.\n");
+	printf("\nFixes successfully applied.\n");
 }
 
 /*

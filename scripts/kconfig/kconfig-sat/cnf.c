@@ -36,8 +36,6 @@ void construct_cnf_clauses(PicoSAT *p)
 	struct symbol *sym;
 	
 	/* adding unit-clauses for constants */
-// 	picosat_add_arg(pico, -(const_false->satval), 0);
-// 	picosat_add_arg(pico, const_true->satval, 0);
 	sat_add_clause(2, pico, -(const_false->satval));
 	sat_add_clause(2, pico, const_true->satval);
 	
@@ -134,62 +132,6 @@ static void unfold_cnf_clause(struct fexpr *e)
 
 	sat_add_clause_garray(pico, arr);
 }
-
-/*
- * build a CNF clause with the SAT-variables given
- */
-// struct cnf_clause * build_cnf_clause(struct gstr *reason, int num, ...)
-// {
-// 	va_list valist;
-// 	va_start(valist, num);
-// 	int i;
-// 	
-// 	struct cnf_clause *cl = create_cnf_clause_struct();
-// 	
-// 	for (i = 0; i < num; i++) {
-// 		int val = va_arg(valist, int);
-// 		add_literal_to_clause(cl, val);
-// 	}
-// 	cl->reason = str_new();
-// 	str_append(&cl->reason, str_get(reason));
-// 	
-// 	g_array_append_val(cnf_clauses, cl);
-// 
-// 	nr_of_clauses++;
-// 
-// 	va_end(valist);
-// 	return cl;
-// }
-
-/*
- * add a literal to a CNF-clause
- */
-// void add_literal_to_clause(struct cnf_clause *cl, int val)
-// {
-// 	struct cnf_literal *lit = malloc(sizeof(struct cnf_literal));
-// 
-// 	/* get the fexpr */
-// 	struct fexpr *e = get_fexpr_from_satmap(val);
-// 	assert(abs(val) == e->satval);
-// 	
-// 	lit->val = val;
-// 	lit->name = str_new();
-// 	if (val <= 0)
-// 		str_append(&lit->name, "-");
-// 	str_append(&lit->name, str_get(&e->name));
-// 	
-// 	g_array_append_val(cl->lits, lit);
-// }
-
-/*
- * create a struct for a CNF clause
- */
-// struct cnf_clause * create_cnf_clause_struct(void)
-// {
-// 	struct cnf_clause *cl = malloc(sizeof(struct cnf_clause));
-// 	cl->lits = g_array_new(false, false, sizeof(struct cnf_literal *));
-// 	return cl;
-// }
 
 /*
  * build CNF-clauses for a fexpr not in CNF
@@ -454,31 +396,31 @@ static struct fexpr * get_fexpr_tseytin(struct fexpr *e)
 /*
  * check, if a CNF-clause is a tautology
  */
-bool cnf_is_tautology(struct cnf_clause *cl)
-{
-	struct cnf_literal *lit, *lit2;
-	unsigned int i, j;
-	int curr;
-	for (i = 0; i < cl->lits->len; i++) {
-		lit = g_array_index(cl->lits, struct cnf_literal *, i);
-		
-		/* exception for the 2 unit clauses for the True/False constants */
-		if (cl->lits->len == 1 && (lit->val == const_true->satval || lit->val == -(const_false->satval))) 
-			return false;
-		
-		/* clause is tautology, if a constant evaluates to true */
-		if (lit->val == -(const_false->satval) || lit->val == const_true->satval)
-			return true;
-		
-		/* given X, check if -X is in the clause as well */
-		// TODO
-		curr = lit->val;
-		for (j = i + 1; j < cl->lits->len; j++) {
-			lit2 = g_array_index(cl->lits, struct cnf_literal *, j);
-			
-			if (curr == -(lit2->val)) return true;
-		}
-	}
-	
-	return false;
-}
+// bool cnf_is_tautology(struct cnf_clause *cl)
+// {
+// 	struct cnf_literal *lit, *lit2;
+// 	unsigned int i, j;
+// 	int curr;
+// 	for (i = 0; i < cl->lits->len; i++) {
+// 		lit = g_array_index(cl->lits, struct cnf_literal *, i);
+// 		
+// 		/* exception for the 2 unit clauses for the True/False constants */
+// 		if (cl->lits->len == 1 && (lit->val == const_true->satval || lit->val == -(const_false->satval))) 
+// 			return false;
+// 		
+// 		/* clause is tautology, if a constant evaluates to true */
+// 		if (lit->val == -(const_false->satval) || lit->val == const_true->satval)
+// 			return true;
+// 		
+// 		/* given X, check if -X is in the clause as well */
+// 		TODO
+// 		curr = lit->val;
+// 		for (j = i + 1; j < cl->lits->len; j++) {
+// 			lit2 = g_array_index(cl->lits, struct cnf_literal *, j);
+// 			
+// 			if (curr == -(lit2->val)) return true;
+// 		}
+// 	}
+// 	
+// 	return false;
+// }

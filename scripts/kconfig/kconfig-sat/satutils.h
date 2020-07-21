@@ -23,4 +23,7 @@ void sym_add_assumption(PicoSAT *pico, struct symbol *sym);
 /* add assumption for a boolean symbol to the SAT-solver */
 void sym_add_assumption_tri(PicoSAT *pico, struct symbol *sym, tristate tri_val);
 
+/* add assumptions for the symbols to be changed to the SAT solver */
+void sym_add_assumption_sdv(PicoSAT *pico, GArray *arr);
+
 #endif

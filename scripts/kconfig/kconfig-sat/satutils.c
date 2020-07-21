@@ -58,9 +58,10 @@ void sat_add_clause(int num, ...)
 	}
 	id = malloc(sizeof(int));
 	*id = picosat_add(pico, 0);
+// 	*id = g_hash_table_size(cnf_clauses);
 	
 	/* add clause to hashmap */
-	g_hash_table_insert(cnf_clauses, id, arr);
+	g_hash_table_insert(cnf_clauses_map, id, arr);
 	
 // 	printf("Clause added, id %d\n", id);
 	
@@ -83,8 +84,8 @@ void sat_add_clause_garray(PicoSAT *pico, GArray *arr)
 	*id = picosat_add(pico, 0);
 	
 	/* add clause to hashmap if not done yet */
-	if (!g_hash_table_contains(cnf_clauses, id))
-		g_hash_table_insert(cnf_clauses, id, arr);
+	if (!g_hash_table_contains(cnf_clauses_map, id))
+		g_hash_table_insert(cnf_clauses_map, id, arr);
 }
 
 /*
@@ -392,6 +393,48 @@ void sym_add_assumption_tri(PicoSAT *pico, struct symbol *sym, tristate tri_val)
 			sym->fexpr_y->assumption = true;
 			sym->fexpr_m->assumption = false;
 			break;
+		}
+	}
+}
+
+/* 
+ * add assumptions for the symbols to be changed to the SAT solver
+ */
+void sym_add_assumption_sdv(PicoSAT *pico, GArray *arr)
+{
+	unsigned int i;
+	struct symbol_dvalue *sdv;
+	for (i = 0; i < arr->len; i++) {
+		sdv = g_array_index(arr, struct symbol_dvalue *, i);
+		
+		int lit_y = sdv->sym->fexpr_y->satval;
+		
+		if (sdv->sym->type == S_BOOLEAN) {
+			switch (sdv->tri) {
+			case yes:
+				picosat_assume(pico, lit_y);
+				break;
+			case no:
+				picosat_assume(pico, -lit_y);
+				break;
+			case mod:
+				perror("Should not happen.\n");
+			}
+		} else if (sdv->sym->type == S_TRISTATE) {
+			int lit_m = sdv->sym->fexpr_m->satval;
+			switch (sdv->tri) {
+			case yes:
+				picosat_assume(pico, lit_y);
+				picosat_assume(pico, -lit_m);
+				break;
+			case mod:
+				picosat_assume(pico, -lit_y);
+				picosat_assume(pico, lit_m);
+				break;
+			case no:
+				picosat_assume(pico, -lit_y);
+				picosat_assume(pico, -lit_m);
+			}
 		}
 	}
 }
