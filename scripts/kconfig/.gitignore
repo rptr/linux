@@ -10,3 +10,10 @@ mconf
 nconf
 qconf
 gconf
+
+#
+# satconfig
+#
+satconfig
+satdvconfig
+kconfig-sat/out_*
