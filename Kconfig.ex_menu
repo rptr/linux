@@ -1,0 +1,20 @@
+mainmenu "Example configuration"
+
+menu "Architectures"
+
+menu "Misc"
+config EX
+	bool "Example option"
+endmenu
+
+config X86
+	bool "X86 architecture"
+
+config 64BIT
+	bool "64 bit support"
+	depends on X86
+
+config ARM
+	bool "ARM architecture"
+
+endmenu
