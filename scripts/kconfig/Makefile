@@ -187,7 +187,7 @@ $(foreach f, mconf.o $(lxdialog), \
 $(addprefix $(obj)/, mconf.o $(lxdialog)): $(obj)/mconf-cfg
 
 ### satconfig ###
-hostprogs-y		+= satconfig satdvconfig
+hostprogs		+= satconfig satdvconfig
 satconf-objs		:= kconfig-sat/cnf.o kconfig-sat/constraints.o kconfig-sat/fexpr.o kconfig-sat/picosat.o kconfig-sat/print.o kconfig-sat/rangefix.o kconfig-sat/satconf.o kconfig-sat/satutils.o kconfig-sat/utils.o
 
 satconfig-objs		:= satconfig.o $(satconf-objs) $(common-objs)
