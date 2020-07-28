@@ -1,0 +1,35 @@
+mainmenu "Simple example to demo kconfig select broken dependency issue"
+
+menuconfig MODULES
+	bool "Enable loadable module support"
+	option modules
+	default y
+
+config A
+	tristate "CONFIG A"
+
+config B
+	tristate "CONFIG B"
+
+choice
+	prompt "CHOICE_1"
+
+config D
+	tristate "CONFIG D"
+
+config E
+	tristate "CONFIG E"
+
+config F
+	tristate "CONFIG F"
+
+config G
+	tristate "CONFIG G"
+
+endchoice
+
+config I
+	int "CONFIG I"
+	default 0
+	range 0 5 if A
+	range 0 2

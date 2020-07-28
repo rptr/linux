@@ -4,7 +4,7 @@
 # These targets are used from top-level makefile
 
 PHONY += xconfig gconfig menuconfig config localmodconfig localyesconfig \
-	build_menuconfig build_nconfig build_gconfig build_xconfig
+	build_menuconfig build_nconfig build_gconfig build_xconfig satconfig satdvconfig
 
 ifdef KBUILD_KCONFIG
 Kconfig := $(KBUILD_KCONFIG)
@@ -36,6 +36,12 @@ config: $(obj)/conf
 	$< $(silent) --oldaskconfig $(Kconfig)
 
 nconfig: $(obj)/nconf
+	$< $(silent) $(Kconfig)
+
+satconfig: $(obj)/satconfig
+	$< $(silent) $(Kconfig)
+
+satdvconfig: $(obj)/satdvconfig
 	$< $(silent) $(Kconfig)
 
 build_menuconfig: $(obj)/mconf
@@ -124,6 +130,8 @@ help:
 	@echo  '  xconfig	  - Update current config utilising a Qt based front-end'
 	@echo  '  gconfig	  - Update current config utilising a GTK+ based front-end'
 	@echo  '  oldconfig	  - Update current config utilising a provided .config as base'
+	@echo  '  satconfig	  - Update current config to a valid config'
+	@echo  '  satdvconfig	  - CLI to change a symbol to a desired value'
 	@echo  '  localmodconfig  - Update current config disabling modules not loaded'
 	@echo  '  localyesconfig  - Update current config converting local mods to core'
 	@echo  '  defconfig	  - New config with default from ARCH supplied defconfig'
@@ -177,6 +185,30 @@ $(foreach f, mconf.o $(lxdialog), \
 $(addprefix $(obj)/, mconf.o $(lxdialog)): $(obj)/mconf-cfg
 
 # qconf: Used for the xconfig target based on Qt
+
+### satconfig ###
+hostprogs-y		+= satconfig satdvconfig
+satconf-objs		:= kconfig-sat/cnf.o kconfig-sat/constraints.o kconfig-sat/fexpr.o kconfig-sat/picosat.o kconfig-sat/print.o kconfig-sat/rangefix.o kconfig-sat/satconf.o kconfig-sat/satutils.o kconfig-sat/utils.o
+
+satconfig-objs		:= satconfig.o $(satconf-objs) $(common-objs)
+satdvconfig-objs	:= satdvconfig.o $(satconf-objs) $(common-objs)
+
+HOSTLDLIBS_satconfig	= $(shell pkg-config --libs glib-2.0)
+HOSTCFLAGS_satconfig.o	= $(shell pkg-config --cflags glib-2.0)
+HOSTLDLIBS_satdvconfig	= $(shell pkg-config --libs glib-2.0)
+HOSTCFLAGS_satdvconfig.o	= $(shell pkg-config --cflags glib-2.0)
+
+HOSTCFLAGS_cnf.o	= $(shell pkg-config --cflags glib-2.0)
+HOSTCFLAGS_constraints.o= $(shell pkg-config --cflags glib-2.0)
+HOSTCFLAGS_fexpr.o	= $(shell pkg-config --cflags glib-2.0)
+HOSTCFLAGS_picosat.o	= -DTRACE -Wno-missing-prototypes -Wno-pointer-compare
+HOSTCFLAGS_print.o	= $(shell pkg-config --cflags glib-2.0)
+HOSTCFLAGS_rangefix.o	= $(shell pkg-config --cflags glib-2.0)
+HOSTCFLAGS_satconf.o	= $(shell pkg-config --cflags glib-2.0)
+HOSTCFLAGS_satutils.o	= $(shell pkg-config --cflags glib-2.0)
+HOSTCFLAGS_utils.o	= $(shell pkg-config --cflags glib-2.0)
+### satconfig end ###
+
 hostprogs-y	+= qconf
 qconf-cxxobjs	:= qconf.o
 qconf-objs	:= images.o $(common-objs)
