@@ -184,8 +184,6 @@ $(foreach f, mconf.o $(lxdialog), \
 
 $(addprefix $(obj)/, mconf.o $(lxdialog)): $(obj)/mconf-cfg
 
-# qconf: Used for the xconfig target based on Qt
-
 ### satconfig ###
 hostprogs-y		+= satconfig satdvconfig
 satconf-objs		:= kconfig-sat/cnf.o kconfig-sat/constraints.o kconfig-sat/fexpr.o kconfig-sat/picosat.o kconfig-sat/print.o kconfig-sat/rangefix.o kconfig-sat/satconf.o kconfig-sat/satutils.o kconfig-sat/utils.o
@@ -193,22 +191,23 @@ satconf-objs		:= kconfig-sat/cnf.o kconfig-sat/constraints.o kconfig-sat/fexpr.o
 satconfig-objs		:= satconfig.o $(satconf-objs) $(common-objs)
 satdvconfig-objs	:= satdvconfig.o $(satconf-objs) $(common-objs)
 
-HOSTLDLIBS_satconfig	= $(shell pkg-config --libs glib-2.0)
-HOSTCFLAGS_satconfig.o	= $(shell pkg-config --cflags glib-2.0)
-HOSTLDLIBS_satdvconfig	= $(shell pkg-config --libs glib-2.0)
+HOSTLDLIBS_satconfig		= $(shell pkg-config --libs glib-2.0)
+HOSTCFLAGS_satconfig.o		= $(shell pkg-config --cflags glib-2.0)
+HOSTLDLIBS_satdvconfig		= $(shell pkg-config --libs glib-2.0)
 HOSTCFLAGS_satdvconfig.o	= $(shell pkg-config --cflags glib-2.0)
 
-HOSTCFLAGS_cnf.o	= $(shell pkg-config --cflags glib-2.0)
-HOSTCFLAGS_constraints.o= $(shell pkg-config --cflags glib-2.0)
-HOSTCFLAGS_fexpr.o	= $(shell pkg-config --cflags glib-2.0)
-HOSTCFLAGS_picosat.o	= -DTRACE -Wno-missing-prototypes -Wno-pointer-compare
-HOSTCFLAGS_print.o	= $(shell pkg-config --cflags glib-2.0)
-HOSTCFLAGS_rangefix.o	= $(shell pkg-config --cflags glib-2.0)
-HOSTCFLAGS_satconf.o	= $(shell pkg-config --cflags glib-2.0)
-HOSTCFLAGS_satutils.o	= $(shell pkg-config --cflags glib-2.0)
-HOSTCFLAGS_utils.o	= $(shell pkg-config --cflags glib-2.0)
+HOSTCFLAGS_kconfig-sat/cnf.o		= $(shell pkg-config --cflags glib-2.0)
+HOSTCFLAGS_kconfig-sat/constraints.o	= $(shell pkg-config --cflags glib-2.0)
+HOSTCFLAGS_kconfig-sat/fexpr.o		= $(shell pkg-config --cflags glib-2.0)
+HOSTCFLAGS_kconfig-sat/picosat.o	= -DTRACE -Wno-missing-prototypes -Wno-pointer-compare
+HOSTCFLAGS_kconfig-sat/print.o		= $(shell pkg-config --cflags glib-2.0)
+HOSTCFLAGS_kconfig-sat/rangefix.o	= $(shell pkg-config --cflags glib-2.0)
+HOSTCFLAGS_kconfig-sat/satconf.o	= $(shell pkg-config --cflags glib-2.0)
+HOSTCFLAGS_kconfig-sat/satutils.o	= $(shell pkg-config --cflags glib-2.0)
+HOSTCFLAGS_kconfig-sat/utils.o		= $(shell pkg-config --cflags glib-2.0)
 ### satconfig end ###
 
+# qconf: Used for the xconfig target based on Qt
 hostprogs-y	+= qconf
 qconf-cxxobjs	:= qconf.o
 qconf-objs	:= images.o $(common-objs)
