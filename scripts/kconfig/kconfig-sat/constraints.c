@@ -661,7 +661,7 @@ static void add_invisible_constraints(struct symbol *sym, struct property *promp
 // 	print_expr("Prompt condition:", prompt->visible.expr, E_NONE);
 // 	print_expr("dir_dep:         ", sym->dir_dep.expr, 0);
 	
-	struct k_expr * ke_promptCond = parse_expr(prompt->visible.expr, NULL);
+	struct k_expr *ke_promptCond = parse_expr(prompt->visible.expr, NULL);
 	struct fexpr *promptCondition_both = calculate_fexpr_both(ke_promptCond);
 	struct fexpr *promptCondition_yes = calculate_fexpr_y(ke_promptCond);
 	struct fexpr *nopromptCond = fexpr_not(promptCondition_both);
@@ -680,8 +680,18 @@ static void add_invisible_constraints(struct symbol *sym, struct property *promp
 // 	print_fexpr("Default_m:", default_m, -1);
 // 	print_fexpr("Default_both:", default_both, -1);
 	
+	/* tristate elements are only selectable as yes, if they are visible as yes */
+	if (sym->type == S_TRISTATE) {
+		struct fexpr *e1 = implies(promptCondition_both, implies(sym->fexpr_y, promptCondition_yes));
+		
+		convert_fexpr_to_nnf(e1);
+		sym_add_constraint(sym, e1);
+	}	
+	
 	/* if invisible and on by default, then a symbol can only be deactivated by its dependencies */
 	if (sym->type == S_TRISTATE) {
+		if (defaults->len == 0) return;
+		
 		struct fexpr *e1 = implies(nopromptCond, implies(default_y, sym->fexpr_y));
 		convert_fexpr_to_nnf(e1);
 		sym_add_constraint(sym, e1);
@@ -690,6 +700,8 @@ static void add_invisible_constraints(struct symbol *sym, struct property *promp
 		convert_fexpr_to_nnf(e2);
 		sym_add_constraint(sym, e2);
 	} else if (sym->type == S_BOOLEAN) {
+		if (defaults->len == 0) return;
+		
 		struct fexpr *c = implies(default_both, sym->fexpr_y);
 		
 		// TODO tristate choice hack
@@ -701,13 +713,7 @@ static void add_invisible_constraints(struct symbol *sym, struct property *promp
 		
 	}
 	
-	/* tristate elements are only selectable as yes, if they are visible as yes */
-	if (sym->type == S_TRISTATE) {
-		struct fexpr *e1 = implies(promptCondition_both, implies(sym->fexpr_y, promptCondition_yes));
-		
-		convert_fexpr_to_nnf(e1);
-		sym_add_constraint(sym, e1);
-	}
+
 	
 }
 
@@ -797,7 +803,7 @@ static void sym_add_range_constraints(struct symbol *sym)
 }
 
 /*
- * build a constraint, s.t. at least 1 of the symbols for a non-boolean symbol is true
+ * at least 1 of the known values for a non-boolean symbol must be true
  */
 static void sym_nonbool_at_least_1(struct symbol *sym)
 {
@@ -816,7 +822,7 @@ static void sym_nonbool_at_least_1(struct symbol *sym)
 }
 
 /*
- * build a constraint, s.t. at most 1 of the symbols for a non-boolean symbol can be true
+ * at most 1 of the known values for a non-boolean symbol can be true
  */
 static void sym_nonbool_at_most_1(struct symbol *sym)
 {
@@ -835,7 +841,7 @@ static void sym_nonbool_at_most_1(struct symbol *sym)
 }
 
 /*
- * build constraint for non-boolean symbols forcing a value when the symbol has a prompt
+ * a visible prompt for a non-boolean implies a value for the symbol
  */
 static void sym_add_nonbool_prompt_constraint(struct symbol *sym)
 {

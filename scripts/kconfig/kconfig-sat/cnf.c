@@ -11,7 +11,6 @@
 
 #include "satconf.h"
 
-static bool fexpr_is_cnf(struct fexpr *e);
 static void unfold_cnf_clause(struct fexpr *e);
 static void build_cnf_tseytin(struct fexpr *e);
 static void build_cnf_tseytin_util(struct fexpr *e, struct fexpr *t);
@@ -67,7 +66,7 @@ void construct_cnf_clauses(PicoSAT *p)
 /*
  * check, if a fexpr is in CNF
  */
-static bool fexpr_is_cnf(struct fexpr *e)
+bool fexpr_is_cnf(struct fexpr *e)
 {
 	if (!e) return false;
 	
