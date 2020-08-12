@@ -1,6 +1,9 @@
 #ifndef FEXPR_H
 #define FEXPR_H
 
+/* create a fexpr */
+struct fexpr * fexpr_create(int satval, enum fexpr_type type, char *name);
+
 /* create the fexpr for a symbol */
 void sym_create_fexpr (struct symbol *sym);
 
@@ -25,6 +28,9 @@ struct fexpr * fexpr_or(struct fexpr *a, struct fexpr *b);
 
 /* macro to create a fexpr of type NOT */
 struct fexpr * fexpr_not(struct fexpr *a);
+
+/* check whether a fexpr is in CNF */
+bool fexpr_is_cnf(struct fexpr *e);
 
 /* return fexpr_both for a symbol */
 struct fexpr * sym_get_fexpr_both(struct symbol *sym);
@@ -67,5 +73,14 @@ void convert_fexpr_to_nnf(struct fexpr *e);
 
 /* convert a fexpr from negation normal form into conjunctive normal form */
 void convert_fexpr_to_cnf(struct fexpr *e);
+
+/* print an fexpr */
+void fexpr_print(char *tag, struct fexpr *e, int parent);
+
+/* write an fexpr into a string (format needed for testing) */
+void fexpr_as_char(struct fexpr *e, struct gstr *s, int parent);
+
+/* write an fexpr into a string */
+void fexpr_as_char_short(struct fexpr *e, struct gstr *s, int parent);
 
 #endif

@@ -9,7 +9,7 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "satconf.h"
+#include "configfix.h"
 
 unsigned int sat_variable_nr = 1;
 unsigned int tmp_variable_nr = 1;

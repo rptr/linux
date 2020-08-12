@@ -9,7 +9,7 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "satconf.h"
+#include "configfix.h"
 
 #define MAX_DIAGNOSES 3
 #define MAX_SECONDS 30

@@ -40,6 +40,6 @@ config qwer
 	tristate "qwer"
 	depends on CUSTABC
 
-config qwer2
-	int "qwer2"
-	default 1
+#config qwer2
+#	int "qwer2"
+#	default 1

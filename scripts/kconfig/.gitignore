@@ -14,6 +14,6 @@ gconf
 #
 # satconfig
 #
-satconfig
-satdvconfig
-kconfig-sat/out_*
+cfconfig
+cfcliconfig
+configfix/out_*

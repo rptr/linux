@@ -9,14 +9,14 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "kconfig-sat/satconf.h"
+#include "configfix/configfix.h"
 
 
 /* -------------------------------------- */
 
 int main(int argc, char *argv[])
 {
-	printf("\nHello satconfig!\n");
+	printf("\nHello configfix!\n\n");
 	
 	run_satconf_cli(argv[1]);
 	

@@ -1,5 +1,5 @@
-#ifndef SATCONF_H
-#define SATCONF_H
+#ifndef CONFIGFIX_H
+#define CONFIGFIX_H
 
 /* make functions accessible from xconfig */
 #ifdef __cplusplus
@@ -21,7 +21,6 @@ extern "C" {
 
 /* include other header files needed */
 #include "picosat.h"
-#include "cnf.h"
 #include "constraints.h"
 #include "fexpr.h"
 #include "print.h"
