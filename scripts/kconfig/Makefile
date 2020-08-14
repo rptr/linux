@@ -4,7 +4,8 @@
 # These targets are used from top-level makefile
 
 PHONY += xconfig gconfig menuconfig config localmodconfig localyesconfig \
-	build_menuconfig build_nconfig build_gconfig build_xconfig
+	build_menuconfig build_nconfig build_gconfig build_xconfig cfconfig \
+	cfcliconfig
 
 ifdef KBUILD_KCONFIG
 Kconfig := $(KBUILD_KCONFIG)
@@ -32,6 +33,12 @@ config: $(obj)/conf
 	$< $(silent) --oldaskconfig $(Kconfig)
 
 nconfig: $(obj)/nconf
+	$< $(silent) $(Kconfig)
+
+cfconfig: $(obj)/cfconfig
+	$< $(silent) $(Kconfig)
+
+cfcliconfig: $(obj)/cfcliconfig
 	$< $(silent) $(Kconfig)
 
 build_menuconfig: $(obj)/mconf
@@ -124,6 +131,8 @@ help:
 	@echo  '  xconfig	  - Update current config utilising a Qt based front-end'
 	@echo  '  gconfig	  - Update current config utilising a GTK+ based front-end'
 	@echo  '  oldconfig	  - Update current config utilising a provided .config as base'
+	@echo  '  satconfig	  - Update current config to a valid config'
+	@echo  '  cfcliconfig	  - CLI to change a symbol to a desired value'
 	@echo  '  localmodconfig  - Update current config disabling modules not loaded'
 	@echo  '                    except those preserved by LMC_KEEP environment variable'
 	@echo  '  localyesconfig  - Update current config converting local mods to core'
@@ -178,6 +187,28 @@ $(foreach f, mconf.o $(lxdialog), \
   $(eval HOSTCFLAGS_$f = $$(shell . $(obj)/mconf-cfg && echo $$$$cflags)))
 
 $(addprefix $(obj)/, mconf.o $(lxdialog)): $(obj)/mconf-cfg
+
+### configfix ###
+hostprogs		+= cfconfig cfcliconfig
+cfconf-objs		:= configfix/constraints.o configfix/fexpr.o configfix/picosat.o configfix/print.o configfix/rangefix.o configfix/configfix.o configfix/satutils.o configfix/utils.o
+
+cfconfig-objs		:= cfconfig.o $(cfconf-objs) $(common-objs)
+cfcliconfig-objs	:= cfcliconfig.o $(cfconf-objs) $(common-objs)
+
+HOSTLDLIBS_cfconfig		= $(shell pkg-config --libs glib-2.0)
+HOSTCFLAGS_cfconfig.o		= $(shell pkg-config --cflags glib-2.0)
+HOSTLDLIBS_cfcliconfig		= $(shell pkg-config --libs glib-2.0)
+HOSTCFLAGS_cfcliconfig.o	= $(shell pkg-config --cflags glib-2.0)
+
+HOSTCFLAGS_configfix/configfix.o	= $(shell pkg-config --cflags glib-2.0)
+HOSTCFLAGS_configfix/constraints.o	= $(shell pkg-config --cflags glib-2.0)
+HOSTCFLAGS_configfix/fexpr.o		= $(shell pkg-config --cflags glib-2.0)
+HOSTCFLAGS_configfix/picosat.o		= -DTRACE -Wno-missing-prototypes -Wno-pointer-compare
+HOSTCFLAGS_configfix/print.o 		= $(shell pkg-config --cflags glib-2.0)
+HOSTCFLAGS_configfix/rangefix.o		= $(shell pkg-config --cflags glib-2.0)
+HOSTCFLAGS_configfix/satutils.o		= $(shell pkg-config --cflags glib-2.0)
+HOSTCFLAGS_configfix/utils.o 		= $(shell pkg-config --cflags glib-2.0)
+### configfix end ###
 
 # qconf: Used for the xconfig target based on Qt
 hostprogs	+= qconf

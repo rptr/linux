@@ -1,0 +1,48 @@
+menuconfig MODULES
+        bool "Enable loadable module support"
+        option modules
+	default y
+
+config A
+	bool "A"
+
+config B
+	tristate "B"
+	depends on A
+
+config C
+	tristate "C"
+	depends on B
+
+config D
+	int "D"
+	default 0 if B
+	default 1
+
+config E
+	tristate "E"
+	depends on A && B
+	default m
+
+config F
+	tristate "F"
+	depends on C || H
+	default y if B
+	default m
+
+config G
+	tristate "G"
+	depends on H
+	default y if A
+	default m if B
+
+config H
+	bool "H"
+
+#config I
+#	int "I"
+#	default 7
+
+config J
+	bool "J"
+	default F
