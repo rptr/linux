@@ -1,0 +1,42 @@
+menuconfig MODULES
+	bool "Enable loadable module support"
+	option modules
+	default y
+
+config A
+	tristate "A prompt"
+
+config B
+	tristate "B prompt"
+	select A if C
+
+config C
+	tristate "C prompt"
+	
+
+config D
+	tristate "D prompt"
+	#depends on A	
+	#default m if B
+	#default C || B
+
+#config E
+#	tristate "E prompt" if B
+	#depends on A
+
+#if C
+#config F
+#	bool "F prompt" if B
+	#depends on A && B
+#endif
+
+#config I
+#	int "I prompt"
+	#depends on B
+	#default 4 if C
+#	default 1
+
+#config J
+#	int "J prompt"
+	#depends on A
+#	default 1

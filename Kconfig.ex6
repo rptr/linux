@@ -1,0 +1,30 @@
+menuconfig MODULES
+        bool "Enable loadable module support"
+        option modules
+	default y
+
+config A
+	bool "A prompt"
+	#depends on B
+
+config B
+	bool "B prompt"
+
+config C
+	bool "C prompt"
+	#depends on I=5 || I=7
+
+config D
+	bool "D prompt"
+
+config I
+	int "I"
+	depends on C && D
+	#default 1
+	range 6 10 if A
+	range 15 20 if B
+	range 25 30
+
+#config H
+#	hex "H"
+#	range 0x0 0x4

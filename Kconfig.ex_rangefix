@@ -1,0 +1,11 @@
+config X1
+	bool "x1"
+
+config X2
+	bool "x2"
+	depends on X3
+	depends on X1
+
+config X3
+	bool "x3"
+	depends on X1

@@ -1,0 +1,36 @@
+# Kconfig example 2
+
+mainmenu "Kconfig example 2 - simple selects"
+
+config A
+	bool "CONFIG A"
+	default n if B=y || C
+	depends on D && F
+
+config B
+	bool "CONFIG B"
+	default y
+
+config C
+	bool "CONFIG C"
+	imply B
+
+config D
+	bool "CONFIG D"
+	select E if A && B || !C
+
+config E
+	bool "CONFIG E"
+	depends on F
+
+config F
+	bool "CONFIG F"
+	default y if H!=m
+	select C
+	select I
+
+config H
+	tristate "CONFIG H"
+
+config I
+	bool "CONFIG I"
