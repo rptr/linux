@@ -9,7 +9,7 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "configfix/configfix.h"
+#include "configfix.h"
 
 
 /* -------------------------------------- */

@@ -1858,7 +1858,7 @@ ConfigMainWindow::ConfigMainWindow(void)
 
 	configList->setFocus();
 
-	menu = menuBar();
+	// menu = menuBar();
 	toolBar = new QToolBar("Tools", this);
 	addToolBar(toolBar);
 

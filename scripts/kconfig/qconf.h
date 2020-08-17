@@ -16,10 +16,12 @@
 #include <QListWidget>
 #include <QTableWidget>
 #include <QList>
+#include <QComboBox>
+#include <QLabel>
 #include "expr.h"
 
 #include "conflict_resolver.h"
-#include "configfix/configfix.h"
+#include "configfix.h"
 
 class ConfigView;
 class ConfigList;

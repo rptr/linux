@@ -190,7 +190,7 @@ $(addprefix $(obj)/, mconf.o $(lxdialog)): $(obj)/mconf-cfg
 
 ### configfix ###
 hostprogs		+= cfconfig cfcliconfig
-cfconf-objs		:= configfix/constraints.o configfix/fexpr.o configfix/picosat.o configfix/print.o configfix/rangefix.o configfix/configfix.o configfix/satutils.o configfix/utils.o
+cfconf-objs		:= cfconstraints.o cffexpr.o picosat.o cfprint.o cfrangefix.o configfix.o cfsatutils.o cfutils.o
 
 cfconfig-objs		:= cfconfig.o $(cfconf-objs) $(common-objs)
 cfcliconfig-objs	:= cfcliconfig.o $(cfconf-objs) $(common-objs)
@@ -200,14 +200,14 @@ HOSTCFLAGS_cfconfig.o		= $(shell pkg-config --cflags glib-2.0)
 HOSTLDLIBS_cfcliconfig		= $(shell pkg-config --libs glib-2.0)
 HOSTCFLAGS_cfcliconfig.o	= $(shell pkg-config --cflags glib-2.0)
 
-HOSTCFLAGS_configfix/configfix.o	= $(shell pkg-config --cflags glib-2.0)
-HOSTCFLAGS_configfix/constraints.o	= $(shell pkg-config --cflags glib-2.0)
-HOSTCFLAGS_configfix/fexpr.o		= $(shell pkg-config --cflags glib-2.0)
-HOSTCFLAGS_configfix/picosat.o		= -DTRACE -Wno-missing-prototypes -Wno-pointer-compare
-HOSTCFLAGS_configfix/print.o 		= $(shell pkg-config --cflags glib-2.0)
-HOSTCFLAGS_configfix/rangefix.o		= $(shell pkg-config --cflags glib-2.0)
-HOSTCFLAGS_configfix/satutils.o		= $(shell pkg-config --cflags glib-2.0)
-HOSTCFLAGS_configfix/utils.o 		= $(shell pkg-config --cflags glib-2.0)
+HOSTCFLAGS_configfix.o	= $(shell pkg-config --cflags glib-2.0)
+HOSTCFLAGS_cfconstraints.o	= $(shell pkg-config --cflags glib-2.0)
+HOSTCFLAGS_cffexpr.o		= $(shell pkg-config --cflags glib-2.0)
+HOSTCFLAGS_picosat.o		= -DTRACE -Wno-missing-prototypes -Wno-pointer-compare
+HOSTCFLAGS_cfprint.o 		= $(shell pkg-config --cflags glib-2.0)
+HOSTCFLAGS_cfrangefix.o		= $(shell pkg-config --cflags glib-2.0)
+HOSTCFLAGS_cfsatutils.o		= $(shell pkg-config --cflags glib-2.0)
+HOSTCFLAGS_cfutils.o 		= $(shell pkg-config --cflags glib-2.0)
 ### configfix end ###
 
 # qconf: Used for the xconfig target based on Qt
@@ -219,7 +219,7 @@ HOSTLDLIBS_qconf	= $(shell . $(obj)/qconf-cfg && echo $$libs && pkg-config --lib
 HOSTLDLIBS_conflict_resolver	= $(shell . $(obj)/qconf-cfg && echo $$libs)
 HOSTCXXFLAGS_qconf.o	= $(shell . $(obj)/qconf-cfg && echo $$cflags && pkg-config --cflags glib-2.0)
 HOSTCXXFLAGS_conflict_resolver.o	= $(shell . $(obj)/qconf-cfg && echo $$cflags)
-HOSTCXXFLAGS_qconf-moc.o = $(shell . $(obj)/qconf-cfg && echo $$cflags)
+HOSTCXXFLAGS_qconf-moc.o = $(shell . $(obj)/qconf-cfg && echo $$cflags && pkg-config --cflags glib-2.0)
 
 $(obj)/qconf.o: $(obj)/qconf-cfg
 

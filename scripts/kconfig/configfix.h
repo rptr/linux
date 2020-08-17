@@ -8,7 +8,7 @@ extern "C" {
 
 /* include internal definitions */
 #define LKC_DIRECT_LINK
-#include "../lkc.h"
+#include "lkc.h"
 
 
 /* include glib */
@@ -16,17 +16,17 @@ extern "C" {
 
 
 /* include own definitions */
-#include "defs.h"
+#include "cfdefs.h"
 
 
 /* include other header files needed */
 #include "picosat.h"
-#include "constraints.h"
-#include "fexpr.h"
-#include "print.h"
-#include "rangefix.h"
-#include "satutils.h"
-#include "utils.h"
+#include "cfconstraints.h"
+#include "cffexpr.h"
+#include "cfprint.h"
+#include "cfrangefix.h"
+#include "cfsatutils.h"
+#include "cfutils.h"
 
 
 /* external functions */
