@@ -115,7 +115,7 @@ public:
 	QPalette inactivedColorGroup;
 	QMenu* headerPopup;
 
-	static QAction *showNormalAction, *showAllAction, *showPromptAction;
+	static QAction *showNormalAction, *showAllAction, *showPromptAction, *addSymbolsFromContextMenu;
 };
 
 class ConfigItem : public QTreeWidgetItem {
