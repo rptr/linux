@@ -1492,7 +1492,12 @@ void apply_fix(GArray *diag)
 {
 	struct symbol_fix *fix;
 	unsigned int i, no_symbols_set = 0, iterations = 0;
-	GArray *tmp = g_array_copy(diag);
+// 	GArray *tmp = g_array_copy(diag);
+	GArray *tmp = g_array_new(false, false, sizeof(struct symbol_fix *));
+	for (i = 0; i < diag->len; i++) {
+		fix = g_array_index(diag, struct symbol_fix *, i);
+		g_array_append_val(tmp, fix);
+	}
 
 	
 	printf("\nTrying to apply fixes now...\n");
