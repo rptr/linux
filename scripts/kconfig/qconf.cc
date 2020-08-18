@@ -954,7 +954,7 @@ ConfigView::ConfigView(QWidget* parent, const char *name)
 void ConfigView::ShowContextMenu(const QPoint& pos){
    QMenu contextMenu(tr("Context menu"), this);
 
-   contextMenu.addAction(addSymbolsFromContextMenu);
+   contextMenu.addAction(ConfigList::addSymbolsFromContextMenu);
    contextMenu.exec(mapToGlobal(pos));
 }
 
