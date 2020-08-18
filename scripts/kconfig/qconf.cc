@@ -1089,14 +1089,14 @@ ConflictsView::ConflictsView(QWidget* parent, const char *name)
 	solutionTable->setColumnCount(2);
 	solutionTable->setHorizontalHeaderLabels(QStringList()  << "Symbol" << "New Value");
 
-	// applyFixButton = new QPushButton("Apply Selected solution");
-	// connect(applyFixButton, SIGNAL(clicked(bool)), SLOT(applyFixButtonClick()));
+	applyFixButton = new QPushButton("Apply Selected solution");
+	connect(applyFixButton, SIGNAL(clicked(bool)), SLOT(applyFixButtonClick()));
 
 	numSolutionLabel = new QLabel("Solutions:");
 	solutionLayout->addWidget(numSolutionLabel);
 	solutionLayout->addWidget(solutionSelector);
 	solutionLayout->addWidget(solutionTable);
-	// solutionLayout->addWidget(applyFixButton);
+	solutionLayout->addWidget(applyFixButton);
 
 	horizontalLayout->addLayout(solutionLayout);
 
@@ -1123,6 +1123,8 @@ void ConflictsView::applyFixButtonClick(){
 
 	GArray* selected_solution = g_array_index(solution_output,GArray * , solution_number);
 	apply_satfix(selected_solution);
+	
+	ConfigView::updateListAll();
 }
 void ConflictsView::changeToYes(){
 	QItemSelectionModel *select = conflictsTable->selectionModel();
