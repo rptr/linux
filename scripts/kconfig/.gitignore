@@ -16,4 +16,5 @@ gconf
 #
 cfconfig
 cfcliconfig
-configfix/out_*
+cfoutconfig
+cfout_constraints.*

@@ -6,8 +6,7 @@
 #ifndef CF_PRINT_H
 #define CF_PRINT_H
 
-#define OUTFILE_DIMACS "./scripts/kconfig/kconfig-sat/out_cnf.dimacs"
-#define OUTFILE_FEXPR "./scripts/kconfig/kconfig-sat/out_constraints"
+#define OUTFILE_FEXPR "./scripts/kconfig/cf_constraints.out"
 
 /* print all symbols */
 void print_all_symbols(void);
@@ -40,6 +39,6 @@ void print_default_map(GArray *map);
 void write_cnf_to_file(GArray *cnf_clauses, int sat_variable_nr, int nr_of_clauses);
 
 /* write all constraints into a file for testing purposes */
-void write_constraints_to_file(void);
+void write_constraints_to_file_kcr(void);
 
 #endif

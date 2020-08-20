@@ -5,7 +5,7 @@
 
 PHONY += xconfig gconfig menuconfig config localmodconfig localyesconfig \
 	build_menuconfig build_nconfig build_gconfig build_xconfig \
-	cfconfig cfcliconfig
+	cfconfig cfcliconfig cfoutconfig
 
 ifdef KBUILD_KCONFIG
 Kconfig := $(KBUILD_KCONFIG)
@@ -39,6 +39,9 @@ cfconfig: $(obj)/cfconfig
 	$< $(silent) $(Kconfig)
 
 cfcliconfig: $(obj)/cfcliconfig
+	$< $(silent) $(Kconfig)
+
+cfoutconfig: $(obj)/cfoutconfig
 	$< $(silent) $(Kconfig)
 
 build_menuconfig: $(obj)/mconf
@@ -131,8 +134,6 @@ help:
 	@echo  '  xconfig	  - Update current config utilising a Qt based front-end'
 	@echo  '  gconfig	  - Update current config utilising a GTK+ based front-end'
 	@echo  '  oldconfig	  - Update current config utilising a provided .config as base'
-	@echo  '  satconfig	  - Update current config to a valid config'
-	@echo  '  cfcliconfig	  - CLI to change a symbol to a desired value'
 	@echo  '  localmodconfig  - Update current config disabling modules not loaded'
 	@echo  '                    except those preserved by LMC_KEEP environment variable'
 	@echo  '  localyesconfig  - Update current config converting local mods to core'
@@ -151,6 +152,7 @@ help:
 	@echo  '  olddefconfig	  - Same as oldconfig but sets new symbols to their'
 	@echo  '                    default value without prompting'
 	@echo  '  tinyconfig	  - Configure the tiniest possible kernel'
+	@echo  '  cfoutconfig	  - Output the constraint from configfix into a textfile'
 	@echo  '  testconfig	  - Run Kconfig unit tests (requires python3 and pytest)'
 
 # ===========================================================================
@@ -189,16 +191,19 @@ $(foreach f, mconf.o $(lxdialog), \
 $(addprefix $(obj)/, mconf.o $(lxdialog)): $(obj)/mconf-cfg
 
 ### configfix ###
-hostprogs		+= cfconfig cfcliconfig
+hostprogs		+= cfconfig cfcliconfig cfoutconfig
 cfconf-objs		:= configfix.o cf_constraints.o cf_fexpr.o cf_print.o cf_rangefix.o cf_satutils.o cf_utils.o picosat.o
 
 cfconfig-objs		:= cfconfig.o $(cfconf-objs) $(common-objs)
 cfcliconfig-objs	:= cfcliconfig.o $(cfconf-objs) $(common-objs)
+cfoutconfig-objs	:= cfoutconfig.o $(cfconf-objs) $(common-objs)
 
 HOSTLDLIBS_cfconfig		= $(shell pkg-config --libs glib-2.0)
 HOSTCFLAGS_cfconfig.o		= $(shell pkg-config --cflags glib-2.0)
 HOSTLDLIBS_cfcliconfig		= $(shell pkg-config --libs glib-2.0)
 HOSTCFLAGS_cfcliconfig.o	= $(shell pkg-config --cflags glib-2.0)
+HOSTLDLIBS_cfoutconfig		= $(shell pkg-config --libs glib-2.0)
+HOSTCFLAGS_cfoutconfig.o	= $(shell pkg-config --cflags glib-2.0)
 
 HOSTCFLAGS_configfix.o		= $(shell pkg-config --cflags glib-2.0)
 HOSTCFLAGS_cf_constraints.o	= $(shell pkg-config --cflags glib-2.0)

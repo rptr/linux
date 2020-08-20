@@ -475,7 +475,7 @@ void write_cnf_to_file(GArray *cnf_clauses, int sat_variable_nr, int nr_of_claus
 /*
  * write all constraints into a file for testing purposes
  */
-void write_constraints_to_file(void)
+void write_constraints_to_file_kcr(void)
 {
 	printf("Writing constraints to file...");
 	
