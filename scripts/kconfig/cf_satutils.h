@@ -1,5 +1,10 @@
-#ifndef SATUTILS_H
-#define SATUTILS_H
+/* SPDX-License-Identifier: GPL-2.0 */
+/*
+ * Copyright (C) 2020 Patrick Franz <patfra71@gmail.com>
+ */
+
+#ifndef CF_SATUTILS_H
+#define CF_SATUTILS_H
 
 /* initialize PicoSAT */
 PicoSAT * initialize_picosat(void);

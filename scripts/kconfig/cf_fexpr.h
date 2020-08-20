@@ -1,5 +1,10 @@
-#ifndef FEXPR_H
-#define FEXPR_H
+/* SPDX-License-Identifier: GPL-2.0 */
+/*
+ * Copyright (C) 2020 Patrick Franz <patfra71@gmail.com>
+ */
+
+#ifndef CF_FEXPR_H
+#define CF_FEXPR_H
 
 /* create a fexpr */
 struct fexpr * fexpr_create(int satval, enum fexpr_type type, char *name);

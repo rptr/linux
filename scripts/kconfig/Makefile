@@ -4,8 +4,8 @@
 # These targets are used from top-level makefile
 
 PHONY += xconfig gconfig menuconfig config localmodconfig localyesconfig \
-	build_menuconfig build_nconfig build_gconfig build_xconfig cfconfig \
-	cfcliconfig
+	build_menuconfig build_nconfig build_gconfig build_xconfig \
+	cfconfig cfcliconfig
 
 ifdef KBUILD_KCONFIG
 Kconfig := $(KBUILD_KCONFIG)
@@ -190,7 +190,7 @@ $(addprefix $(obj)/, mconf.o $(lxdialog)): $(obj)/mconf-cfg
 
 ### configfix ###
 hostprogs		+= cfconfig cfcliconfig
-cfconf-objs		:= cfconstraints.o cffexpr.o picosat.o cfprint.o cfrangefix.o configfix.o cfsatutils.o cfutils.o
+cfconf-objs		:= configfix.o cf_constraints.o cf_fexpr.o cf_print.o cf_rangefix.o cf_satutils.o cf_utils.o picosat.o
 
 cfconfig-objs		:= cfconfig.o $(cfconf-objs) $(common-objs)
 cfcliconfig-objs	:= cfcliconfig.o $(cfconf-objs) $(common-objs)
@@ -200,14 +200,14 @@ HOSTCFLAGS_cfconfig.o		= $(shell pkg-config --cflags glib-2.0)
 HOSTLDLIBS_cfcliconfig		= $(shell pkg-config --libs glib-2.0)
 HOSTCFLAGS_cfcliconfig.o	= $(shell pkg-config --cflags glib-2.0)
 
-HOSTCFLAGS_configfix.o	= $(shell pkg-config --cflags glib-2.0)
-HOSTCFLAGS_cfconstraints.o	= $(shell pkg-config --cflags glib-2.0)
-HOSTCFLAGS_cffexpr.o		= $(shell pkg-config --cflags glib-2.0)
+HOSTCFLAGS_configfix.o		= $(shell pkg-config --cflags glib-2.0)
+HOSTCFLAGS_cf_constraints.o	= $(shell pkg-config --cflags glib-2.0)
+HOSTCFLAGS_cf_fexpr.o		= $(shell pkg-config --cflags glib-2.0)
+HOSTCFLAGS_cf_print.o 		= $(shell pkg-config --cflags glib-2.0)
+HOSTCFLAGS_cf_rangefix.o	= $(shell pkg-config --cflags glib-2.0)
+HOSTCFLAGS_cf_satutils.o	= $(shell pkg-config --cflags glib-2.0)
+HOSTCFLAGS_cf_utils.o 		= $(shell pkg-config --cflags glib-2.0)
 HOSTCFLAGS_picosat.o		= -DTRACE -Wno-missing-prototypes -Wno-pointer-compare
-HOSTCFLAGS_cfprint.o 		= $(shell pkg-config --cflags glib-2.0)
-HOSTCFLAGS_cfrangefix.o		= $(shell pkg-config --cflags glib-2.0)
-HOSTCFLAGS_cfsatutils.o		= $(shell pkg-config --cflags glib-2.0)
-HOSTCFLAGS_cfutils.o 		= $(shell pkg-config --cflags glib-2.0)
 ### configfix end ###
 
 # qconf: Used for the xconfig target based on Qt

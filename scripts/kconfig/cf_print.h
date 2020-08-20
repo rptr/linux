@@ -1,5 +1,10 @@
-#ifndef PRINT_H
-#define PRINT_H
+/* SPDX-License-Identifier: GPL-2.0 */
+/*
+ * Copyright (C) 2020 Patrick Franz <patfra71@gmail.com>
+ */
+
+#ifndef CF_PRINT_H
+#define CF_PRINT_H
 
 #define OUTFILE_DIMACS "./scripts/kconfig/kconfig-sat/out_cnf.dimacs"
 #define OUTFILE_FEXPR "./scripts/kconfig/kconfig-sat/out_constraints"

@@ -256,7 +256,7 @@ GArray * run_satconf(GArray *arr)
 		printf("===> PROBLEM IS UNSATISFIABLE <===\n");
 		printf("\n");
 		
-		ret = rangefix_init(pico);
+		ret = rangefix_run(pico);
 	}
 	else {
 		printf("Unknown if satisfiable.\n");

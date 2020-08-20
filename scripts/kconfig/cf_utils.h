@@ -1,5 +1,10 @@
-#ifndef UTILS_H
-#define UTILS_H
+/* SPDX-License-Identifier: GPL-2.0 */
+/*
+ * Copyright (C) 2020 Patrick Franz <patfra71@gmail.com>
+ */
+
+#ifndef CF_UTILS_H
+#define CF_UTILS_H
 
 /* parse Kconfig-file and read .config */
 void init_config (const char *Kconfig_file);

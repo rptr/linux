@@ -1,3 +1,8 @@
+/* SPDX-License-Identifier: GPL-2.0 */
+/*
+ * Copyright (C) 2020 Patrick Franz <patfra71@gmail.com>
+ */
+
 #define _GNU_SOURCE
 #include <assert.h>
 #include <locale.h>
@@ -569,7 +574,7 @@ void picosat_solve(PicoSAT *pico)
 static void run_unsat_problem(PicoSAT *pico)
 {
 	/* get the diagnoses from RangeFix */
-	GArray *diagnoses = rangefix_init(pico);
+	GArray *diagnoses = rangefix_run(pico);
 	
 	/* ask user for solution to apply */
 	GArray *fix = choose_fix(diagnoses);
