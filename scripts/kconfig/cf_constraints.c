@@ -1076,5 +1076,11 @@ void sym_add_constraint(struct symbol *sym, struct fexpr *constraint)
 {
 	if (!constraint) return;
 	
+	/* no need to add that */
+	if (constraint == const_true) return;
+	
+	/* this should never happen */
+	if (constraint == const_false) perror("Adding const_false.");
+	
 	g_array_append_val(sym->constraints->arr, constraint);
 }
