@@ -5,31 +5,15 @@ menuconfig MODULES
 
 config A
 	bool "A"
-#	depends on B
-	#select S
-	#default y
 
 config B
 	bool "B"
-	depends on A
 
 config C
 	bool "C"
-	depends on A
-#	default y if E
-#	default m
+	depends on A && B
+	#default y
 
 config D
-	tristate "D"
-	depends on C
-
-#config E
-#	bool "E"
-#	select D
-
-#config S
-#	tristate "S"
-#	depends on D && I=16
-
-#config I
-#	int "I"
+	bool "D"
+	select C
