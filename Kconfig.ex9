@@ -3,17 +3,34 @@ menuconfig MODULES
 	option modules
 	default y
 
+choice
+	bool
+	prompt "1"
+	depends on E
+
 config A
 	bool "A"
 
 config B
 	bool "B"
+	depends on D
 
 config C
 	bool "C"
-	depends on A && B
+#	depends on A
 	#default y
+
+endchoice
 
 config D
 	bool "D"
-	select C
+	#select E
+
+config E
+	tristate "E"
+	depends on D
+	#depends on m && F
+
+config F
+	tristate "F"
+	#select E
