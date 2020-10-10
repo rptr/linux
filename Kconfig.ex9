@@ -27,10 +27,10 @@ config D
 	#select E
 
 config E
-	tristate "E"
-	depends on D
+	bool "E"
+	#depends on D
 	#depends on m && F
 
 config F
-	tristate "F"
+	bool "F"
 	#select E
