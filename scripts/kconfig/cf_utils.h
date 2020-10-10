@@ -46,6 +46,18 @@ struct fexpr * get_fexpr_from_satmap(int key);
 /* parse an expr as a k_expr */
 struct k_expr * parse_expr(struct expr *e, struct k_expr *parent);
 
+/* print an expr */
+void print_expr(char *tag, struct expr *e, int prevtoken);
+
+/* print some debug info about the tree structure of k_expr */
+void debug_print_kexpr(struct k_expr *e);
+
+/* print a kexpr */
+void print_kexpr(char *tag, struct k_expr *e);
+
+/* write a kexpr into a string */
+void kexpr_as_char(struct k_expr *e, struct gstr *s);
+
 
 /* check, if the symbol is a tristate-constant */
 bool is_tristate_constant(struct symbol *sym);
@@ -73,6 +85,18 @@ char * sym_get_name(struct symbol *sym);
 
 /* check whether symbol is to be changed */
 bool sym_is_sdv(GArray *arr, struct symbol *sym);
+
+/* print a symbol's name */
+void print_sym_name(struct symbol *sym);
+
+/* print all constraints for a symbol */
+void print_sym_constraint(struct symbol *sym);
+
+/* print a default map */
+void print_default_map(GArray *map);
+
+/* print all symbols */
+void print_all_symbols(void);
 
 /* add an integer to a GArray */
 void g_array_add_ints(int num, ...);
