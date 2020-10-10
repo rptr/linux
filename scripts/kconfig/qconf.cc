@@ -1189,7 +1189,6 @@ void ConflictsView::addSymbol(struct menu *m)
 }
 void ConflictsView::addSymbolFromContextMenu() {
 	struct menu *menu;
-	enum prop_type type;
 
 	if (currentSelection.count() == 0)
 		return;
@@ -1251,7 +1250,7 @@ void ConflictsView::changeSolutionTable(int solution_number){
 // 	std::cout << "solution length =" << unsigned(selected_solution->len) << std::endl;
 	// solutionTable->clearContents();
 	solutionTable->setRowCount(0);
-	for (int i = 0; i <selected_solution->len; i++)
+	for (unsigned int i = 0; i <selected_solution->len; i++)
 	{
 		solutionTable->insertRow(solutionTable->rowCount());
 		struct symbol_fix* cur_symbol = g_array_index(selected_solution,struct symbol_fix*,i);
@@ -1355,7 +1354,7 @@ void ConflictsView::calculateFixes(void)
 	}
 // 	std::cout << "solution length = " << unsigned(solution_output->len) << std::endl;
 	solutionSelector->clear();
-	for (int i = 0; i < solution_output->len; i++)
+	for (unsigned int i = 0; i < solution_output->len; i++)
 	{
 		solutionSelector->addItem(QString::number(i+1));
 	}

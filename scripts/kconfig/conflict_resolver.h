@@ -14,25 +14,20 @@ extern "C" {
 #endif
 
 enum symbol_status {
-    UNSATISFIED,
-    SATISFIED
+	UNSATISFIED,
+	SATISFIED
 };
 
 typedef struct
 {
-    QString symbol;
-    QString change_needed;
-    enum symbol_status status;
-    tristate req; // change requested
+	QString symbol;
+	QString change_needed;
+	enum symbol_status status;
+	tristate req; // change requested
 } Constraint ;
 
-QString tristate_value_to_string(tristate x);
-tristate string_value_to_tristate(QString x);
-
-
-
-
-
+QString tristate_value_to_string(tristate val);
+tristate string_value_to_tristate(QString s);
 
 
 #ifdef __cplusplus
