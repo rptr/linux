@@ -28,7 +28,6 @@ extern "C" {
 #include "picosat.h"
 #include "cf_constraints.h"
 #include "cf_fexpr.h"
-#include "cf_print.h"
 #include "cf_rangefix.h"
 #include "cf_satutils.h"
 #include "cf_utils.h"
