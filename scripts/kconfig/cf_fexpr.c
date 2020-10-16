@@ -572,7 +572,7 @@ struct fexpr * sym_get_fexpr_both(struct symbol *sym)
  */
 struct fexpr * sym_get_fexpr_sel_y(struct symbol *sym)
 {
-	if (!sym->rev_dep.expr)
+	if (sym->fexpr_sel_y == NULL)
 		return const_false;
 	
 	return sym->fexpr_sel_y;
@@ -583,7 +583,7 @@ struct fexpr * sym_get_fexpr_sel_y(struct symbol *sym)
  */
 struct fexpr * sym_get_fexpr_sel_m(struct symbol *sym)
 {
-	if (!sym->rev_dep.expr || sym->type == S_TRISTATE)
+	if (sym->fexpr_sel_m == NULL || sym->type != S_TRISTATE)
 		return const_false;
 	
 	return sym->fexpr_sel_m;
