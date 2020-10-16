@@ -74,10 +74,10 @@ bool fexpr_is_symbol_or_not(struct fexpr *e);
 bool fexpr_is_symbol_or_neg_atom(struct fexpr *e);
 
 /* convert a fexpr into negation normal form */
-void convert_fexpr_to_nnf(struct fexpr *e);
+// void convert_fexpr_to_nnf(struct fexpr *e);
 
 /* convert a fexpr from negation normal form into conjunctive normal form */
-void convert_fexpr_to_cnf(struct fexpr *e);
+// void convert_fexpr_to_cnf(struct fexpr *e);
 
 /* print an fexpr */
 void fexpr_print(char *tag, struct fexpr *e, int parent);

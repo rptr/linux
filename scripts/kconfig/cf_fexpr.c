@@ -504,6 +504,27 @@ struct fexpr * fexpr_not(struct fexpr *a)
 	if (a == const_true)
 		return const_false;
 	
+	/* eliminate double negation */
+	if (a->type == FE_NOT)
+		return a->left;
+
+	/* De Morgan */
+	if (a->type == FE_AND) {
+		struct fexpr *fe = malloc(sizeof(struct fexpr));
+		fe->type = FE_OR;
+		fe->left = fexpr_not(a->left);
+		fe->right = fexpr_not(a->right);
+
+		return fe;
+	} else if (a->type == FE_OR) {
+		struct fexpr *fe = malloc(sizeof(struct fexpr));
+		fe->type = FE_AND;
+		fe->left = fexpr_not(a->left);
+		fe->right = fexpr_not(a->right);
+
+		return fe;
+	}
+	
 	struct fexpr *fe = malloc(sizeof(struct fexpr));
 	fe->type = FE_NOT;
 	fe->left = a;
@@ -614,157 +635,150 @@ bool fexpr_is_symbol_or_neg_atom(struct fexpr *e)
 /*
  * convert a fexpr into negation normal form
  */
-static bool convert_fexpr_to_nnf_util(struct fexpr *e)
-{
-	if (!e) return false;
-	
-	switch (e->type) {
-	case FE_SYMBOL:
-	case FE_CHOICE:
-	case FE_FALSE:
-	case FE_TRUE:
-	case FE_SELECT:
-	case FE_TMPSATVAR:
-		return false;
-	case FE_AND:
-	case FE_OR:
-		return convert_fexpr_to_nnf_util(e->left) || convert_fexpr_to_nnf_util(e->right);
-	case FE_NOT:
-		/* De Morgan */
-		if (e->left->type == FE_AND) {
-			struct fexpr *left = malloc(sizeof(struct fexpr));
-			left->type = FE_NOT;
-			left->left = e->left->left;
-			struct fexpr *right = malloc(sizeof(struct fexpr));
-			right->type = FE_NOT;
-			right->left = e->left->right;
-			
-			e->type = FE_OR;
-			e->left = left;
-			e->right = right;
-			
-			return true;
-		} else if (e->left->type == FE_OR) {
-			struct fexpr *left = malloc(sizeof(struct fexpr));
-			left->type = FE_NOT;
-			left->left = e->left->left;
-			struct fexpr *right = malloc(sizeof(struct fexpr));
-			right->type = FE_NOT;
-			right->left = e->left->right;
-			
-			e->type = FE_AND;
-			e->left = left;
-			e->right = right;
-			
-			return true;
-		} 
-		/* double negation */
-		else if (e->left->type == FE_NOT) {
-			if (e->left->left->type == FE_SYMBOL || e->left->left->type == FE_CHOICE) {
-				e->type = e->left->left->type;
-				e->name = str_new();
-				str_append(&e->name, str_get(&e->left->left->name));
-				e->satval = e->left->left->satval;
-				e->sym = e->left->left->sym;
-				if (e->type == FE_SYMBOL)
-					e->tri = e->left->left->tri;
-				return true;
-			} else if (e->left->left->type == FE_AND || e->left->left->type == FE_OR) {
-				e->type = e->left->left->type;
-				e->right = e->left->left->right;
-				e->left = e->left->left->left;
-				return true;
-			} else if (e->left->left->type == FE_EQUALS) {
-				e->type = e->left->left->type;
-				e->eqsym = e->left->left->eqsym;
-				e->eqvalue = e->left->left->eqvalue;
-				return true;
-			}
-			return false;
-		}
-		return false;
-	case FE_EQUALS:
-	case FE_NONBOOL:
-		return false;
-	}
-	return false;
-}
-void convert_fexpr_to_nnf(struct fexpr *e) {
-	while (convert_fexpr_to_nnf_util(e))
-		;
-}
+// static bool convert_fexpr_to_nnf_util(struct fexpr *e)
+// {
+// 	if (!e) return false;
+// 	
+// 	switch (e->type) {
+// 	case FE_SYMBOL:
+// 	case FE_CHOICE:
+// 	case FE_FALSE:
+// 	case FE_TRUE:
+// 	case FE_SELECT:
+// 	case FE_TMPSATVAR:
+// 		return false;
+// 	case FE_AND:
+// 	case FE_OR:
+// 		return convert_fexpr_to_nnf_util(e->left) || convert_fexpr_to_nnf_util(e->right);
+// 	case FE_NOT:
+// 		/* De Morgan */
+// 		if (e->left->type == FE_AND) {
+// 			struct fexpr *left = malloc(sizeof(struct fexpr));
+// 			left->type = FE_NOT;
+// 			left->left = e->left->left;
+// 			struct fexpr *right = malloc(sizeof(struct fexpr));
+// 			right->type = FE_NOT;
+// 			right->left = e->left->right;
+// 			
+// 			e->type = FE_OR;
+// 			e->left = left;
+// 			e->right = right;
+// 			
+// 			return true;
+// 		} else if (e->left->type == FE_OR) {
+// 			struct fexpr *left = malloc(sizeof(struct fexpr));
+// 			left->type = FE_NOT;
+// 			left->left = e->left->left;
+// 			struct fexpr *right = malloc(sizeof(struct fexpr));
+// 			right->type = FE_NOT;
+// 			right->left = e->left->right;
+// 			
+// 			e->type = FE_AND;
+// 			e->left = left;
+// 			e->right = right;
+// 			
+// 			return true;
+// 		} 
+// 		/* double negation */
+// 		else if (e->left->type == FE_NOT) {
+// 			if (e->left->left->type == FE_SYMBOL || e->left->left->type == FE_CHOICE) {
+// 				e->type = e->left->left->type;
+// 				e->name = str_new();
+// 				str_append(&e->name, str_get(&e->left->left->name));
+// 				e->satval = e->left->left->satval;
+// 				e->sym = e->left->left->sym;
+// 				if (e->type == FE_SYMBOL)
+// 					e->tri = e->left->left->tri;
+// 				return true;
+// 			} else if (e->left->left->type == FE_AND || e->left->left->type == FE_OR) {
+// 				e->type = e->left->left->type;
+// 				e->right = e->left->left->right;
+// 				e->left = e->left->left->left;
+// 				return true;
+// 			} else if (e->left->left->type == FE_EQUALS) {
+// 				e->type = e->left->left->type;
+// 				e->eqsym = e->left->left->eqsym;
+// 				e->eqvalue = e->left->left->eqvalue;
+// 				return true;
+// 			}
+// 			return false;
+// 		}
+// 		return false;
+// 	case FE_EQUALS:
+// 	case FE_NONBOOL:
+// 		return false;
+// 	}
+// 	return false;
+// }
+// void convert_fexpr_to_nnf(struct fexpr *e) {
+// 	while (convert_fexpr_to_nnf_util(e))
+// 		;
+// }
 
 /* 
  * convert a fexpr from negation normal form into conjunctive normal form
  */
-static bool convert_nnf_to_cnf_util(struct fexpr *e)
-{
-// 	print_fexpr("fe:", e, -1);
-// 	printf("Type: %d\n", e->type);
-// 	getchar();
-	
-	switch (e->type) {
-	case FE_SYMBOL:
-	case FE_CHOICE:
-	case FE_FALSE:
-	case FE_TRUE:
-	case FE_SELECT:
-	case FE_TMPSATVAR:
-		return false;
-	case FE_AND:
-		return convert_nnf_to_cnf_util(e->left) || convert_nnf_to_cnf_util(e->right);
-	case FE_OR:
-		if (e->left->type == FE_AND) {
-			e->type = FE_AND;
-			struct fexpr *fe_left = malloc(sizeof(struct fexpr));
-			struct fexpr *fe_right = malloc(sizeof(struct fexpr));
-			
-			fe_left->type = FE_OR;
-			fe_left->left = e->left->left;
-			fe_left->right = e->right;
-	
-			fe_right->type = FE_OR;
-			fe_right->left = e->left->right;
-			fe_right->right = e->right;
-			
-			e->left = fe_left;
-			e->right = fe_right;
-			
-			return true;
-		}
-		else if (e->right->type == FE_AND) {
-			e->type = FE_AND;
-			struct fexpr *fe_left = malloc(sizeof(struct fexpr));
-			struct fexpr *fe_right = malloc(sizeof(struct fexpr));
-			
-			fe_left->type = FE_OR;
-			fe_left->left = e->left;
-			fe_left->right = e->right->left;
-	
-			fe_right->type = FE_OR;
-			fe_right->left = e->left;
-			fe_right->right = e->right->right;
-			
-			e->left = fe_left;
-			e->right = fe_right;
-			
-			return true;
-		}
-		return convert_nnf_to_cnf_util(e->left) || convert_nnf_to_cnf_util(e->right);
-	case FE_NOT:
-	case FE_EQUALS:
-	case FE_NONBOOL:
-		return false;
-	}
-	return false;
-}
-void convert_fexpr_to_cnf(struct fexpr *e) {
-// 	printf("\n");
-// 	print_fexpr("fexpr:", e, -1);
-// 	printf("Type: %d\n", e->type);
-	while (convert_nnf_to_cnf_util(e))
-		;
-}
+// static bool convert_nnf_to_cnf_util(struct fexpr *e)
+// {
+// 	switch (e->type) {
+// 	case FE_SYMBOL:
+// 	case FE_CHOICE:
+// 	case FE_FALSE:
+// 	case FE_TRUE:
+// 	case FE_SELECT:
+// 	case FE_TMPSATVAR:
+// 		return false;
+// 	case FE_AND:
+// 		return convert_nnf_to_cnf_util(e->left) || convert_nnf_to_cnf_util(e->right);
+// 	case FE_OR:
+// 		if (e->left->type == FE_AND) {
+// 			e->type = FE_AND;
+// 			struct fexpr *fe_left = malloc(sizeof(struct fexpr));
+// 			struct fexpr *fe_right = malloc(sizeof(struct fexpr));
+// 			
+// 			fe_left->type = FE_OR;
+// 			fe_left->left = e->left->left;
+// 			fe_left->right = e->right;
+// 	
+// 			fe_right->type = FE_OR;
+// 			fe_right->left = e->left->right;
+// 			fe_right->right = e->right;
+// 			
+// 			e->left = fe_left;
+// 			e->right = fe_right;
+// 			
+// 			return true;
+// 		}
+// 		else if (e->right->type == FE_AND) {
+// 			e->type = FE_AND;
+// 			struct fexpr *fe_left = malloc(sizeof(struct fexpr));
+// 			struct fexpr *fe_right = malloc(sizeof(struct fexpr));
+// 			
+// 			fe_left->type = FE_OR;
+// 			fe_left->left = e->left;
+// 			fe_left->right = e->right->left;
+// 	
+// 			fe_right->type = FE_OR;
+// 			fe_right->left = e->left;
+// 			fe_right->right = e->right->right;
+// 			
+// 			e->left = fe_left;
+// 			e->right = fe_right;
+// 			
+// 			return true;
+// 		}
+// 		return convert_nnf_to_cnf_util(e->left) || convert_nnf_to_cnf_util(e->right);
+// 	case FE_NOT:
+// 	case FE_EQUALS:
+// 	case FE_NONBOOL:
+// 		return false;
+// 	}
+// 	return false;
+// }
+// void convert_fexpr_to_cnf(struct fexpr *e) {
+// 	while (convert_nnf_to_cnf_util(e))
+// 		;
+// }
 
 /*
  * print a fexpr

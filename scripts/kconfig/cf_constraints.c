@@ -146,7 +146,6 @@ void get_constraints(void)
 		sym_add_constraint(sym, sel_y);
 		
 		struct fexpr *c1 = implies(sym->fexpr_sel_y, sym->list_sel_y);
-		convert_fexpr_to_nnf(c1);
 		sym_add_constraint(sym, c1);
 		
 		/* only continue for tristates */
@@ -156,7 +155,6 @@ void get_constraints(void)
 		sym_add_constraint(sym, sel_m);
         
 		struct fexpr *c2 = implies(sym->fexpr_sel_m, sym->list_sel_m);
-		convert_fexpr_to_nnf(c2);
 		sym_add_constraint(sym, c2);
 	}
 	
@@ -277,7 +275,6 @@ static void add_selects(struct symbol *sym)
 		
 		struct fexpr *e1 = implies(fexpr_and(cond_y, sym->fexpr_y), selected->fexpr_sel_y);
         
-		convert_fexpr_to_nnf(e1);
 		sym_add_constraint(selected, e1);
 		
 		/* imply that symbol is selected to y */
@@ -293,8 +290,7 @@ static void add_selects(struct symbol *sym)
 		
 
 		struct fexpr *e2 = implies(fexpr_and(sym_get_fexpr_both(sym), cond_both), sym_get_fexpr_sel_both(selected));
-        
-		convert_fexpr_to_nnf(e2);
+
 		sym_add_constraint(selected, e2);
 		
 		/* imply that symbol is selected */
@@ -328,17 +324,14 @@ static void add_dependencies_bool(struct symbol *sym)
 		
 		struct fexpr *fe_y = implies(sym->fexpr_y, fexpr_or(dep_y, sel_y));
 		
-		convert_fexpr_to_nnf(fe_y);
 		sym_add_constraint(sym, fe_y);
 		
 		struct fexpr *fe_both = implies(sym->fexpr_m, fexpr_or(dep_both, sym_get_fexpr_sel_both(sym)));
-		
-		convert_fexpr_to_nnf(fe_both);
+
 		sym_add_constraint(sym, fe_both);
 	} else if (sym->type == S_BOOLEAN) {
 		
 		struct fexpr *fe_both = implies(sym->fexpr_y, fexpr_or(dep_both, sym_get_fexpr_sel_both(sym)));
-		convert_fexpr_to_nnf(fe_both);
 		sym_add_constraint(sym, fe_both);
 	}
 }
@@ -400,8 +393,7 @@ static void add_dependencies_nonbool(struct symbol *sym)
 	}
 
 	struct fexpr *fe_both = implies(nb_vals, fexpr_or(dep_both, sel_both));
-	
-	convert_fexpr_to_nnf(fe_both);
+
 	sym_add_constraint(sym, fe_both);
 }
 
@@ -423,13 +415,11 @@ static void add_choice_prompt_cond(struct symbol* sym)
 	
 	if (!sym_is_optional(sym)) {
 		struct fexpr *req_cond = implies(promptCondition, fe_both);
-		convert_fexpr_to_nnf(req_cond);
 		sym_add_constraint(sym, req_cond);
 	}
 	
 	struct fexpr *pr_cond = implies(fe_both, promptCondition);
 	
-	convert_fexpr_to_nnf(pr_cond);
 	sym_add_constraint(sym, pr_cond);
 }
 
@@ -459,15 +449,12 @@ static void add_choice_dependencies(struct symbol *sym)
 	if (sym->type == S_TRISTATE) {
 		struct fexpr *dep_y = calculate_fexpr_y(ke_dirdep);
 		struct fexpr *fe_y = implies(sym->fexpr_y, dep_y);
-		convert_fexpr_to_nnf(fe_y);
 		sym_add_constraint(sym, fe_y);
 		
 		struct fexpr *fe_both = implies(sym->fexpr_m, dep_both);
-		convert_fexpr_to_nnf(fe_both);
 		sym_add_constraint(sym, fe_both);
 	} else if (sym->type == S_BOOLEAN) {
 		struct fexpr *fe_both = implies(sym->fexpr_y, dep_both);
-		convert_fexpr_to_nnf(fe_both);
 		sym_add_constraint(sym, fe_both);
 	}
 }
@@ -593,7 +580,6 @@ static void add_invisible_constraints(struct symbol *sym, struct property *promp
 	if (sym->type == S_TRISTATE) {
 		struct fexpr *e1 = implies(promptCondition_both, implies(sym->fexpr_y, promptCondition_yes));
 		
-		convert_fexpr_to_nnf(e1);
 		sym_add_constraint(sym, e1);
 	}
 
@@ -613,19 +599,16 @@ static void add_invisible_constraints(struct symbol *sym, struct property *promp
 		struct fexpr *c1 = implies(fexpr_not(default_y), sel_y);
 		struct fexpr *c2 = implies(modules_sym->fexpr_y, c1);
 		struct fexpr *c3 = implies(nopromptCond, c2);
-		convert_fexpr_to_nnf(c3);
 		sym_add_constraint(sym, c3);
 
 		struct fexpr *d1 = implies(fexpr_not(default_m), sel_m);
 		struct fexpr *d2 = implies(modules_sym->fexpr_y, d1);
 		struct fexpr *d3 = implies(nopromptCond, d2);
-		convert_fexpr_to_nnf(d3);
 		sym_add_constraint(sym, d3);
 
 		struct fexpr *e1 = implies(fexpr_not(default_both), sel_both);
 		struct fexpr *e2 = implies(fexpr_not(modules_sym->fexpr_y), e1);
 		struct fexpr *e3 = implies(nopromptCond, e2);
-		convert_fexpr_to_nnf(e3);
 		sym_add_constraint(sym, e3);
 	} else if (sym->type == S_BOOLEAN) {
 		/* somewhat dirty hack since the symbol is defined twice.
@@ -644,7 +627,6 @@ static void add_invisible_constraints(struct symbol *sym, struct property *promp
 		struct fexpr *e1 = implies(fexpr_not(default_both), sel_y);
 		struct fexpr *e2 = implies(nopromptCond, e1);
 		
-		convert_fexpr_to_nnf(e2);
 		sym_add_constraint(sym, e2);
 	} else {
 		// TODO for non-booleans
@@ -657,11 +639,9 @@ SKIP_PREV_CONSTRAINT:
 		if (defaults->len == 0) return;
 		
 		struct fexpr *e1 = implies(nopromptCond, implies(default_y, sym->fexpr_y));
-		convert_fexpr_to_nnf(e1);
 		sym_add_constraint(sym, e1);
 		
 		struct fexpr *e2 = implies(nopromptCond, implies(default_m, sym_get_fexpr_both(sym)));
-		convert_fexpr_to_nnf(e2);
 		sym_add_constraint(sym, e2);
 	} else if (sym->type == S_BOOLEAN) {
 		if (defaults->len == 0) return;
@@ -671,7 +651,6 @@ SKIP_PREV_CONSTRAINT:
 		// TODO tristate choice hack
 		
 		struct fexpr *c2 = implies(nopromptCond, c);
-		convert_fexpr_to_nnf(c2);
 		sym_add_constraint(sym, c2);
 	} else {
 		// TODO for non-booleans
