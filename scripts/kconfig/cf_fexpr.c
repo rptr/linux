@@ -25,7 +25,7 @@ static void create_fexpr_choice(struct symbol *sym);
 /*
  *  create a fexpr
  */
-struct fexpr * fexpr_create(int satval, enum fexpr_type type, char* name)
+struct fexpr * fexpr_create(int satval, enum fexpr_type type, char *name)
 {
 	struct fexpr *e = malloc(sizeof(struct fexpr));
 	e->satval = satval;
@@ -182,8 +182,7 @@ static void create_fexpr_choice(struct symbol *sym)
 		if (*read != ' ')
 			*write++ = *read;
 	} while (*read++);
-	
-	//printf("\nChoice: %s, prop_type %s\n", sym->name, prompt->text);
+
 	struct fexpr *fexpr_y = fexpr_create(sat_variable_nr++, FE_CHOICE, "Choice_");
 	str_append(&fexpr_y->name, name);
 	fexpr_y->sym = sym;
@@ -195,14 +194,14 @@ static void create_fexpr_choice(struct symbol *sym)
 	
 	struct fexpr *fexpr_m;
 	if (sym->type == S_TRISTATE) {
-		fexpr_m = fexpr_create(sat_variable_nr++, FE_CHOICE, name);
+		fexpr_m = fexpr_create(sat_variable_nr++, FE_CHOICE, "Choice_");
+		str_append(&fexpr_m->name, name);
 		str_append(&fexpr_m->name, "_MODULE");
 		fexpr_m->sym = sym;
 		fexpr_m->tri = mod;
 		/* add it to satmap */
 		g_hash_table_insert(satmap, &fexpr_m->satval, fexpr_m);
 	} else {
-// 		printf("is NOT tristate\n");
 		fexpr_m = const_false;
 	}
 	sym->fexpr_m = fexpr_m;
