@@ -73,6 +73,9 @@ bool fexpr_is_symbol_or_not(struct fexpr *e);
 /* check, if a fexpr is a symbol, a True/False-constant, a literal symbolizing a non-boolean, a choice symbol or a negated "symbol" */
 bool fexpr_is_symbol_or_neg_atom(struct fexpr *e);
 
+/* check whether the fexpr is a constant (true/false) */
+bool fexpr_is_constant(struct fexpr *e);
+
 /* convert a fexpr into negation normal form */
 // void convert_fexpr_to_nnf(struct fexpr *e);
 
@@ -87,5 +90,8 @@ void fexpr_as_char(struct fexpr *e, struct gstr *s, int parent);
 
 /* write an fexpr into a string */
 void fexpr_as_char_short(struct fexpr *e, struct gstr *s, int parent);
+
+/* check whether 2 fexpr are equal */
+bool fexpr_eq(struct fexpr *e1, struct fexpr *e2);
 
 #endif

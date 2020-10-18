@@ -21,6 +21,7 @@ static void create_fexpr_nonbool(struct symbol *sym);
 static void create_fexpr_unknown(struct symbol *sym);
 static void create_fexpr_choice(struct symbol *sym);
 
+static int trans_count;
 
 /*
  *  create a fexpr
@@ -633,6 +634,14 @@ bool fexpr_is_symbol_or_neg_atom(struct fexpr *e)
 }
 
 /*
+ * check whether the fexpr is a constant (true/false)
+ */
+bool fexpr_is_constant(struct fexpr *e)
+{
+	return e == const_true || e == const_false;
+}
+
+/*
  * convert a fexpr into negation normal form
  */
 // static bool convert_fexpr_to_nnf_util(struct fexpr *e)
@@ -931,4 +940,257 @@ void fexpr_as_char_short(struct fexpr *e, struct gstr *s, int parent)
 	default:
 		return;
 	}
+}
+
+static void fexpr_free(struct fexpr *e)
+{
+	if (!e) return;
+
+	switch (e->type) {
+	case FE_SYMBOL:
+// 	case FE_TRUE:
+// 	case FE_FALSE:
+	case FE_NONBOOL:
+	case FE_CHOICE:
+	case FE_SELECT:
+	case FE_TMPSATVAR:
+// 		fexpr_print("Freeing", e, -1);
+// 		getchar();
+// 		str_free(&e->name);
+		free(e);
+		return;
+		break;
+	case FE_AND:
+	case FE_OR:
+		fexpr_free(e->left);
+		fexpr_free(e->right);
+		break;
+	case FE_NOT:
+		fexpr_free(e->left);
+		break;
+	case FE_EQUALS:
+		fprintf(stderr, "Cannot free type %d\n", e->type);
+		break;
+	case FE_TRUE:
+	case FE_FALSE:
+		return;
+// 		break;
+	}
+	
+// 	if (fexpr_is_symbol(e) && !fexpr_is_constant(e)) {
+// 		fexpr_print("Freeing", e, -1);
+// 		str_free(&e->name);
+// 	}
+// 	if (e != NULL)
+		free(e);
+}
+
+static struct fexpr * fexpr_copy(struct fexpr *org)
+{
+	struct fexpr *e;
+
+	if (!org) return NULL;
+
+	switch (org->type) {
+	case FE_TRUE:
+	case FE_FALSE:
+		return org;
+	case FE_SYMBOL:	
+	case FE_NONBOOL:
+	case FE_CHOICE:
+	case FE_SELECT:
+	case FE_TMPSATVAR:
+		e = malloc(sizeof(struct fexpr));
+		e->type = org->type;
+		e->satval = org->satval;
+// 		str_append(&e->name, strdup(str_get(&org->name)));
+		break;
+	case FE_AND:
+		e = malloc(sizeof(struct fexpr));
+		e->type = FE_AND;
+		e->left = fexpr_copy(org->left);
+		e->right = fexpr_copy(org->right);
+		break;
+	case FE_OR:
+		e = malloc(sizeof(struct fexpr));
+		e->type = FE_OR;
+		e->left = fexpr_copy(org->left);
+		e->right = fexpr_copy(org->right);
+		break;
+	case FE_NOT:
+		e = malloc(sizeof(struct fexpr));
+		e->type = FE_NOT;
+		e->left = fexpr_copy(org->left);
+		break;
+	case FE_EQUALS:
+		fprintf(stderr, "Cannot copy type FE_EQUALS\n");
+		free(e);
+		e = NULL;
+		break;
+	}
+
+	return e;
+}
+
+
+static struct fexpr * fexpr_eliminate_yn(struct fexpr *e)
+{
+	if (!e) return e;
+	
+	struct fexpr *tmp;
+	bool ind = false;
+
+	switch (e->type) {
+	case FE_AND:
+		if (fexpr_is_constant(e->left) || fexpr_is_constant(e->right)) {
+// 			fexpr_print("before", e, -1);
+			ind = true;
+		}
+		e->left = fexpr_eliminate_yn(e->left);
+		e->right = fexpr_eliminate_yn(e->right);
+		tmp = fexpr_and(e->left, e->right);
+		if (ind) {
+// 			fexpr_print("after", tmp, -1);
+		}
+		return tmp;
+	case FE_OR:
+		e->left = fexpr_eliminate_yn(e->left);
+		e->right = fexpr_eliminate_yn(e->right);
+		return fexpr_or(e->left, e->right);
+	default:
+		;
+	}
+
+	return e;
+}
+
+static void __fexpr_eliminate_eq(enum fexpr_type type, struct fexpr **ep1, struct fexpr **ep2)
+{
+	#define e1 (*ep1)
+	#define e2 (*ep2)
+
+	// TODO
+
+	/* Recurse down to leaves */
+	if (e1->type == type) {
+		__fexpr_eliminate_eq(type, &e1->left, &e2);
+		__fexpr_eliminate_eq(type, &e1->right, &e2);
+		return;
+	}
+	if (e2->type == type) {
+		__fexpr_eliminate_eq(type, &e1, &e2->left);
+		__fexpr_eliminate_eq(type, &e1, &e2->right);
+		return;
+	}
+
+	/* e1 and e2 are leaves. Compare them. */
+	if (fexpr_is_symbol(e1) && fexpr_is_symbol(e2) &&
+		e1->satval == e2->satval &&
+		fexpr_is_constant(e1))
+		return;
+	if (!fexpr_eq(e1, e2)) return;
+
+	/* e1 and e2 are equal leaves. Prepare them for elimination. */
+	trans_count++;
+	// TODO free
+// 	printf("got here in __fexpr\n");
+// 	fexpr_print("Freeing e1 in __", e1, -1);
+	fexpr_free(e1);
+// 	fexpr_print("Freeing e2 in __", e2, -1);
+	fexpr_free(e2);
+	switch (type) {
+	case FE_OR:
+		e1 = const_false;
+		e2 = const_false;
+		break;
+	case FE_AND:
+		e1 = const_true;
+		e2 = const_true;
+		break;
+	default:
+		break;
+	}
+
+
+	#undef e1
+	#undef e2
+}
+
+/*
+ * eliminate common operands in a fexpr
+ */
+static void fexpr_eliminate_eq(struct fexpr **ep1, struct fexpr **ep2)
+{
+	#define e1 (*ep1)
+	#define e2 (*ep2)
+
+	if (!e1 || !e2) return;
+
+	switch (e1->type) {
+	case FE_AND:
+	case FE_OR:
+		__fexpr_eliminate_eq(e1->type, ep1, ep2);
+	default:
+		;
+	}
+	if (e1->type != e2->type) {
+		switch (e2->type) {
+		case FE_AND:
+		case FE_OR:
+			__fexpr_eliminate_eq(e2->type, ep1, ep2);
+		default:
+			;
+		}
+	}
+	e1 = fexpr_eliminate_yn(e1);
+	e2 = fexpr_eliminate_yn(e2);
+
+	#undef e1
+	#undef e2
+}
+
+/*
+ * check whether 2 fexpr are equals
+ */
+bool fexpr_eq(struct fexpr *e1, struct fexpr *e2)
+{
+	int res, oldcount;
+
+	if (!e1 || !e2) return false;
+
+	if (e1->type != e2->type) return false;
+
+	switch (e1->type) {
+	case FE_SYMBOL:
+	case FE_TRUE:
+	case FE_FALSE:
+	case FE_NONBOOL:
+	case FE_CHOICE:
+	case FE_SELECT:
+	case FE_TMPSATVAR:
+		return e1->satval == e2->satval;
+	case FE_AND:
+	case FE_OR:
+		e1 = fexpr_copy(e1);
+		e2 = fexpr_copy(e2);
+		oldcount = trans_count;
+		fexpr_eliminate_eq(&e1, &e2);
+		res = fexpr_is_symbol(e1) &&
+			fexpr_is_symbol(e2) &&
+			e1->satval == e2->satval;
+		// TODO
+// 		getchar();
+// 		fexpr_print("++++++Freeing e1 in __", e1, -1);
+		fexpr_free(e1);
+// 		fexpr_print("++++++Freeing e1 in __", e1, -1);
+		fexpr_free(e2);
+		trans_count = oldcount;
+		return res;
+	case FE_NOT:
+		return fexpr_eq(e1->left, e2->left);
+	case FE_EQUALS:
+		return false;
+	}
+
+	return false;
 }

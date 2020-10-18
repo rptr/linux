@@ -52,8 +52,13 @@ static void debug_info(void)
 {
 	unsigned int i;
 	struct symbol *sym;
+	sym = sym_find("REGMAP_I2C");
+	if (sym->dir_dep.expr)
+		print_expr("dep:", sym->dir_dep.expr, E_NONE);
+	if (sym->rev_dep.expr)
+		print_expr("rdep:", sym->rev_dep.expr, E_NONE);
 	for_all_symbols(i, sym) {
-
+// REGMAP_I2C, 
 	}
 }
 
@@ -1007,6 +1012,7 @@ unsigned int count_counstraints(void)
 /*
  * add a constraint for a symbol
  */
+static int no_eq = 0;
 void sym_add_constraint(struct symbol *sym, struct fexpr *constraint)
 {
 	if (!constraint) return;
@@ -1016,6 +1022,32 @@ void sym_add_constraint(struct symbol *sym, struct fexpr *constraint)
 	
 	/* this should never happen */
 	if (constraint == const_false) perror("Adding const_false.");
+	
+// 	print_sym_name(sym);
+// 	fexpr_print("Orig", constraint, -1);
+// 	/* check the constraints for the same symbol */
+// 	unsigned int i;
+// 	struct fexpr *e;
+// 	for (i = 0; i < sym->constraints->arr->len; i++) {
+// 		e = g_array_index(sym->constraints->arr, struct fexpr *, i);
+// 		fexpr_print("Checking...", e, -1);
+// 		
+// 		if (fexpr_eq(constraint, e)) return;
+// 		if (fexpr_eq(constraint,e)) {
+// 			printf("EQUAL\n");
+// 			fexpr_print("c", constraint, -1);
+// 			fexpr_print("e", e, -1);
+// 			getchar();
+// 			no_eq++;
+// 			if (no_eq % 500 == 0) {
+// 				printf("Equiv: %d\n", no_eq);
+// 				printf("Total: %d\n", count_counstraints());
+// 				getchar();
+// 			}
+// 				
+// 			return;
+// 		}
+// 	}
 	
 	g_array_append_val(sym->constraints->arr, constraint);
 }
