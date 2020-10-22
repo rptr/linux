@@ -46,6 +46,11 @@ static struct fexpr * get_default_y(GArray *arr);
 static struct fexpr * get_default_m(GArray *arr);
 static long long sym_get_range_val(struct symbol *sym, int base);
 
+static int trans_count;
+static bool pexpr_eq(struct pexpr *e1, struct pexpr *e2);
+static struct pexpr * fexpr_to_pexpr(struct fexpr *fe);
+static void pexpr_free(struct pexpr *e);
+
 /* -------------------------------------- */
 
 static void debug_info(void)
@@ -1009,10 +1014,306 @@ unsigned int count_counstraints(void)
 	return c;
 }
 
+static struct pexpr * pexpr_eliminate_yn(struct pexpr *e)
+{
+	struct pexpr *tmp;
+	
+	if (e) switch (e->type) {
+	case PE_AND:
+		e->left.pexpr = pexpr_eliminate_yn(e->left.pexpr);
+		e->right.pexpr = pexpr_eliminate_yn(e->right.pexpr);
+		if (e->left.pexpr->type == PE_SYMBOL) {
+			if (e->left.pexpr->left.fexpr == const_false) {
+				pexpr_free(e->left.pexpr);
+				pexpr_free(e->right.pexpr);
+				e->type = PE_SYMBOL;
+				e->left.fexpr = const_false;
+				e->right.pexpr = NULL;
+				return e;
+			} else if (e->left.pexpr->left.fexpr == const_true) {
+				free(e->left.pexpr);
+				tmp = e->right.pexpr;
+				*e = *(e->right.pexpr);
+				free(tmp);
+				return e;
+			}
+		}
+		if (e->right.pexpr->type == PE_SYMBOL) {
+			if (e->right.pexpr->left.fexpr == const_false) {
+				pexpr_free(e->left.pexpr);
+				pexpr_free(e->right.pexpr);
+				e->type = PE_SYMBOL;
+				e->left.fexpr = const_false;
+				e->right.fexpr = NULL;
+				return e;
+			} else if (e->right.pexpr->left.fexpr == const_true) {
+				free(e->right.pexpr);
+				tmp = e->left.pexpr;
+				*e = *(e->left.pexpr);
+				free(tmp);
+				return e;
+			}
+		}
+		break;
+	case PE_OR:
+		e->left.pexpr = pexpr_eliminate_yn(e->left.pexpr);
+		e->right.pexpr = pexpr_eliminate_yn(e->right.pexpr);
+		if (e->left.pexpr->type == PE_SYMBOL) {
+			if (e->left.pexpr->left.fexpr == const_false) {
+				free(e->left.pexpr);
+				tmp = e->right.pexpr;
+				*e = *(e->right.pexpr);
+				free(tmp);
+				return e;
+			} else if (e->left.pexpr->left.fexpr == const_true) {
+				pexpr_free(e->left.pexpr);
+				pexpr_free(e->right.pexpr);
+				e->type = PE_SYMBOL;
+				e->left.fexpr = const_true;
+				e->right.pexpr = NULL;
+			}
+		}
+		if (e->right.pexpr->type == PE_SYMBOL) {
+			if (e->left.pexpr->left.fexpr == const_false) {
+				free(e->right.pexpr);
+				tmp = e->left.pexpr;
+				*e = *(e->left.pexpr);
+				free(tmp);
+				return e;
+			} else if (e->right.pexpr->left.fexpr == const_true) {
+				pexpr_free(e->left.pexpr);
+				pexpr_free(e->right.pexpr);
+				e->type = PE_SYMBOL;
+				e->left.fexpr = const_true;
+				e->right.pexpr = NULL;
+				return e;
+			}
+		}
+	default:
+		;
+	}
+	
+	return e;
+}
+
+static struct pexpr * pexpr_copy(const struct pexpr *org)
+{
+	struct pexpr *e;
+	
+	if (!org) return NULL;
+	
+	e = xmalloc(sizeof(*org));
+	memcpy(e, org, sizeof(*org));
+	switch (org->type) {
+	case PE_SYMBOL:
+		e->left = org->left;
+		break;
+	case PE_AND:
+	case PE_OR:
+		e->left.pexpr = pexpr_copy(org->left.pexpr);
+		e->right.pexpr = pexpr_copy(org->right.pexpr);
+		break;
+	case PE_NOT:
+		e->left.pexpr = pexpr_copy(org->left.pexpr);
+		break;
+	}
+	
+	return e;
+}
+
+static void pexpr_free(struct pexpr *e)
+{
+	if (!e) return;
+	
+	switch (e->type) {
+	case PE_SYMBOL:
+		break;
+	case PE_AND:
+	case PE_OR:
+		pexpr_free(e->left.pexpr);
+		pexpr_free(e->right.pexpr);
+		break;
+	case PE_NOT:
+		pexpr_free(e->left.pexpr);
+		break;
+	}
+	
+	free(e);
+}
+
+#define e1 (*ep1)
+#define e2 (*ep2)
+static void __pexpr_eliminate_eq(enum pexpr_type type, struct pexpr **ep1, struct pexpr **ep2)
+{
+	/* recurse down to the leaves */
+	if (e1->type == type) {
+		__pexpr_eliminate_eq(type, &e1->left.pexpr, &e2);
+		__pexpr_eliminate_eq(type, &e1->right.pexpr, &e2);
+		return;
+	}
+	if (e2->type == type) {
+		__pexpr_eliminate_eq(type, &e1, &e2->left.pexpr);
+		__pexpr_eliminate_eq(type, &e1, &e2->right.pexpr);
+		return;
+	}
+	
+	/* e1 and e2 are leaves. Compare them. */
+	if (e1->type == PE_SYMBOL && e2->type == PE_SYMBOL &&
+		e1->left.fexpr->satval == e2->left.fexpr->satval &&
+		(e1->left.fexpr == const_true || e2->left.fexpr == const_false))
+		return;
+	if (!pexpr_eq(e1, e2))
+		return;
+	
+	/* e1 and e2 are equal leaves. Prepare them for elimination. */
+	trans_count++;
+	pexpr_free(e1);
+	pexpr_free(e2);
+	switch (type) {
+	case PE_AND:
+		e1 = fexpr_to_pexpr(const_true);
+		e2 = fexpr_to_pexpr(const_true);
+		break;
+	case PE_OR:
+		e1 = fexpr_to_pexpr(const_false);
+		e2 = fexpr_to_pexpr(const_false);
+		break;
+	default:
+		;
+	}
+}
+
+static void pexpr_eliminate_eq(struct pexpr **ep1, struct pexpr **ep2)
+{	
+	if (!e1 || !e2) return;
+	
+	switch (e1->type) {
+	case PE_AND:
+	case PE_OR:
+		__pexpr_eliminate_eq(e1->type, ep1, ep2);
+	default:
+		;
+	}
+	if (e1->type != e2->type) switch (e2->type) {
+	case PE_AND:
+	case PE_OR:
+		__pexpr_eliminate_eq(e2->type, ep1, ep2);
+	default:
+		;
+	}
+	e1 = pexpr_eliminate_yn(e1);
+	e2 = pexpr_eliminate_yn(e2);
+}
+#undef e1
+#undef e2
+
+static bool pexpr_eq(struct pexpr *e1, struct pexpr *e2)
+{
+	bool res;
+	int old_count;
+	
+	if (!e1 || !e2) return false;
+	
+	if (e1->type != e2->type)
+		return false;
+	
+	switch (e1->type) {
+	case PE_SYMBOL:
+		return e1->left.fexpr->satval == e2->left.fexpr->satval;
+	case PE_AND:
+	case PE_OR:
+		e1 = pexpr_copy(e1);
+		e2 = pexpr_copy(e2);
+		old_count = trans_count;
+		pexpr_eliminate_eq(&e1, &e2);
+		res = (e1->type == PE_SYMBOL && e2->type == PE_SYMBOL &&
+			e1->left.fexpr->satval == e2->left.fexpr->satval);
+		pexpr_free(e1);
+		pexpr_free(e2);
+		trans_count = old_count;
+		return res;
+	case PE_NOT:
+		return pexpr_eq(e1->left.pexpr, e2->left.pexpr);
+	}
+	
+	return false;
+}
+
+static void pexpr_print(struct pexpr *e, int prevtoken)
+{
+	if (!e) return;
+	
+	switch (e->type) {
+	case PE_SYMBOL:
+		printf("%s", str_get(&e->left.fexpr->name));
+		break;
+	case PE_AND:
+		if (prevtoken != PE_AND && prevtoken != -1)
+			printf("(");
+		pexpr_print(e->left.pexpr, PE_AND);
+		printf(" && ");
+		pexpr_print(e->right.pexpr, PE_AND);
+		if (prevtoken != PE_AND && prevtoken != -1)
+			printf(")");
+		break;
+	case PE_OR:
+		if (prevtoken != PE_OR && prevtoken != -1)
+			printf("(");
+		pexpr_print(e->left.pexpr, PE_OR);
+		printf(" || ");
+		pexpr_print(e->right.pexpr, PE_OR);
+		if (prevtoken != PE_OR && prevtoken != -1)
+			printf(")");
+		break;
+	case PE_NOT:
+		printf("!");
+		pexpr_print(e->left.pexpr, PE_NOT);
+		break;
+	}
+}
+
+static struct pexpr * fexpr_to_pexpr(struct fexpr *fe)
+{
+	struct pexpr *pe;
+	
+	switch (fe->type) {
+	case FE_SYMBOL:
+	case FE_TRUE:
+	case FE_FALSE:
+	case FE_NONBOOL:
+	case FE_CHOICE:
+	case FE_SELECT:
+	case FE_TMPSATVAR:
+		pe = xcalloc(1, sizeof(*pe));
+		pe->type = PE_SYMBOL;
+		pe->left.fexpr = fe;
+		return pe;
+	case FE_AND:
+		pe = xcalloc(1, sizeof(*pe));
+		pe->type = PE_AND;
+		pe->left.pexpr = fexpr_to_pexpr(fe->left);
+		pe->right.pexpr = fexpr_to_pexpr(fe->right);
+		return pe;
+	case FE_OR:
+		pe = xcalloc(1, sizeof(*pe));
+		pe->type = PE_OR;
+		pe->left.pexpr = fexpr_to_pexpr(fe->left);
+		pe->right.pexpr = fexpr_to_pexpr(fe->right);
+		return pe;
+	case FE_NOT:
+		pe = xcalloc(1, sizeof(*pe));
+		pe->type = PE_NOT;
+		pe->left.pexpr = fexpr_to_pexpr(fe->left);
+		return pe;
+	}
+	
+	return NULL;
+}
+
 /*
  * add a constraint for a symbol
  */
-static int no_eq = 0;
+static int no_eq = 0, no_cmp = 0;
 void sym_add_constraint(struct symbol *sym, struct fexpr *constraint)
 {
 	if (!constraint) return;
@@ -1023,31 +1324,58 @@ void sym_add_constraint(struct symbol *sym, struct fexpr *constraint)
 	/* this should never happen */
 	if (constraint == const_false) perror("Adding const_false.");
 	
-// 	print_sym_name(sym);
-// 	fexpr_print("Orig", constraint, -1);
-// 	/* check the constraints for the same symbol */
-// 	unsigned int i;
-// 	struct fexpr *e;
-// 	for (i = 0; i < sym->constraints->arr->len; i++) {
-// 		e = g_array_index(sym->constraints->arr, struct fexpr *, i);
-// 		fexpr_print("Checking...", e, -1);
-// 		
-// 		if (fexpr_eq(constraint, e)) return;
-// 		if (fexpr_eq(constraint,e)) {
-// 			printf("EQUAL\n");
-// 			fexpr_print("c", constraint, -1);
-// 			fexpr_print("e", e, -1);
-// 			getchar();
-// 			no_eq++;
-// 			if (no_eq % 500 == 0) {
-// 				printf("Equiv: %d\n", no_eq);
-// 				printf("Total: %d\n", count_counstraints());
-// 				getchar();
-// 			}
-// 				
-// 			return;
-// 		}
-// 	}
+	g_array_append_val(sym->constraints->arr, constraint);
+	return;
+
+	if (fexpr_is_cnf(constraint)) {
+		g_array_append_val(sym->constraints->arr, constraint);
+		return;
+	}
 	
+	
+	struct pexpr *pe_orig = fexpr_to_pexpr(constraint);
+
+// 	printf("CHECKING NEW CONSTRAINT in symbol %s\n", sym_get_name(sym));
+// 	printf("c: ");
+// 	pexpr_print(pe_orig, -1);
+// 	printf("\n");
+
+// 	/* check the constraints for the same symbol */
+	unsigned int i;
+	struct fexpr *e;
+	struct pexpr *pe_copy;
+	for (i = 0; i < sym->constraints->arr->len; i++) {
+		e = g_array_index(sym->constraints->arr, struct fexpr *, i);
+		pe_copy = fexpr_to_pexpr(e);
+// 		printf("Checking... ");
+// 		pexpr_print(pe_copy, -1);
+// 		printf("\n");
+		
+// 		if (fexpr_eq(constraint, e)) return;
+		no_cmp++;
+		if (pexpr_eq(pe_orig, pe_copy)) {
+// 			printf("EQUAL\n");
+// 			pexpr_print(pe_orig, -1);
+// 			printf("\n");
+// 			pexpr_print(pe_copy, -1);
+// 			printf("\n");
+
+// 			getchar();
+			no_eq++;
+			if (no_eq % 500 == 0) {
+				printf("Equiv: %d\n", no_eq);
+				printf("Comps: %d\n", no_cmp);
+				printf("Total: %d\n", count_counstraints());
+// 				getchar();
+			}
+				
+			pexpr_free(pe_copy);
+			pexpr_free(pe_orig);
+			return;
+		}
+		pexpr_free(pe_copy);
+	}
+	
+	pexpr_free(pe_orig);
 	g_array_append_val(sym->constraints->arr, constraint);
 }

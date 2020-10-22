@@ -116,6 +116,23 @@ struct fexpr {
 	
 };
 
+enum pexpr_type {
+	PE_SYMBOL,
+	PE_AND,
+	PE_OR,
+	PE_NOT
+};
+
+union pexpr_data {
+	struct pexpr *pexpr;
+	struct fexpr *fexpr;
+};
+
+struct pexpr {
+	enum pexpr_type type;
+	union pexpr_data left, right;
+};
+
 struct default_map {
 	struct fexpr *val;
 	

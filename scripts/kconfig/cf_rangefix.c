@@ -17,12 +17,12 @@
 #include "configfix.h"
 
 #define MAX_DIAGNOSES 3
-#define MAX_SECONDS 30
+#define MAX_SECONDS 300
 #define SLICE_PROBLEM false
 #define PRINT_UNSAT_CORE true
 #define PRINT_DIAGNOSES false
 #define PRINT_DIAGNOSIS_FOUND true
-#define MINIMISE_DIAGNOSES false
+#define MINIMISE_DIAGNOSES true
 #define MINIMISE_UNSAT_CORE true
 
 
