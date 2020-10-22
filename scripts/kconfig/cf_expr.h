@@ -3,8 +3,8 @@
  * Copyright (C) 2020 Patrick Franz <patfra71@gmail.com>
  */
 
-#ifndef CF_FEXPR_H
-#define CF_FEXPR_H
+#ifndef CF_EXPR_H
+#define CF_EXPR_H
 
 /* create a fexpr */
 struct fexpr * fexpr_create(int satval, enum fexpr_type type, char *name);
@@ -76,12 +76,6 @@ bool fexpr_is_symbol_or_neg_atom(struct fexpr *e);
 /* check whether the fexpr is a constant (true/false) */
 bool fexpr_is_constant(struct fexpr *e);
 
-/* convert a fexpr into negation normal form */
-// void convert_fexpr_to_nnf(struct fexpr *e);
-
-/* convert a fexpr from negation normal form into conjunctive normal form */
-// void convert_fexpr_to_cnf(struct fexpr *e);
-
 /* print an fexpr */
 void fexpr_print(char *tag, struct fexpr *e, int parent);
 
@@ -91,7 +85,22 @@ void fexpr_as_char(struct fexpr *e, struct gstr *s, int parent);
 /* write an fexpr into a string */
 void fexpr_as_char_short(struct fexpr *e, struct gstr *s, int parent);
 
-/* check whether 2 fexpr are equal */
-bool fexpr_eq(struct fexpr *e1, struct fexpr *e2);
+/* check whether 2 pexpr are equal */
+bool pexpr_eq(struct pexpr *e1, struct pexpr *e2);
+
+/* copy a pexpr */
+struct pexpr * pexpr_copy(const struct pexpr *org);
+
+/* free a pexpr */
+void pexpr_free(struct pexpr *e);
+
+/* print a pexpr  */
+void pexpr_print(char *tag, struct pexpr *e, int prevtoken);
+
+/* convert a fexpr to a pexpr */
+struct pexpr * fexpr_to_pexpr(struct fexpr *fe);
+
+/* eliminate duplicate and redundant operands */
+struct pexpr * pexpr_eliminate_dups(struct pexpr *e);
 
 #endif

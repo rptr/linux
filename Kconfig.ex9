@@ -24,7 +24,7 @@ endchoice
 
 config D
 	bool "D"
-	#select E
+	depends on E || F
 
 config E
 	bool "E"
@@ -33,4 +33,4 @@ config E
 
 config F
 	bool "F"
-	#select E
+	select D
