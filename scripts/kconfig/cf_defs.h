@@ -68,6 +68,7 @@ enum fexpr_type {
 	FE_OR,
 	FE_NOT,
 	FE_EQUALS,
+	FE_NPC, /* no prompt condition */
 	FE_TRUE,  /* constant of value True */
 	FE_FALSE,  /* constant of value False */
 	FE_NONBOOL,  /* for all non-(boolean/tristate) known values */

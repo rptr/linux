@@ -548,6 +548,7 @@ bool fexpr_is_cnf(struct fexpr *e)
 	case FE_NONBOOL:
 	case FE_SELECT:
 	case FE_CHOICE:
+	case FE_NPC:
 		return true;
 	case FE_AND:
 		return false;
@@ -615,7 +616,7 @@ struct fexpr * implies(struct fexpr *a, struct fexpr *b)
  */
 bool fexpr_is_symbol(struct fexpr *e)
 {
-	return e->type == FE_SYMBOL || e->type == FE_FALSE || e->type == FE_TRUE || e->type == FE_NONBOOL || e->type == FE_CHOICE || e->type == FE_SELECT;
+	return e->type == FE_SYMBOL || e->type == FE_FALSE || e->type == FE_TRUE || e->type == FE_NONBOOL || e->type == FE_CHOICE || e->type == FE_SELECT || e->type == FE_NPC;
 }
 
 /*
@@ -801,6 +802,7 @@ static void fexpr_print_util(struct fexpr *e, int parent)
 	case FE_SYMBOL:
 	case FE_CHOICE:
 	case FE_SELECT:
+	case FE_NPC:
 	case FE_NONBOOL:
 	case FE_TMPSATVAR:
 		printf("%s", str_get(&e->name));
@@ -856,6 +858,7 @@ void fexpr_as_char(struct fexpr *e, struct gstr *s, int parent)
 	case FE_SYMBOL:
 	case FE_CHOICE:
 	case FE_SELECT:
+	case FE_NPC:
 	case FE_NONBOOL:
 		str_append(s, "definedEx(");
 		str_append(s, str_get(&e->name));
@@ -906,6 +909,7 @@ void fexpr_as_char_short(struct fexpr *e, struct gstr *s, int parent)
 	case FE_SYMBOL:
 	case FE_CHOICE:
 	case FE_SELECT:
+	case FE_NPC:
 	case FE_NONBOOL:
 		str_append(s, str_get(&e->name));
 		return;
@@ -1246,6 +1250,7 @@ struct pexpr * fexpr_to_pexpr(struct fexpr *fe)
 	case FE_NONBOOL:
 	case FE_CHOICE:
 	case FE_SELECT:
+	case FE_NPC:
 	case FE_TMPSATVAR:
 		pe = xcalloc(1, sizeof(*pe));
 		pe->type = PE_SYMBOL;

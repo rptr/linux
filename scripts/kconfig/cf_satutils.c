@@ -98,6 +98,7 @@ static void unfold_cnf_clause_util(GArray *arr, struct fexpr *e)
 	case FE_NONBOOL:
 	case FE_SELECT:
 	case FE_CHOICE:
+	case FE_NPC:
 // 		picosat_add(pico, e->satval);
 		g_array_add_ints(2, arr, e->satval);
 		break;
@@ -372,6 +373,7 @@ static struct fexpr * get_fexpr_tseytin(struct fexpr *e)
 	case FE_NONBOOL:
 	case FE_SELECT:
 	case FE_CHOICE:
+	case FE_NPC:
 		return e;
 	case FE_AND:
 		t = create_tmpsatvar();

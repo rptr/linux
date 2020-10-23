@@ -576,6 +576,13 @@ static void add_invisible_constraints(struct symbol *sym, struct property *promp
 	struct fexpr *promptCondition_yes = calculate_fexpr_y(ke_promptCond);
 	struct fexpr *nopromptCond = fexpr_not(promptCondition_both);
 	
+	struct fexpr *npc = fexpr_create(sat_variable_nr++, FE_NPC, sym_get_name(sym));
+	str_append(&npc->name, "_NPC");
+	sym->noPromptCond = npc;
+	
+	struct fexpr *c = implies(nopromptCond, npc);
+	sym_add_constraint(sym, c);
+	
 	GArray *defaults = get_defaults(sym);
 	struct fexpr *default_y = get_default_y(defaults);
 	struct fexpr *default_m = get_default_m(defaults);
@@ -603,17 +610,17 @@ static void add_invisible_constraints(struct symbol *sym, struct property *promp
 		
 		struct fexpr *c1 = implies(fexpr_not(default_y), sel_y);
 		struct fexpr *c2 = implies(modules_sym->fexpr_y, c1);
-		struct fexpr *c3 = implies(nopromptCond, c2);
+		struct fexpr *c3 = implies(npc, c2);
 		sym_add_constraint(sym, c3);
 
 		struct fexpr *d1 = implies(fexpr_not(default_m), sel_m);
 		struct fexpr *d2 = implies(modules_sym->fexpr_y, d1);
-		struct fexpr *d3 = implies(nopromptCond, d2);
+		struct fexpr *d3 = implies(npc, d2);
 		sym_add_constraint(sym, d3);
 
 		struct fexpr *e1 = implies(fexpr_not(default_both), sel_both);
 		struct fexpr *e2 = implies(fexpr_not(modules_sym->fexpr_y), e1);
-		struct fexpr *e3 = implies(nopromptCond, e2);
+		struct fexpr *e3 = implies(npc, e2);
 		sym_add_constraint(sym, e3);
 	} else if (sym->type == S_BOOLEAN) {
 		/* somewhat dirty hack since the symbol is defined twice.
@@ -630,7 +637,7 @@ static void add_invisible_constraints(struct symbol *sym, struct property *promp
 			sel_y = fexpr_not(sym->fexpr_y);
 		
 		struct fexpr *e1 = implies(fexpr_not(default_both), sel_y);
-		struct fexpr *e2 = implies(nopromptCond, e1);
+		struct fexpr *e2 = implies(npc, e1);
 		
 		sym_add_constraint_eq(sym, e2);
 	} else {
@@ -643,10 +650,10 @@ SKIP_PREV_CONSTRAINT:
 	if (sym->type == S_TRISTATE) {
 		if (defaults->len == 0) return;
 		
-		struct fexpr *e1 = implies(nopromptCond, implies(default_y, sym->fexpr_y));
+		struct fexpr *e1 = implies(npc, implies(default_y, sym->fexpr_y));
 		sym_add_constraint(sym, e1);
 		
-		struct fexpr *e2 = implies(nopromptCond, implies(default_m, sym_get_fexpr_both(sym)));
+		struct fexpr *e2 = implies(npc, implies(default_m, sym_get_fexpr_both(sym)));
 		sym_add_constraint(sym, e2);
 	} else if (sym->type == S_BOOLEAN) {
 		if (defaults->len == 0) return;
@@ -655,7 +662,7 @@ SKIP_PREV_CONSTRAINT:
 		
 		// TODO tristate choice hack
 		
-		struct fexpr *c2 = implies(nopromptCond, c);
+		struct fexpr *c2 = implies(npc, c);
 		sym_add_constraint(sym, c2);
 	} else {
 		// TODO for non-booleans

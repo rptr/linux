@@ -23,8 +23,8 @@ config C
 endchoice
 
 config D
-	bool "D"
-	depends on E || F
+	tristate "D"
+	depends on E && F
 
 config E
 	bool "E"
