@@ -16,7 +16,7 @@
 
 #include "configfix.h"
 
-#define KCR_CMP true
+#define KCR_CMP false
 #define DEBUG_FUN false
 
 static void debug_info(void);
@@ -632,7 +632,7 @@ static void add_invisible_constraints(struct symbol *sym, struct property *promp
 		struct fexpr *e1 = implies(fexpr_not(default_both), sel_y);
 		struct fexpr *e2 = implies(nopromptCond, e1);
 		
-		sym_add_constraint(sym, e2);
+		sym_add_constraint_eq(sym, e2);
 	} else {
 		// TODO for non-booleans
 	}
@@ -1024,15 +1024,23 @@ void sym_add_constraint(struct symbol *sym, struct fexpr *constraint)
 	if (constraint == const_false) perror("Adding const_false.");
 	
 	g_array_append_val(sym->constraints->arr, constraint);
-	return;
+}
 
-	if (fexpr_is_cnf(constraint)) {
-		g_array_append_val(sym->constraints->arr, constraint);
-		return;
-	}
+/*
+ * add a constraint for a symbol, but check for duplicate constraints
+ */
+void sym_add_constraint_eq(struct symbol *sym, struct fexpr *constraint)
+{
+	if (!constraint) return;
 	
+	/* no need to add that */
+	if (constraint == const_true) return;
 	
+	/* this should never happen */
+	if (constraint == const_false) perror("Adding const_false.");
+
 	struct pexpr *pe_orig = fexpr_to_pexpr(constraint);
+	pe_orig = pexpr_eliminate_dups(pe_orig);
 
 // 	printf("CHECKING NEW CONSTRAINT in symbol %s\n", sym_get_name(sym));
 // 	printf("c: ");
@@ -1061,12 +1069,12 @@ void sym_add_constraint(struct symbol *sym, struct fexpr *constraint)
 
 // 			getchar();
 			no_eq++;
-			if (no_eq % 500 == 0) {
-				printf("Equiv: %d\n", no_eq);
-				printf("Comps: %d\n", no_cmp);
-				printf("Total: %d\n", count_counstraints());
+// 			if (no_eq % 500 == 0) {
+// 				printf("Equiv: %d\n", no_eq);
+// 				printf("Comps: %d\n", no_cmp);
+// 				printf("Total: %d\n", count_counstraints());
 // 				getchar();
-			}
+// 			}
 				
 			pexpr_free(pe_copy);
 			pexpr_free(pe_orig);
