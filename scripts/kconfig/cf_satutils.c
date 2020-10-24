@@ -400,7 +400,7 @@ void sat_add_clause(int num, ...)
 	if (num <= 1) return;
 	
 	va_list valist;
-	int i, *id, *lit;
+	int i, *lit;
 	PicoSAT *pico;
 	GArray *arr = g_array_new(false, false, sizeof(int *));
 	
@@ -416,12 +416,13 @@ void sat_add_clause(int num, ...)
 		picosat_add(pico, *lit);
 		g_array_append_val(arr, lit);
 	}
-	id = malloc(sizeof(int));
-	*id = picosat_add(pico, 0);
+	picosat_add(pico, 0);
+// 	id = malloc(sizeof(int));
+// 	*id = picosat_add(pico, 0);
 // 	*id = g_hash_table_size(cnf_clauses);
 	
 	/* add clause to hashmap */
-	g_hash_table_insert(cnf_clauses_map, id, arr);
+// 	g_hash_table_insert(cnf_clauses_map, id, arr);
 	
 // 	printf("Clause added, id %d\n", id);
 	
@@ -434,18 +435,19 @@ void sat_add_clause(int num, ...)
  */
 void sat_add_clause_garray(PicoSAT *pico, GArray *arr)
 {
-	int i, *id, *lit;
+	int i, *lit;
 
 	for (i = 0; i < arr->len; i++) {
 		lit = g_array_index(arr, int *, i);
 		picosat_add(pico, *lit);
 	}
-	id = malloc(sizeof(int));
-	*id = picosat_add(pico, 0);
+	picosat_add(pico, 0);
+// 	id = malloc(sizeof(int));
+// 	*id = picosat_add(pico, 0);
 	
 	/* add clause to hashmap if not done yet */
-	if (!g_hash_table_contains(cnf_clauses_map, id))
-		g_hash_table_insert(cnf_clauses_map, id, arr);
+// 	if (!g_hash_table_contains(cnf_clauses_map, id))
+// 		g_hash_table_insert(cnf_clauses_map, id, arr);
 }
 
 /*

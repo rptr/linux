@@ -40,11 +40,11 @@ void init_config(const char *Kconfig_file)
 void init_data(void)
 {
 	/* initialize map with all CNF clauses */
-	cnf_clauses_map = g_hash_table_new_full(
-		g_int_hash, g_int_equal, //< This is an integer hash.
-		free, //< Call "free" on the key (made with "malloc").
-		NULL //< Call "free" on the value (made with "strdup").
-	);
+// 	cnf_clauses_map = g_hash_table_new_full(
+// 		g_int_hash, g_int_equal, //< This is an integer hash.
+// 		free, //< Call "free" on the key (made with "malloc").
+// 		NULL //< Call "free" on the value (made with "strdup").
+// 	);
 	
 	/* create hashtable with all fexpr */
 	satmap = g_hash_table_new_full(

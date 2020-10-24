@@ -18,7 +18,7 @@
 
 #define MAX_DIAGNOSES 3
 #define MAX_SECONDS 300
-#define SLICE_PROBLEM false
+#define SLICE_PROBLEM false /* DO NOT ENABLE, NOT FULLY IMPLEMENTED */
 #define PRINT_UNSAT_CORE true
 #define PRINT_DIAGNOSES false
 #define PRINT_DIAGNOSIS_FOUND true
@@ -42,7 +42,7 @@ static GArray * minimise_unsat_core(PicoSAT *pico, GArray *C);
 static GArray * minimise_unsat_core_mapped(PicoSAT *pico, GArray *C, GHashTable *satvarmap);
 static bool diagnosis_satisfies_entire_problem(PicoSAT *pico, GArray *c);
 static int * g_hash_table_find_key(GHashTable *satvarmap, int *keyvalue);
-static GArray * map_oldclause_to_newclause(GHashTable *satvarmap, GArray *oldc);
+// static GArray * map_oldclause_to_newclause(GHashTable *satvarmap, GArray *oldc);
 
 static GArray * get_difference(GArray *C, GArray *E0);
 static bool has_intersection(GArray *e, GArray *X);
@@ -829,26 +829,29 @@ static GArray * get_unsat_core_soft_mapped(PicoSAT *pico, GHashTable *satvarmap)
  */
 static void extract_unsat_core_hard(PicoSAT *pico, PicoSAT *pico_cur, GHashTable *clauses_added, GHashTable *satvarmap)
 {
-	int i;
-	GArray *clause, *newclause;
+	// TODO
+	return;
 	
-	for (i = 0; i < picosat_added_original_clauses(pico); i++) {
-		/* clause was part of an unsat core before */
-		if (g_hash_table_contains(clauses_added, &i)) continue;
-		
-		/* clause is not part of the unsat core */
-		if (picosat_coreclause(pico, i) == 0) continue; 
-		
-		/* get clause */
-		clause = (GArray *) g_hash_table_lookup(cnf_clauses_map, &i);
-		newclause = map_oldclause_to_newclause(satvarmap, clause);
-		
-		/* add clause to pico_cur/clauses_added if not done yet */
-		sat_add_clause_garray(pico_cur, newclause);
-		int *j = malloc(sizeof(int));
-		*j = i;
-		g_hash_table_insert(clauses_added, j, j);
-	}
+// 	int i;
+// 	GArray *clause, *newclause;
+// 	
+// 	for (i = 0; i < picosat_added_original_clauses(pico); i++) {
+// 		/* clause was part of an unsat core before */
+// 		if (g_hash_table_contains(clauses_added, &i)) continue;
+// 		
+// 		/* clause is not part of the unsat core */
+// 		if (picosat_coreclause(pico, i) == 0) continue; 
+// 		
+// 		/* get clause */
+// 		clause = (GArray *) g_hash_table_lookup(cnf_clauses_map, &i);
+// 		newclause = map_oldclause_to_newclause(satvarmap, clause);
+// 		
+// 		/* add clause to pico_cur/clauses_added if not done yet */
+// 		sat_add_clause_garray(pico_cur, newclause);
+// 		int *j = malloc(sizeof(int));
+// 		*j = i;
+// 		g_hash_table_insert(clauses_added, j, j);
+// 	}
 }
 
 /*
@@ -859,9 +862,9 @@ static GArray * minimise_unsat_core(PicoSAT *pico, GArray *C)
 	/* no need to check further */
 	if (C->len == 1) return C;
 	
-	GArray * c_set;
+	GArray *c_set;
 	unsigned int i;
-	struct fexpr * c;
+	struct fexpr *c;
 	
 	for (i = 0; i < C->len; i++) {
 		c = g_array_index(C, struct fexpr *, i);
@@ -966,33 +969,33 @@ static int * g_hash_table_find_key(GHashTable *satvarmap, int *keyvalue)
 /*
  * convert a clause from pico to a clause for pico_cur
  */
-static GArray * map_oldclause_to_newclause(GHashTable *satvarmap, GArray *oldc)
-{
-	GArray *newc = g_array_new(false, false, sizeof(int *));
-	int i, *newval, *oldval, *newabsval, *oldabsval;
-	for (i = 0; i < oldc->len; i++) {
-		oldval = g_array_index(oldc, int *, i);
-		if (*oldval < 0) {
-			oldabsval = malloc(sizeof(int));
-			*oldabsval = abs(*oldval);
-		} else {
-			oldabsval = oldval;
-		}
-		if (!g_hash_table_contains(satvarmap, oldabsval)) {
-			newabsval = malloc(sizeof(int));
-			*newabsval = g_hash_table_size(satvarmap) + 1;
-			g_hash_table_insert(satvarmap, oldabsval, newabsval);
-		} else {
-			newabsval = g_hash_table_lookup(satvarmap, oldabsval);
-		}
-
-		newval = malloc(sizeof(int));
-		*newval = *oldval < 0 ? *newabsval * -1 : *newabsval;
-		g_array_append_val(newc, newval);
-	}
-	
-	return newc;
-}
+// static GArray * map_oldclause_to_newclause(GHashTable *satvarmap, GArray *oldc)
+// {
+// 	GArray *newc = g_array_new(false, false, sizeof(int *));
+// 	int i, *newval, *oldval, *newabsval, *oldabsval;
+// 	for (i = 0; i < oldc->len; i++) {
+// 		oldval = g_array_index(oldc, int *, i);
+// 		if (*oldval < 0) {
+// 			oldabsval = malloc(sizeof(int));
+// 			*oldabsval = abs(*oldval);
+// 		} else {
+// 			oldabsval = oldval;
+// 		}
+// 		if (!g_hash_table_contains(satvarmap, oldabsval)) {
+// 			newabsval = malloc(sizeof(int));
+// 			*newabsval = g_hash_table_size(satvarmap) + 1;
+// 			g_hash_table_insert(satvarmap, oldabsval, newabsval);
+// 		} else {
+// 			newabsval = g_hash_table_lookup(satvarmap, oldabsval);
+// 		}
+// 
+// 		newval = malloc(sizeof(int));
+// 		*newval = *oldval < 0 ? *newabsval * -1 : *newabsval;
+// 		g_array_append_val(newc, newval);
+// 	}
+// 	
+// 	return newc;
+// }
 
 /*
  * Calculate C\E0

@@ -1019,7 +1019,6 @@ unsigned int count_counstraints(void)
 /*
  * add a constraint for a symbol
  */
-static int no_eq = 0, no_cmp = 0;
 void sym_add_constraint(struct symbol *sym, struct fexpr *constraint)
 {
 	if (!constraint) return;
@@ -1036,6 +1035,7 @@ void sym_add_constraint(struct symbol *sym, struct fexpr *constraint)
 /*
  * add a constraint for a symbol, but check for duplicate constraints
  */
+static int no_eq = 0, no_cmp = 0;
 void sym_add_constraint_eq(struct symbol *sym, struct fexpr *constraint)
 {
 	if (!constraint) return;
@@ -1049,32 +1049,17 @@ void sym_add_constraint_eq(struct symbol *sym, struct fexpr *constraint)
 	struct pexpr *pe_orig = fexpr_to_pexpr(constraint);
 	pe_orig = pexpr_eliminate_dups(pe_orig);
 
-// 	printf("CHECKING NEW CONSTRAINT in symbol %s\n", sym_get_name(sym));
-// 	printf("c: ");
-// 	pexpr_print(pe_orig, -1);
-// 	printf("\n");
-
-// 	/* check the constraints for the same symbol */
+	/* check the constraints for the same symbol */
 	unsigned int i;
 	struct fexpr *e;
 	struct pexpr *pe_copy;
 	for (i = 0; i < sym->constraints->arr->len; i++) {
 		e = g_array_index(sym->constraints->arr, struct fexpr *, i);
 		pe_copy = fexpr_to_pexpr(e);
-// 		printf("Checking... ");
-// 		pexpr_print(pe_copy, -1);
-// 		printf("\n");
-		
-// 		if (fexpr_eq(constraint, e)) return;
+
 		no_cmp++;
 		if (pexpr_eq(pe_orig, pe_copy)) {
 // 			printf("EQUAL\n");
-// 			pexpr_print(pe_orig, -1);
-// 			printf("\n");
-// 			pexpr_print(pe_copy, -1);
-// 			printf("\n");
-
-// 			getchar();
 			no_eq++;
 // 			if (no_eq % 500 == 0) {
 // 				printf("Equiv: %d\n", no_eq);
@@ -1082,7 +1067,6 @@ void sym_add_constraint_eq(struct symbol *sym, struct fexpr *constraint)
 // 				printf("Total: %d\n", count_counstraints());
 // 				getchar();
 // 			}
-				
 			pexpr_free(pe_copy);
 			pexpr_free(pe_orig);
 			return;

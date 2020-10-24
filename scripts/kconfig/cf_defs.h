@@ -5,7 +5,7 @@
 extern unsigned int sat_variable_nr;
 extern unsigned int tmp_variable_nr;
 extern GHashTable *satmap;
-extern GHashTable *cnf_clauses_map; /* hash-table with all CNF-clauses */
+// extern GHashTable *cnf_clauses_map; /* hash-table with all CNF-clauses */
 extern GArray *sdv_arr; /* array with conflict-symbols */
 extern struct fexpr *const_false;
 extern struct fexpr *const_true;
