@@ -1087,7 +1087,7 @@ ConflictsView::ConflictsView(QWidget* parent, const char *name)
 	solutionTable = new QTableWidget();
 	solutionTable->setRowCount(0);
 	solutionTable->setColumnCount(2);
-	solutionTable->setHorizontalHeaderLabels(QStringList()  << "Symbol" << "New Value");
+	solutionTable->setHorizontalHeaderLabels(QStringList()  << "Symbol" << "New Value" );
 
 	applyFixButton = new QPushButton("Apply Selected solution");
 	connect(applyFixButton, SIGNAL(clicked(bool)), SLOT(applyFixButtonClick()));
@@ -1123,7 +1123,7 @@ void ConflictsView::applyFixButtonClick(){
 
 	GArray* selected_solution = g_array_index(solution_output,GArray * , solution_number);
 	apply_fix(selected_solution);
-	
+
 	ConfigView::updateListAll();
 }
 void ConflictsView::changeToYes(){
@@ -1269,26 +1269,25 @@ void ConflictsView::changeSolutionTable(int solution_number){
 		if (cur_symbol->type == symbolfix_type::SF_BOOLEAN){
 // 			std::cout << "adding boolean symbol " << std::endl;
 			QTableWidgetItem* symbol_value = new QTableWidgetItem(tristate_value_to_string(cur_symbol->tri));
-			symbol_name->setForeground( sym_string_within_range(cur_symbol->sym, tristate_value_to_string(cur_symbol->tri).toStdString().c_str())? green : red);
 			solutionTable->setItem(solutionTable->rowCount()-1,1,symbol_value);
 		} else if(cur_symbol->type == symbolfix_type::SF_NONBOOLEAN){
 // 			std::cout << "adding non boolean symbol " << std::endl;
 			QTableWidgetItem* symbol_value = new QTableWidgetItem(cur_symbol->nb_val.s);
-			symbol_name->setForeground( sym_string_within_range(cur_symbol->sym, tristate_value_to_string(cur_symbol->tri).toStdString().c_str())? green : red);
 			solutionTable->setItem(solutionTable->rowCount()-1,1,symbol_value);
 		} else {
 			QTableWidgetItem* symbol_value = new QTableWidgetItem(cur_symbol->disallowed.s);
-			symbol_name->setForeground( sym_string_within_range(cur_symbol->sym, tristate_value_to_string(cur_symbol->tri).toStdString().c_str())? green : red);
 // 			std::cout << "adding disalllowed symbol " << std::endl;
 			solutionTable->setItem(solutionTable->rowCount()-1,1,symbol_value);
 		}
 // 		std::cout << "Adding " << cur_symbol->sym->name << " to list " << std::endl;
 	}
+	UpdateConflictsViewColorization();
 }
 void ConflictsView::UpdateConflictsViewColorization(void)
 {
 	auto green = QColor(0,170,0);
 	auto red = QColor(255,0,0);
+	auto grey = QColor(180,180,180);
 
 	if (solutionTable->rowCount() == 0 || current_solution_number < 0)
 		return;
@@ -1301,13 +1300,42 @@ void ConflictsView::UpdateConflictsViewColorization(void)
 		GArray* selected_solution = g_array_index(solution_output,GArray * ,current_solution_number);
 		struct symbol_fix* cur_symbol = g_array_index(selected_solution,struct symbol_fix*,i);
 
-		if (sym_string_within_range(cur_symbol->sym, tristate_value_to_string(cur_symbol->tri).toStdString().c_str()))
-		{
-			symbol->setForeground(green);
+		// if symbol is editable but the value is not the target value from solution we got, the color is red
+		// if symbol is editable but the value is the target value from solution we got, the color is green
+		// if symbol is not editable , the value is not the target value, the color is grey
+		// if symbol is not editable , the value is the target value, the color is green
 
-		} else {
+
+		auto editable = sym_string_within_range(cur_symbol->sym, tristate_value_to_string(cur_symbol->tri).toStdString().c_str());
+		auto _symbol = solutionTable->item(i,0)->text().toUtf8().data();
+		struct symbol* sym_ = sym_find(_symbol);
+
+		tristate current_value_of_symbol = sym_get_tristate_value(sym_);
+		tristate target_value_of_symbol = string_value_to_tristate(solutionTable->item(i,1)->text());
+		bool symbol_value_same_as_target = current_value_of_symbol == target_value_of_symbol;
+
+
+		// std::cerr << "symbol name: " << symbol->text().toStdString() <<std::endl;
+		// std::cerr << "symbol current value: " << tristate_value_to_string(current_value_of_symbol).toStdString() <<std::endl;
+		// std::cerr << "symbol target: " << solutionTable->item(i,1)->text().toStdString() <<std::endl;
+		// std::cerr << "editable :"  << (editable ? "true" : "false" ) << std::endl;
+		// std::cerr << "symbol value same as target? : "  << (symbol_value_same_as_target ? "true" : "false" ) << std::endl;
+
+		if (editable && !symbol_value_same_as_target){
+			std::cerr << "editable but symbol not on target value" << std::endl;
 			symbol->setForeground(red);
+		} else if (editable && symbol_value_same_as_target){
+			std::cerr << "editable and symbol is target value" << std::endl;
+			symbol->setForeground(green);
+		} else if (!editable && !symbol_value_same_as_target){
+			std::cerr << "not editable and symbol is not target value" << std::endl;
+			symbol->setForeground(grey);
+		} else if (!editable && symbol_value_same_as_target){
+			std::cerr << "not editable and symbol same target value" << std::endl;
+			symbol->setForeground(green);
 		}
+
+
 
     }
 
