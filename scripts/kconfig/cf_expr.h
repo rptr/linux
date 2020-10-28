@@ -24,18 +24,44 @@ struct fexpr * calculate_fexpr_m_not(struct k_expr *a);
 struct fexpr * calculate_fexpr_y_equals(struct k_expr *a);
 struct fexpr * calculate_fexpr_y_unequals(struct k_expr *a);
 
+struct pexpr * calculate_pexpr_both(struct k_expr *e);
+struct pexpr * calculate_pexpr_y(struct k_expr *e);
+struct pexpr * calculate_pexpr_m(struct k_expr *e);
+struct pexpr * calculate_pexpr_y_and(struct k_expr *a, struct k_expr *b);
+struct pexpr * calculate_pexpr_m_and(struct k_expr *a, struct k_expr *b);
+struct pexpr * calculate_pexpr_both_and(struct k_expr *a, struct k_expr *b);
+struct pexpr * calculate_pexpr_y_or(struct k_expr *a, struct k_expr *b);
+struct pexpr * calculate_pexpr_m_or(struct k_expr *a, struct k_expr *b);
+struct pexpr * calculate_pexpr_both_or(struct k_expr *a, struct k_expr *b);
+struct pexpr * calculate_pexpr_y_not(struct k_expr *a);
+struct pexpr * calculate_pexpr_m_not(struct k_expr *a);
+struct pexpr * calculate_pexpr_y_equals(struct k_expr *a);
+struct pexpr * calculate_pexpr_y_unequals(struct k_expr *a);
+
 
 /* macro to create a fexpr of type AND */
 struct fexpr * fexpr_and(struct fexpr *a, struct fexpr *b);
 
+/* macro to create a pexpr of type AND */
+struct pexpr * pexpr_and(struct pexpr *a, struct pexpr *b);
+
 /* macro to create a fexpr of type OR */
 struct fexpr * fexpr_or(struct fexpr *a, struct fexpr *b);
+
+/* macro to create a pexpr of type OR */
+struct pexpr * pexpr_or(struct pexpr *a, struct pexpr *b);
 
 /* macro to create a fexpr of type NOT */
 struct fexpr * fexpr_not(struct fexpr *a);
 
+/* macro to create a pexpr of type NOT */
+struct pexpr * pexpr_not(struct pexpr *a);
+
 /* check whether a fexpr is in CNF */
 bool fexpr_is_cnf(struct fexpr *e);
+
+/* check whether a pexpr is in CNF */
+bool pexpr_is_cnf(struct pexpr *e);
 
 /* return fexpr_both for a symbol */
 struct fexpr * sym_get_fexpr_both(struct symbol *sym);
@@ -62,7 +88,10 @@ struct fexpr * sym_get_nonbool_fexpr(struct symbol *sym, char *value);
 struct fexpr * sym_get_or_create_nonbool_fexpr(struct symbol *sym, char *value);
 
 /* macro to construct a fexpr for "A implies B" */
-struct fexpr * implies(struct fexpr *a, struct fexpr *b);
+struct fexpr * implies_fexpr(struct fexpr *a, struct fexpr *b);
+
+/* macro to construct a pexpr for "A implies B" */
+struct pexpr * pexpr_implies(struct pexpr *a, struct pexpr *b);
 
 /* check, if the fexpr is a symbol, a True/False-constant, a literal symbolizing a non-boolean or a choice symbol */
 bool fexpr_is_symbol(struct fexpr *e);
@@ -72,6 +101,9 @@ bool fexpr_is_symbol_or_not(struct fexpr *e);
 
 /* check, if a fexpr is a symbol, a True/False-constant, a literal symbolizing a non-boolean, a choice symbol or a negated "symbol" */
 bool fexpr_is_symbol_or_neg_atom(struct fexpr *e);
+
+/* check whether a pexpr is a symbol or a negated symbol */
+bool pexpr_is_symbol(struct pexpr *e);
 
 /* check whether the fexpr is a constant (true/false) */
 bool fexpr_is_constant(struct fexpr *e);
@@ -84,6 +116,9 @@ void fexpr_as_char(struct fexpr *e, struct gstr *s, int parent);
 
 /* write an fexpr into a string */
 void fexpr_as_char_short(struct fexpr *e, struct gstr *s, int parent);
+
+/* write pn pexpr into a string */
+void pexpr_as_char_short(struct pexpr *e, struct gstr *s, int parent);
 
 /* check whether 2 pexpr are equal */
 bool pexpr_eq(struct pexpr *e1, struct pexpr *e2);
@@ -98,7 +133,7 @@ void pexpr_free(struct pexpr *e);
 void pexpr_print(char *tag, struct pexpr *e, int prevtoken);
 
 /* convert a fexpr to a pexpr */
-struct pexpr * fexpr_to_pexpr(struct fexpr *fe);
+struct pexpr * pexf(struct fexpr *fe);
 
 /* eliminate duplicate and redundant operands */
 struct pexpr * pexpr_eliminate_dups(struct pexpr *e);

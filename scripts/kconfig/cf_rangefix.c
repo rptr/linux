@@ -17,7 +17,7 @@
 #include "configfix.h"
 
 #define MAX_DIAGNOSES 3
-#define MAX_SECONDS 300
+#define MAX_SECONDS 10
 #define SLICE_PROBLEM false /* DO NOT ENABLE, NOT FULLY IMPLEMENTED */
 #define PRINT_UNSAT_CORE true
 #define PRINT_DIAGNOSES false
@@ -118,6 +118,18 @@ static GArray * generate_diagnoses(PicoSAT *pico)
 	GArray *X, *e, *x_set, *E1, *E_R_Union, *E2;
 	struct fexpr *x;
 	unsigned int i, j, k, diagnosis_index;
+	
+	/* TO BE REMOVED AGAIN, JUST FOR TESTING */
+	k = 0;
+	while (k < 10) {
+		if (stop_rangefix) {
+			stop_rangefix = false;
+			return R;
+		}
+		k++;
+		sleep(1);
+	}
+	return R;
 	
 	/* create constraint set C */
 	add_fexpr_to_constraint_set(C);

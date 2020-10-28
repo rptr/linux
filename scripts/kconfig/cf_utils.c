@@ -62,7 +62,7 @@ void init_data(void)
 static void create_sat_variables(struct symbol *sym)
 {
 	sym->constraints = malloc(sizeof(struct garray_wrapper));
-	sym->constraints->arr = g_array_new(false, false, sizeof(struct fexpr *));
+	sym->constraints->arr = g_array_new(false, false, sizeof(struct pexpr *));
 	sym_create_fexpr(sym);
 }
 
@@ -613,17 +613,17 @@ struct property * sym_get_prompt(struct symbol *sym)
 /*
  * return the condition for the property, True if there is none
  */
-struct fexpr * prop_get_condition(struct property *prop)
+struct pexpr * prop_get_condition(struct property *prop)
 {
 	assert(prop != NULL);
 	
 	/* if there is no condition, return True */
 	if (!prop->visible.expr)
-		return const_true;
+		return pexf(const_true);
 	
 	struct k_expr *ke = parse_expr(prop->visible.expr, NULL);
 	
-	return calculate_fexpr_both(ke);
+	return calculate_pexpr_both(ke);
 }
 
 /*
@@ -677,11 +677,11 @@ void print_sym_name(struct symbol *sym)
  */
 void print_sym_constraint(struct symbol* sym)
 {
-	struct fexpr *e;
+	struct pexpr *e;
 	int i;
 	for (i = 0; i < sym->constraints->arr->len; i++) {
-		e = g_array_index(sym->constraints->arr, struct fexpr *, i);
-		fexpr_print("::", e, -1);
+		e = g_array_index(sym->constraints->arr, struct pexpr *, i);
+		pexpr_print("::", e, -1);
 	}
 }
 
@@ -699,7 +699,7 @@ void print_default_map(GArray *map)
 		str_append(&s, "\t");
 		str_append(&s, str_get(&entry->val->name));
 		str_append(&s, " ->");
-		fexpr_print(strdup(str_get(&s)), entry->e, -1);
+		pexpr_print(strdup(str_get(&s)), entry->e, -1);
 	}
 }
 

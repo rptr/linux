@@ -7,6 +7,7 @@ extern unsigned int tmp_variable_nr;
 extern GHashTable *satmap;
 // extern GHashTable *cnf_clauses_map; /* hash-table with all CNF-clauses */
 extern GArray *sdv_arr; /* array with conflict-symbols */
+extern bool stop_rangefix;
 extern struct fexpr *const_false;
 extern struct fexpr *const_true;
 extern struct fexpr *symbol_yes_fexpr;
@@ -137,7 +138,7 @@ struct pexpr {
 struct default_map {
 	struct fexpr *val;
 	
-	struct fexpr *e;
+	struct pexpr *e;
 };
 
 enum symboldv_type {

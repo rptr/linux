@@ -97,15 +97,15 @@ static void write_constraints_to_file(void)
 	FILE *fd = fopen(OUTFILE_CONSTRAINTS, "w");
 	unsigned int i, j;
 	struct symbol *sym;
-	struct fexpr *e;
+	struct pexpr *e;
 	
 	for_all_symbols(i, sym) {
 		if (sym->type == S_UNKNOWN) continue;
 		
 		for (j = 0; j < sym->constraints->arr->len; j++) {
-			e = g_array_index(sym->constraints->arr, struct fexpr *, j);
+			e = g_array_index(sym->constraints->arr, struct pexpr *, j);
 			struct gstr s = str_new();
-			fexpr_as_char_short(e, &s, -1);
+			pexpr_as_char_short(e, &s, -1);
 			fprintf(fd, "%s\n", str_get(&s));
 			str_free(&s);
 		}
@@ -117,12 +117,14 @@ static void add_comments(gpointer key, gpointer value, gpointer fd)
 {
 	struct fexpr *e = (struct fexpr *) value;
 	
-	if (
-		e->type == FE_TMPSATVAR || 
-		e->type == FE_SELECT ||
-		e->type == FE_CHOICE ||
-		e->type == FE_FALSE ||
-		e->type == FE_TRUE
+	printf("%d %s\n", *((int *) key), str_get(&e->name));
+	
+	if (12 == 11
+// 		e->type == FE_TMPSATVAR || 
+// 		e->type == FE_SELECT ||
+// 		e->type == FE_CHOICE ||
+// 		e->type == FE_FALSE ||
+// 		e->type == FE_TRUE
 	) return;
 	
 	fprintf((FILE *) fd, "c %d %s\n", *((int *) key), str_get(&e->name));

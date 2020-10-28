@@ -40,6 +40,8 @@ int apply_fix(GArray *diag);
 
 int run_satconf_cli(const char *Kconfig_file);
 
+void interrupt_rangefix(void);
+
 
 /* make functions accessible from xconfig */
 #ifdef __cplusplus

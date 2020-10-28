@@ -23,6 +23,8 @@ GHashTable *satmap = NULL; /* hash table with all SAT-variables and their fexpr 
 GHashTable *cnf_clauses_map; /* hash-table with all CNF-clauses */
 GArray *sdv_arr; /* array with conflict-symbols */
 
+bool stop_rangefix = false;
+
 struct fexpr *const_false; /* constant False */
 struct fexpr *const_true; /* constant True */
 struct fexpr *symbol_yes_fexpr; /* symbol_yes as fexpr */
@@ -70,20 +72,6 @@ int run_satconf_cli(const char *Kconfig_file)
 		
 		printf("done. (%.6f secs.)\n", time);
 		
-// 		printf("Building CNF-clauses...");
-// 		start = clock();
-// 		
-// 		/* construct the CNF clauses */
-// 		construct_cnf_clauses();
-// 		
-// 		end = clock();
-// 		time = ((double) (end - start)) / CLOCKS_PER_SEC;
-// 		
-// 		printf("done. (%.6f secs.)\n", time);
-		
-		/* write constraints to file */
-// 		write_constraints_to_file();
-		
 		init_done = true;
 	}
 	
@@ -92,10 +80,6 @@ int run_satconf_cli(const char *Kconfig_file)
 	
 	/* print all symbols and its constraints */
 // 	print_all_symbols();
-
-	/* print all CNFs */
-// 	printf("All CNFs:\n");
-// 	print_all_cnf_clauses( cnf_clauses );
 
 //  	return EXIT_SUCCESS;
 	
@@ -389,6 +373,15 @@ int apply_fix(GArray* diag)
 	
 	return manually_changed;
 }
+
+/*
+ * stop RangeFix after the next iteration
+ */
+void interrupt_rangefix(void)
+{
+	stop_rangefix = true;
+}
+
 
 /*
  * check whether all symbols are already within range
