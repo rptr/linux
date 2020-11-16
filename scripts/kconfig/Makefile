@@ -219,7 +219,7 @@ hostprogs	+= qconf
 qconf-cxxobjs	:= qconf.o qconf-moc.o conflict_resolver.o
 qconf-objs	:= images.o $(common-objs) $(cfconf-objs)
 
-HOSTLDLIBS_qconf	= $(shell . $(obj)/qconf-cfg && echo $$libs && pkg-config --libs glib-2.0)
+HOSTLDLIBS_qconf	= $(shell . $(obj)/qconf-cfg && echo $$libs && pkg-config --libs glib-2.0 &&  echo -lpthread)
 HOSTLDLIBS_conflict_resolver	= $(shell . $(obj)/qconf-cfg && echo $$libs)
 HOSTCXXFLAGS_qconf.o	= $(shell . $(obj)/qconf-cfg && echo $$cflags && pkg-config --cflags glib-2.0)
 HOSTCXXFLAGS_conflict_resolver.o	= $(shell . $(obj)/qconf-cfg && echo $$cflags)

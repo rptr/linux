@@ -18,6 +18,8 @@
 #include <QList>
 #include <QComboBox>
 #include <QLabel>
+#include <thread>
+
 #include "expr.h"
 
 #include "conflict_resolver.h"
@@ -254,6 +256,7 @@ public slots:
 
 	void applyFixButtonClick();
 	void UpdateConflictsViewColorization();
+	void updateResults();
 
 
 
@@ -268,6 +271,7 @@ signals:
 	void showDataChanged(bool);
     void conflictSelected(struct menu *);
 	void refreshMenu();
+	void resultsReady();
 public:
 	QTableWidget* conflictsTable;
 	QList<Constraint> constraints;
@@ -289,6 +293,9 @@ public:
 	QLabel* numSolutionLabel{nullptr};
 	//currently selected config items in configlist.
 	QList<QTreeWidgetItem*> currentSelection;
+	QAction *fixConflictsAction_{nullptr};
+	void runSatConfAsync();
+	std::thread* runSatConfAsyncThread{nullptr};
 
 	//colorize the symbols
 	// void ColorizeSolutionTable();

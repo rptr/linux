@@ -35,6 +35,9 @@
 #include <QMimeData>
 #include <QBrush>
 #include <QColor>
+#include <future>
+#include <memory>
+
 static QApplication *configApp;
 static ConfigSettings *configSettings;
 
@@ -1038,18 +1041,18 @@ ConflictsView::ConflictsView(QWidget* parent, const char *name)
 	QAction *setConfigSymbolAsNo = new QAction("N");
 	QAction *setConfigSymbolAsModule = new QAction("M");
 	QAction *setConfigSymbolAsYes = new QAction("Y");
-	QAction *fixConflictsAction = new QAction("Calculate Fixes");
+	fixConflictsAction_ = new QAction("Calculate Fixes");
 	QAction *removeSymbol = new QAction("Remove Symbol");
 
 	//if you change the order of buttons here, change the code where
 	//module button was disabled if symbol is boolean, selecting module button
 	//depends on a specific index in list of action
-	fixConflictsAction->setCheckable(false);
+	fixConflictsAction_->setCheckable(false);
 	conflictsToolBar->addAction(addSymbol);
 	conflictsToolBar->addAction(setConfigSymbolAsNo);
 	conflictsToolBar->addAction(setConfigSymbolAsModule);
 	conflictsToolBar->addAction(setConfigSymbolAsYes);
-	conflictsToolBar->addAction(fixConflictsAction);
+	conflictsToolBar->addAction(fixConflictsAction_);
 	conflictsToolBar->addAction(removeSymbol);
 
 	verticalLayout->addWidget(conflictsToolBar);
@@ -1059,9 +1062,10 @@ ConflictsView::ConflictsView(QWidget* parent, const char *name)
 	connect(setConfigSymbolAsModule, SIGNAL(triggered(bool)), SLOT(changeToModule()));
 	connect(setConfigSymbolAsYes, SIGNAL(triggered(bool)), SLOT(changeToYes()));
 	connect(removeSymbol, SIGNAL(triggered(bool)), SLOT(removeSymbol()));
+	connect(this, SIGNAL(resultsReady()), SLOT(updateResults()));
 	//connect clicking 'calculate fixes' to 'change all symbol values to fix all conflicts'
 	// no longer used anymore for now.
-	connect(fixConflictsAction, SIGNAL(triggered(bool)), SLOT(calculateFixes()));
+	connect(fixConflictsAction_, SIGNAL(triggered(bool)), SLOT(calculateFixes()));
 
 	conflictsTable = (QTableWidget*) new dropAbleView(this);
 	conflictsTable->setRowCount(0);
@@ -1340,22 +1344,8 @@ void ConflictsView::UpdateConflictsViewColorization(void)
     }
 
 }
-void ConflictsView::calculateFixes(void)
+void ConflictsView::runSatConfAsync()
 {
-// 	std::cout << "calculating fixes" << std::endl;
-	// call satconf to get a solution by looking at the grid and taking the symbol and their desired value.
-	//get the symbols from  grid:
-	if(conflictsTable->rowCount() == 0)
-		return;
-
-	numSolutionLabel->setText(QString("Solutions: "));
-	solutionSelector->clear();
-	solutionTable->setRowCount(0);
-	solutionTable->repaint();
-	solutionSelector->repaint();
-	numSolutionLabel->repaint();
-
-
 	GArray* wanted_symbols = g_array_sized_new(FALSE,TRUE,sizeof(struct symbol_dvalue *),conflictsTable->rowCount());
 	//loop through the rows in conflicts table adding each row into the array:
 	struct symbol_dvalue* p = nullptr;
@@ -1373,14 +1363,23 @@ void ConflictsView::calculateFixes(void)
 		tmp->tri = string_value_to_tristate(conflictsTable->item(i,1)->text());
 		g_array_append_val(wanted_symbols,tmp);
 	}
+	fixConflictsAction_->setText("Cancel");
+	// conflictsToolBar->repaint();
 	solution_output = run_satconf(wanted_symbols);
 	free(p);
 	g_array_free (wanted_symbols,FALSE);
+	emit resultsReady();
+
+}
+void ConflictsView::updateResults(void)
+{
+	fixConflictsAction_->setText("Calculate Fixes");
+	// conflictsToolBar->repaint();
 	if (solution_output == nullptr || solution_output->len == 0)
 	{
 		return;
 	}
-// 	std::cout << "solution length = " << unsigned(solution_output->len) << std::endl;
+	// std::cout << "solution length = " << unsigned(solution_output->len) << std::endl;
 	solutionSelector->clear();
 	for (unsigned int i = 0; i < solution_output->len; i++)
 	{
@@ -1389,6 +1388,39 @@ void ConflictsView::calculateFixes(void)
 	// populate the solution table from the first solution gotten
 	numSolutionLabel->setText(QString("Solutions: (%1) found").arg(solution_output->len));
 	changeSolutionTable(0);
+	if (runSatConfAsyncThread->joinable()){
+		runSatConfAsyncThread->join();
+		delete runSatConfAsyncThread;
+		runSatConfAsyncThread  = nullptr;
+	}
+
+}
+void ConflictsView::calculateFixes(void)
+{
+// 	std::cout << "calculating fixes" << std::endl;
+	// call satconf to get a solution by looking at the grid and taking the symbol and their desired value.
+	//get the symbols from  grid:
+	if(conflictsTable->rowCount() == 0)
+		return;
+
+	numSolutionLabel->setText(QString("Solutions: "));
+	solutionSelector->clear();
+	solutionTable->setRowCount(0);
+	// solutionTable->repaint();
+	// solutionSelector->repaint();
+	// numSolutionLabel->repaint();
+	// fire away asynchronous call
+	if (runSatConfAsyncThread == nullptr)
+	{
+		runSatConfAsyncThread = new std::thread(&ConflictsView::runSatConfAsync,this);
+	}else{
+		if (runSatConfAsyncThread->joinable()){
+			runSatConfAsyncThread->join();
+			runSatConfAsyncThread = new std::thread(&ConflictsView::runSatConfAsync,this);
+		}
+
+	}
+
 
 }
 void ConflictsView::changeAll(void)
