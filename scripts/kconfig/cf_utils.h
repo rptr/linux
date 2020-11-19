@@ -78,7 +78,7 @@ bool sym_has_prompt(struct symbol *sym);
 struct property * sym_get_prompt(struct symbol *sym);
 
 /* return the condition for the property, True if there is none */
-struct fexpr * prop_get_condition(struct property *prop);
+struct pexpr * prop_get_condition(struct property *prop);
 
 /* return the name of the symbol */
 char * sym_get_name(struct symbol *sym);

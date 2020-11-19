@@ -27,7 +27,7 @@ extern "C" {
 /* include other header files needed */
 #include "picosat.h"
 #include "cf_constraints.h"
-#include "cf_fexpr.h"
+#include "cf_expr.h"
 #include "cf_rangefix.h"
 #include "cf_satutils.h"
 #include "cf_utils.h"
@@ -39,6 +39,8 @@ GArray * run_satconf(GArray *arr);
 int apply_fix(GArray *diag);
 
 int run_satconf_cli(const char *Kconfig_file);
+
+void interrupt_rangefix(void);
 
 
 /* make functions accessible from xconfig */

@@ -3,10 +3,10 @@ menuconfig MODULES
 	option modules
 	default y
 
-choice
-	bool
-	prompt "1"
-	depends on E
+#choice
+#	bool
+#	prompt "1"
+#	depends on E
 
 config A
 	bool "A"
@@ -20,11 +20,11 @@ config C
 #	depends on A
 	#default y
 
-endchoice
+#endchoice
 
 config D
-	bool "D"
-	#select E
+	tristate "D"
+	depends on E && F
 
 config E
 	bool "E"
@@ -33,4 +33,4 @@ config E
 
 config F
 	bool "F"
-	#select E
+#	select D
