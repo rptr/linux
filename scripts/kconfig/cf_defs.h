@@ -5,8 +5,9 @@
 extern unsigned int sat_variable_nr;
 extern unsigned int tmp_variable_nr;
 extern GHashTable *satmap;
-extern GHashTable *cnf_clauses_map; /* hash-table with all CNF-clauses */
+// extern GHashTable *cnf_clauses_map; /* hash-table with all CNF-clauses */
 extern GArray *sdv_arr; /* array with conflict-symbols */
+extern bool stop_rangefix;
 extern struct fexpr *const_false;
 extern struct fexpr *const_true;
 extern struct fexpr *symbol_yes_fexpr;
@@ -68,6 +69,7 @@ enum fexpr_type {
 	FE_OR,
 	FE_NOT,
 	FE_EQUALS,
+	FE_NPC, /* no prompt condition */
 	FE_TRUE,  /* constant of value True */
 	FE_FALSE,  /* constant of value False */
 	FE_NONBOOL,  /* for all non-(boolean/tristate) known values */
@@ -116,10 +118,27 @@ struct fexpr {
 	
 };
 
+enum pexpr_type {
+	PE_SYMBOL,
+	PE_AND,
+	PE_OR,
+	PE_NOT
+};
+
+union pexpr_data {
+	struct pexpr *pexpr;
+	struct fexpr *fexpr;
+};
+
+struct pexpr {
+	enum pexpr_type type;
+	union pexpr_data left, right;
+};
+
 struct default_map {
 	struct fexpr *val;
 	
-	struct fexpr *e;
+	struct pexpr *e;
 };
 
 enum symboldv_type {
