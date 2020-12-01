@@ -63,6 +63,9 @@ bool fexpr_is_cnf(struct fexpr *e);
 /* check whether a pexpr is in CNF */
 bool pexpr_is_cnf(struct pexpr *e);
 
+/* check whether a pexpr is in NNF */
+bool pexpr_is_nnf(struct pexpr *e);
+
 /* return fexpr_both for a symbol */
 struct fexpr * sym_get_fexpr_both(struct symbol *sym);
 

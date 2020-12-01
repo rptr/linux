@@ -880,6 +880,27 @@ bool pexpr_is_cnf(struct pexpr *e)
 }
 
 /*
+ * check whether a pexpr is in NNF
+ */
+bool pexpr_is_nnf(struct pexpr *e)
+{
+	if (!e) return false;
+	
+	switch (e->type) {
+	case PE_SYMBOL:
+		return true;
+	case PE_AND:
+	case PE_OR:
+		return pexpr_is_nnf(e->left.pexpr) && pexpr_is_nnf(e->right.pexpr);
+	case PE_NOT:
+		return e->left.pexpr->type == PE_SYMBOL;
+	}
+	
+	return false;
+}
+
+
+/*
  * return fexpr_both for a symbol
  */
 struct fexpr * sym_get_fexpr_both(struct symbol *sym)

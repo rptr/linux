@@ -33,7 +33,7 @@ static void add_dependencies_nonbool(struct symbol *sym);
 static void add_choice_prompt_cond(struct symbol *sym);
 static void add_choice_dependencies(struct symbol *sym);
 static void add_choice_constraints(struct symbol *sym);
-static void add_invisible_constraints(struct symbol *sym, struct property *prompt);
+static void add_invisible_constraints(struct symbol *sym);
 static void sym_nonbool_at_least_1(struct symbol *sym);
 static void sym_nonbool_at_most_1(struct symbol *sym);
 static void sym_add_nonbool_values_from_ranges(struct symbol *sym);
@@ -126,9 +126,7 @@ void get_constraints(void)
 // 		}
 		
 		/* build invisible constraints */
-		struct property *prompt = sym_get_prompt(sym);
-		if (prompt != NULL && prompt->visible.expr)
-			add_invisible_constraints(sym, prompt);
+		add_invisible_constraints(sym);
 		
 	}
 	
@@ -179,6 +177,8 @@ void get_constraints(void)
 // 		struct fexpr *c2 = implies(sym->fexpr_sel_m, sym->list_sel_m);
 // 		sym_add_constraint_fexpr(sym, c2);
 	}
+	
+	return;
 	
 	/* 
 	 * build constraints for non-booleans
@@ -511,16 +511,7 @@ static void add_choice_dependencies(struct symbol *sym)
 
 // 	struct fexpr *dep_both = calculate_fexpr_both(ke_dirdep);
 	struct pexpr *dep_both = calculate_pexpr_both(ke_dirdep);
-	
-// 	struct symbol *sym2 = sym_find("D");
-// 	if (sym_is_choice_value(sym) && sym->dir_dep.expr && expr_contains_symbol(sym->dir_dep.expr, sym2)) {
-// 		printf("\n");
-// 		pexpr_print("pe:", dep_both, -1);
-// 		struct fexpr *fe = calculate_fexpr_both(ke_dirdep);
-// 		fexpr_print("fe:", fe, -1);
-// 	}
 		
-	
 	if (sym->type == S_TRISTATE) {
 // 		struct fexpr *dep_y = calculate_fexpr_y(ke_dirdep);
 		struct pexpr *dep_y = calculate_pexpr_y(ke_dirdep);
@@ -662,17 +653,32 @@ static void add_choice_constraints(struct symbol *sym)
 /*
  * build the constraints for invisible options such as defaults
  */
-static void add_invisible_constraints(struct symbol *sym, struct property *prompt)
+static void add_invisible_constraints(struct symbol *sym)
 {
-	assert(prompt);
+	struct property *prompt = sym_get_prompt(sym);
 	
-	struct k_expr *ke_promptCond = parse_expr(prompt->visible.expr, NULL);
+	/* no prompt conditions, nothing to do here */
+	if (prompt != NULL && !prompt->visible.expr) return;
+	
+	struct pexpr *promptCondition_both, *promptCondition_yes, *nopromptCond;
+	if (prompt == NULL) {
+		promptCondition_both = pexf(const_false);
+		promptCondition_yes = pexf(const_false);
+		nopromptCond = pexf(const_true);
+	} else {
+		struct k_expr *ke_promptCond = parse_expr(prompt->visible.expr, NULL);
+		promptCondition_both = calculate_pexpr_both(ke_promptCond);
+		promptCondition_yes = calculate_pexpr_y(ke_promptCond);
+		nopromptCond = pexpr_not(promptCondition_both);
+	}
+	
+// 	struct k_expr *ke_promptCond = parse_expr(prompt->visible.expr, NULL);
 // 	struct fexpr *promptCondition_both = calculate_fexpr_both(ke_promptCond);
-	struct pexpr *promptCondition_both = calculate_pexpr_both(ke_promptCond);
+// 	struct pexpr *promptCondition_both = calculate_pexpr_both(ke_promptCond);
 // 	struct fexpr *promptCondition_yes = calculate_fexpr_y(ke_promptCond);
-	struct pexpr *promptCondition_yes = calculate_pexpr_y(ke_promptCond);
+// 	struct pexpr *promptCondition_yes = calculate_pexpr_y(ke_promptCond);
 // 	struct fexpr *nopromptCond = fexpr_not(promptCondition_both);
-	struct pexpr *nopromptCond = pexpr_not(promptCondition_both);
+// 	struct pexpr *nopromptCond = pexpr_not(promptCondition_both);
 	
 	struct fexpr *npc = fexpr_create(sat_variable_nr++, FE_NPC, "");
 	if (sym_is_choice(sym)) {
@@ -1161,6 +1167,8 @@ void sym_add_constraint(struct symbol *sym, struct pexpr *constraint)
 	
 // 	char *name = sym_get_name(sym);
 // 	pexpr_print(name, constraint, -1);
+	if (!pexpr_is_nnf(constraint))
+		pexpr_print("Not NNF:", constraint, -1);
 }
 
 void sym_add_constraint_fexpr(struct symbol *sym, struct fexpr *constraint)
@@ -1189,6 +1197,9 @@ void sym_add_constraint_eq(struct symbol *sym, struct pexpr *constraint)
 	
 	/* this should never happen */
 	if (constraint->type == PE_SYMBOL && constraint->left.fexpr == const_false) perror("Adding const_false.");
+	
+	if (pexpr_is_nnf(constraint))
+		pexpr_print("Not NNF:", constraint, -1);
 
 // 	struct pexpr *pe_orig;// = pexpr_copy(constraint);
 // 	pe_orig = pexpr_eliminate_dups(constraint);
