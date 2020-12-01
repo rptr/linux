@@ -104,19 +104,16 @@ void get_constraints(void)
 		}
 		
 		/* build constraints for choice prompts */
-// 		if (sym_is_choice(sym))
-// 			add_choice_prompt_cond(sym);
+		if (sym_is_choice(sym))
+			add_choice_prompt_cond(sym);
 		
 		/* build constraints for dependencies (choice symbols and options) */
 		if (sym_is_choice(sym) || sym_is_choice_value(sym))
 			add_choice_dependencies(sym);
 		
-		
 		/* build constraints for the choice groups */
 		if (sym_is_choice(sym))
 			add_choice_constraints(sym);
-		
-		
 		
 		
 // 		if (sym->name && strcmp(sym->name, "CRAMFS_MTD") == 0) {
@@ -470,17 +467,17 @@ static void add_choice_prompt_cond(struct symbol* sym)
 	struct k_expr *ke = prompt->visible.expr ? parse_expr(prompt->visible.expr, NULL) : get_const_true_as_kexpr();
 // 	struct fexpr *promptCondition = calculate_fexpr_both(ke);
 	struct pexpr *promptCondition = calculate_pexpr_both(ke);
-	
+
 // 	struct fexpr *fe_both = sym_get_fexpr_both(sym);
 	struct pexpr *fe_both = pexf(sym_get_fexpr_both(sym));
-	
+
 	if (!sym_is_optional(sym)) {
 // 		struct fexpr *req_cond = implies(promptCondition, fe_both);
 // 		sym_add_constraint_fexpr(sym, req_cond);
 		struct pexpr *req_cond = pexpr_implies(promptCondition, fe_both);
 		sym_add_constraint(sym, req_cond);
 	}
-	
+
 // 	struct fexpr *pr_cond = implies(fe_both, promptCondition);
 	struct pexpr *pr_cond = pexpr_implies(fe_both, promptCondition);
 	
@@ -1162,7 +1159,6 @@ void sym_add_constraint(struct symbol *sym, struct pexpr *constraint)
 	if (constraint->type == PE_SYMBOL && constraint->left.fexpr == const_false)
 		perror("Adding const_false.");
 	
-
 	g_array_append_val(sym->constraints->arr, constraint);
 	
 // 	char *name = sym_get_name(sym);
@@ -1198,7 +1194,7 @@ void sym_add_constraint_eq(struct symbol *sym, struct pexpr *constraint)
 	/* this should never happen */
 	if (constraint->type == PE_SYMBOL && constraint->left.fexpr == const_false) perror("Adding const_false.");
 	
-	if (pexpr_is_nnf(constraint))
+	if (!pexpr_is_nnf(constraint))
 		pexpr_print("Not NNF:", constraint, -1);
 
 // 	struct pexpr *pe_orig;// = pexpr_copy(constraint);
