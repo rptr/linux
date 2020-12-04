@@ -19,6 +19,7 @@
 #include <QComboBox>
 #include <QLabel>
 #include <thread>
+#include <condition_variable>
 
 #include "expr.h"
 
@@ -296,6 +297,10 @@ public:
 	QAction *fixConflictsAction_{nullptr};
 	void runSatConfAsync();
 	std::thread* runSatConfAsyncThread{nullptr};
+
+	std::mutex satconf_mutex;
+	std::condition_variable satconf_cancellation_cv;
+	bool satconf_cancelled{false};
 
 	//colorize the symbols
 	// void ColorizeSolutionTable();

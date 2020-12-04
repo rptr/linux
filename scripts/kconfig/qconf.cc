@@ -1366,58 +1366,71 @@ void ConflictsView::runSatConfAsync()
 	fixConflictsAction_->setText("Cancel");
 	// conflictsToolBar->repaint();
 	solution_output = run_satconf(wanted_symbols);
+	std::cerr << "run_satconf finished....." << std::endl;
 	free(p);
 	g_array_free (wanted_symbols,FALSE);
 	emit resultsReady();
+	std::cerr << "emmitted resultsready()" <<std::endl;;
+	{
+		std::lock_guard<std::mutex> lk{satconf_mutex};
+		satconf_cancelled = true;
+	}
+	satconf_cancellation_cv.notify_one();
+	std::cerr << "notifyone done"<< std::endl;;
 
 }
 void ConflictsView::updateResults(void)
 {
+	std::cerr << "updating results.." <<std::endl;
 	fixConflictsAction_->setText("Calculate Fixes");
 	// conflictsToolBar->repaint();
-	if (solution_output == nullptr || solution_output->len == 0)
+	if (!(solution_output == nullptr || solution_output->len == 0))
 	{
-		return;
+		solutionSelector->clear();
+		for (unsigned int i = 0; i < solution_output->len; i++)
+		{
+			solutionSelector->addItem(QString::number(i+1));
+		}
+		// populate the solution table from the first solution gotten
+		numSolutionLabel->setText(QString("Solutions: (%1) found").arg(solution_output->len));
+		changeSolutionTable(0);
 	}
-	// std::cout << "solution length = " << unsigned(solution_output->len) << std::endl;
-	solutionSelector->clear();
-	for (unsigned int i = 0; i < solution_output->len; i++)
-	{
-		solutionSelector->addItem(QString::number(i+1));
-	}
-	// populate the solution table from the first solution gotten
-	numSolutionLabel->setText(QString("Solutions: (%1) found").arg(solution_output->len));
-	changeSolutionTable(0);
 	if (runSatConfAsyncThread->joinable()){
+		std::cerr << "joining async thread" <<std::endl;
 		runSatConfAsyncThread->join();
 		delete runSatConfAsyncThread;
 		runSatConfAsyncThread  = nullptr;
 	}
+	std::cerr << "update results finished" <<std::endl;
 
 }
 void ConflictsView::calculateFixes(void)
 {
-// 	std::cout << "calculating fixes" << std::endl;
 	// call satconf to get a solution by looking at the grid and taking the symbol and their desired value.
-	//get the symbols from  grid:
 	if(conflictsTable->rowCount() == 0)
 		return;
 
-	numSolutionLabel->setText(QString("Solutions: "));
-	solutionSelector->clear();
-	solutionTable->setRowCount(0);
-	// solutionTable->repaint();
-	// solutionSelector->repaint();
-	// numSolutionLabel->repaint();
-	// fire away asynchronous call
 	if (runSatConfAsyncThread == nullptr)
 	{
+		std::cerr << "reating new asynchronous call" << std::endl;
+		// fire away asynchronous call
+		std::unique_lock<std::mutex> lk{satconf_mutex};
+
+		numSolutionLabel->setText(QString("Solutions: "));
+		solutionSelector->clear();
+		solutionTable->setRowCount(0);
+		satconf_cancelled = false;
 		runSatConfAsyncThread = new std::thread(&ConflictsView::runSatConfAsync,this);
 	}else{
-		if (runSatConfAsyncThread->joinable()){
-			runSatConfAsyncThread->join();
-			runSatConfAsyncThread = new std::thread(&ConflictsView::runSatConfAsync,this);
-		}
+		std::cerr << "interrupting.." << std::endl;
+		interrupt_rangefix();
+		std::unique_lock<std::mutex> lk{satconf_mutex};
+		satconf_cancellation_cv.wait(lk,[this] {return satconf_cancelled == true;});
+
+		// if (runSatConfAsyncThread->joinable()){
+		// 	runSatConfAsyncThread->join();
+		// 	runSatConfAsyncThread = new std::thread(&ConflictsView::runSatConfAsync,this);
+		// }
 
 	}
 
