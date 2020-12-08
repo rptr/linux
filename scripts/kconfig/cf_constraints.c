@@ -127,8 +127,6 @@ void get_constraints(void)
 		
 	}
 	
-	return;
-	
 	/* 
 	 * build the constraints for select-variables
 	 * skip non-Booleans, choice symbols/options och symbols without rev_dir
@@ -174,9 +172,7 @@ void get_constraints(void)
 // 		struct fexpr *c2 = implies(sym->fexpr_sel_m, sym->list_sel_m);
 // 		sym_add_constraint_fexpr(sym, c2);
 	}
-	
-	return;
-	
+
 	/* 
 	 * build constraints for non-booleans
 	 * these constraints might add "known values"
@@ -424,31 +420,37 @@ static void add_dependencies_nonbool(struct symbol *sym)
 {
 	assert(sym_is_nonboolean(sym));
 	assert(sym->dir_dep.expr);
+	assert(!sym->rev_dep.expr);
 	
 	struct k_expr *ke_dirdep = parse_expr(sym->dir_dep.expr, NULL);
-	struct k_expr *ke_revdep = sym->rev_dep.expr ? parse_expr(sym->rev_dep.expr, NULL) : get_const_false_as_kexpr();
+// 	struct k_expr *ke_revdep = sym->rev_dep.expr ? parse_expr(sym->rev_dep.expr, NULL) : get_const_false_as_kexpr();
 	
 // 	struct fexpr *dep_both = calculate_fexpr_both(ke_dirdep);
 	struct pexpr *dep_both = calculate_pexpr_both(ke_dirdep);
-	struct pexpr *sel_both = sym->rev_dep.expr ? calculate_pexpr_both(ke_revdep) : pexf(const_false);
+// 	struct pexpr *sel_both = sym->rev_dep.expr ? calculate_pexpr_both(ke_revdep) : pexf(const_false);
 // 	struct fexpr *sel_both = sym->rev_dep.expr ? calculate_fexpr_both(ke_revdep) : const_false;
 	
 	// TODO check
-	if (sel_both->type == PE_SYMBOL && sel_both->left.fexpr != const_false)
-		perror("Non-boolean symbol has reverse dependencies.");
+// 	if (sel_both->type == PE_SYMBOL && sel_both->left.fexpr != const_false)
+// 		perror("Non-boolean symbol has reverse dependencies.");
+	
+// 	if (sym->rev_dep.expr)
+// 		perror("Non-boolean symbol has reverse dependencies.");
 
 // 	struct fexpr *nb_vals = const_false;
 	struct pexpr *nb_vals = pexf(const_false);
+	struct fexpr *tmp;
 	unsigned int i;
 	/* can skip the first non-boolean value, since this is 'n' */
 	for (i = 1; i < sym->fexpr_nonbool->arr->len; i++) {
 // 		nb_vals = fexpr_or(nb_vals, g_array_index(sym->fexpr_nonbool->arr, struct fexpr *, i));
-		nb_vals = pexpr_or(nb_vals, g_array_index(sym->fexpr_nonbool->arr, struct pexpr *, i));
+		tmp = g_array_index(sym->fexpr_nonbool->arr, struct fexpr *, i);
+		nb_vals = pexpr_or(nb_vals, pexf(tmp));
 	}
 
 // 	struct fexpr *fe_both = implies(nb_vals, fexpr_or(dep_both, sel_both));
-	struct pexpr *c = pexpr_implies(nb_vals, pexpr_or(dep_both, sel_both));
-
+	struct pexpr *c = pexpr_implies(nb_vals, dep_both);
+	
 // 	sym_add_constraint_fexpr(sym, fe_both);
 	sym_add_constraint(sym, c);
 }

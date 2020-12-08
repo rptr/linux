@@ -684,7 +684,7 @@ struct pexpr * pexpr_and(struct pexpr *a, struct pexpr *b)
 	}
 	
 	if (pexpr_eq(a,b)) {
-		pexpr_free(b);
+// 		pexpr_free(b);
 		return a;
 	}
 	
@@ -728,29 +728,29 @@ struct pexpr * pexpr_or(struct pexpr *a, struct pexpr *b)
 	 * expr || expr  -> expr
 	 */
 	if (a->type == PE_SYMBOL && a->left.fexpr == const_false) {
-		if (a->type == PE_AND || a->type == PE_OR)
-			pexpr_free(a);
+// 		if (a->type == PE_AND || a->type == PE_OR)
+// 			pexpr_free(a);
 		return b;
 	}
 	if (b->type == PE_SYMBOL && b->left.fexpr == const_false) {
-		if (b->type ==PE_AND || b->type == PE_OR)
-			pexpr_free(b);
+// 		if (b->type ==PE_AND || b->type == PE_OR)
+// 			pexpr_free(b);
 		return a;
 	}
 	
 	if (a->type == PE_SYMBOL && a->left.fexpr == const_true) {
-		if (b->type ==PE_AND || b->type == PE_OR)
-			pexpr_free(b);
+// 		if (b->type ==PE_AND || b->type == PE_OR)
+// 			pexpr_free(b);
 		return a;
 	}
 	if (b->type == PE_SYMBOL && b->left.fexpr == const_true) {
-		if (a->type == PE_AND || a->type == PE_OR)
-			pexpr_free(a);
+// 		if (a->type == PE_AND || a->type == PE_OR)
+// 			pexpr_free(a);
 		return b;
 	}
 
 	if (pexpr_eq(a,b)) {
-		pexpr_free(b);
+// 		pexpr_free(b);
 		return a;
 	}
 	
