@@ -1,3 +1,8 @@
+/* SPDX-License-Identifier: GPL-2.0 */
+/*
+ * Copyright (C) 2020 Patrick Franz <patfra71@gmail.com>
+ */
+
 #define _GNU_SOURCE
 #include <assert.h>
 #include <locale.h>
@@ -11,11 +16,8 @@
 
 #include "configfix.h"
 
-// static bool init_done = false;
-
 static struct symbol * read_symbol_from_stdin(void);
 static struct symbol_dvalue * sym_create_sdv(struct symbol *sym, char *input);
-// static void run_satdvconf(struct symbol_dvalue *sdv);
 
 /* -------------------------------------- */
 
@@ -48,7 +50,6 @@ int main(int argc, char *argv[])
 		struct symbol_dvalue *sdv = sym_create_sdv(sym, input);
 		g_array_append_val(symbols, sdv);
 		
-// 		run_satdvconf(sdv);
 		diagnoses = run_satconf(symbols);
 		chosen_fix = choose_fix(diagnoses);
 		
@@ -58,7 +59,6 @@ int main(int argc, char *argv[])
 		/* clear the array */
 		g_array_free(symbols, TRUE);
 	}
-
 	
 	return EXIT_SUCCESS;
 }
@@ -112,72 +112,3 @@ static struct symbol_dvalue * sym_create_sdv(struct symbol *sym, char *input)
 
 	return sdv;
 }
-
-// static void run_satdvconf(struct symbol_dvalue *sdv)
-// {
-// 	if (!init_done) {
-// 		printf("\n");
-// 		printf("Init...");
-// 		/* measure time for constructing constraints and clauses */
-// 		clock_t start, end;
-// 		double time;
-// 		start = clock();
-// 
-// 		/* initialize satmap and cnf_clauses */
-// 		init_data();
-// 		
-// 		/* creating constants */
-// 		create_constants();
-// 		
-// 		/* assign SAT variables & create sat_map */
-// 		assign_sat_variables();
-// 		
-// 		/* get the constraints */
-// 		get_constraints();
-// 		
-// 		/* construct the CNF clauses */
-// 		construct_cnf_clauses();
-// 		
-// 		end = clock();
-// 		time = ((double) (end - start)) / CLOCKS_PER_SEC;
-// 		
-// 		printf("Generating constraints and clauses...done. (%.6f secs.)\n", time);
-// 		
-// 		init_done = true;
-// 	}
-// 	
-// 	/* start PicoSAT */
-// 	PicoSAT *pico = initialize_picosat();
-// 	picosat_add_clauses(pico);
-// 	
-// 	/* add unit clauses for symbol */
-// 	if (sym_get_type(sdv->sym) == S_BOOLEAN) {
-// 		switch (sdv->tri) {
-// 		case yes:
-// 			picosat_add_arg(pico, sdv->sym->fexpr_y->satval, 0);
-// 			break;
-// 		case no:
-// 			picosat_add_arg(pico, -(sdv->sym->fexpr_y->satval), 0);
-// 			break;
-// 		case mod:
-// 			perror("Should not happen.\n");
-// 		}
-// 	} else if (sym_get_type(sdv->sym) == S_TRISTATE) {
-// 		switch (sdv->tri) {
-// 		case yes:
-// 			picosat_add_arg(pico, sdv->sym->fexpr_y->satval, 0);
-// 			picosat_add_arg(pico, -(sdv->sym->fexpr_m->satval), 0);
-// 			break;
-// 		case mod:
-// 			picosat_add_arg(pico, -(sdv->sym->fexpr_y->satval), 0);
-// 			picosat_add_arg(pico, sdv->sym->fexpr_m->satval, 0);
-// 			break;
-// 		case no:
-// 			picosat_add_arg(pico, -(sdv->sym->fexpr_y->satval), 0);
-// 			picosat_add_arg(pico, -(sdv->sym->fexpr_m->satval), 0);
-// 		}
-// 	}
-// 
-// 	picosat_solve(pico);
-// 	free(pico);
-// }

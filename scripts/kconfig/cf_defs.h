@@ -1,3 +1,8 @@
+/* SPDX-License-Identifier: GPL-2.0 */
+/*
+ * Copyright (C) 2020 Patrick Franz <patfra71@gmail.com>
+ */
+
 #ifndef DEFS_H
 #define DEFS_H
 
