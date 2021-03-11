@@ -21,7 +21,7 @@ unsigned int tmp_variable_nr = 1;
 
 GHashTable *satmap = NULL; /* hash table with all SAT-variables and their fexpr */
 GHashTable *cnf_clauses_map; /* hash-table with all CNF-clauses */
-GArray *sdv_arr; /* array with conflict-symbols */
+GArray * sdv_symbols; /* array with conflict-symbols */
 
 bool stop_rangefix = false;
 
@@ -192,29 +192,29 @@ GArray * run_satconf(GArray *arr)
 // 	sdv_arr = g_array_copy(arr);
 	unsigned int i;
 	struct symbol_dvalue *sdv;
-	sdv_arr = g_array_new(false, false, sizeof(struct symbol_dvalue *));
+	sdv_symbols = g_array_new(false, false, sizeof(struct symbol_dvalue *));
 	for (i = 0; i < arr->len; i++) {
 		sdv = g_array_index(arr, struct symbol_dvalue *, i);
-		g_array_append_val(sdv_arr, sdv);
+		g_array_append_val(sdv_symbols, sdv);
 	}
 	
 	/* add assumptions for conflict-symbols */
-	sym_add_assumption_sdv(pico, sdv_arr);
+	sym_add_assumption_sdv(pico, sdv_symbols);
 	
 	/* add assumptions for all other symbols */
 	struct symbol *sym;
 	for_all_symbols(i, sym) {
 		if (sym->type == S_UNKNOWN) continue;
 		
-		if (!sym_is_sdv(sdv_arr, sym))
+		if (!sym_is_sdv(sdv_symbols, sym))
 			sym_add_assumption(pico, sym);
 	}
 	
 	/* store the conflict symbols */
 	if (conflict_syms != NULL) g_array_free(conflict_syms, false);
 	conflict_syms = g_array_new(false, false, sizeof(struct symbol *));
-	for (i = 0; i < sdv_arr->len; i++) {
-		sdv = g_array_index(sdv_arr, struct symbol_dvalue *, i);
+	for (i = 0; i < sdv_symbols->len; i++) {
+		sdv = g_array_index(sdv_symbols, struct symbol_dvalue *, i);
 		g_array_append_val(conflict_syms, sdv->sym);
 	}
 
@@ -238,7 +238,22 @@ GArray * run_satconf(GArray *arr)
 		printf("===> PROBLEM IS UNSATISFIABLE <===\n");
 		printf("\n");
 		
-		ret = rangefix_run(pico);
+		struct sfl_list *l = rangefix_run(pico);
+		
+		ret = g_array_new(false, false, sizeof(GArray *));
+		
+		struct sfl_node *node;
+		sfl_list_for_each(node, l) {
+			GArray *diagnosis_symbol = g_array_new(false, false, sizeof(struct symbol_fix *));
+			
+			struct sfix_node *sfnode;
+			sfix_list_for_each(sfnode, node->elem) {
+				g_array_append_val(diagnosis_symbol, sfnode->elem);
+			}
+			
+			g_array_append_val(ret, diagnosis_symbol);
+		}
+
 	}
 	else {
 		printf("Unknown if satisfiable.\n");
@@ -248,7 +263,7 @@ GArray * run_satconf(GArray *arr)
 	
 // 	picosat_reset(pico);
 // 	g_hash_table_remove_all(cnf_clauses_map);
-	g_array_free(sdv_arr, true);
+	g_array_free(sdv_symbols, true);
 	return ret;
 }
 

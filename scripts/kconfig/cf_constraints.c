@@ -439,14 +439,14 @@ static void add_dependencies_nonbool(struct symbol *sym)
 
 // 	struct fexpr *nb_vals = const_false;
 	struct pexpr *nb_vals = pexf(const_false);
-	struct fexpr *tmp;
-	unsigned int i;
+	struct fexpr_node *tmp;
 	/* can skip the first non-boolean value, since this is 'n' */
-	for (i = 1; i < sym->fexpr_nonbool->arr->len; i++) {
-// 		nb_vals = fexpr_or(nb_vals, g_array_index(sym->fexpr_nonbool->arr, struct fexpr *, i));
-		tmp = g_array_index(sym->fexpr_nonbool->arr, struct fexpr *, i);
-		nb_vals = pexpr_or(nb_vals, pexf(tmp));
+	fexpr_list_for_each(tmp, sym->nb_vals) {
+		if (tmp->prev == NULL) continue;
+		
+		nb_vals = pexpr_or(nb_vals, pexf(tmp->elem));
 	}
+	
 
 // 	struct fexpr *fe_both = implies(nb_vals, fexpr_or(dep_both, sel_both));
 	struct pexpr *c = pexpr_implies(nb_vals, dep_both);
@@ -851,17 +851,15 @@ static void sym_add_range_constraints(struct symbol *sym)
 		range_min = sym_get_range_val(prop->expr->left.sym, base);
 		range_max = sym_get_range_val(prop->expr->right.sym, base);
 		
-		struct fexpr *nb_val;
-		unsigned int i;
-		/* can skip the first non-boolean value, since this is 'n' */
-		for (i = 1; i < sym->fexpr_nonbool->arr->len; i++) {
-			nb_val = g_array_index(sym->fexpr_nonbool->arr, struct fexpr *, i);
-			tmp = strtoll(str_get(&nb_val->nb_val), NULL, base);
+// 		/* can skip the first non-boolean value, since this is 'n' */
+		struct fexpr_node *node;
+		fexpr_list_for_each(node, sym->nb_vals) {
+			tmp = strtoll(str_get(&node->elem->nb_val), NULL, base);
 			
 			/* known value is in range, nothing to do here */
 			if (tmp >= range_min && tmp <= range_max) continue;
 			
-			struct pexpr *not_nb_val = pexpr_not(pexf(nb_val));
+			struct pexpr *not_nb_val = pexpr_not(pexf(node->elem));
 			if (tmp < range_min) {
 				struct pexpr *c = pexpr_implies(prevs, not_nb_val);
 				sym_add_constraint(sym, c);
@@ -883,15 +881,13 @@ static void sym_nonbool_at_least_1(struct symbol *sym)
 	assert(sym_is_nonboolean(sym));
 	
 	struct pexpr *e = NULL;
-	unsigned int i;
-	for (i = 0; i < sym->fexpr_nonbool->arr->len; i++) {
-		if (i == 0)
-			e = pexf(g_array_index(sym->fexpr_nonbool->arr, struct fexpr *, i));
-		else 
-			e = pexpr_or(e, pexf(g_array_index(sym->fexpr_nonbool->arr, struct fexpr *, i)));
-		
+	struct fexpr_node *node;
+	fexpr_list_for_each(node, sym->nb_vals) {
+		if (node->prev == NULL)
+			e = pexf(node->elem);
+		else
+			e = pexpr_or(e, pexf(node->elem));
 	}
-// 	sym_add_constraint_fexpr(sym, e);
 	sym_add_constraint(sym, e);
 }
 
@@ -902,12 +898,12 @@ static void sym_nonbool_at_most_1(struct symbol *sym)
 {
 	assert(sym_is_nonboolean(sym));
 	
-	struct pexpr *e1, *e2;
-	unsigned int i, j;
-	for (i = 0; i < sym->fexpr_nonbool->arr->len; i++) {
-		e1 = pexf(g_array_index(sym->fexpr_nonbool->arr, struct fexpr *, i));
-		for (j = i + 1; j < sym->fexpr_nonbool->arr->len; j++) {
-			e2 = pexf(g_array_index(sym->fexpr_nonbool->arr, struct fexpr *, j));
+	struct pexpr *e1, *e2;	
+	struct fexpr_node *node1, *node2;
+	fexpr_list_for_each(node1, sym->nb_vals) {
+		e1 = pexf(node1->elem);
+		for (node2 = node1->next; node2 != NULL; node2 = node2->next) {
+			e2 = pexf(node2->elem);
 			struct pexpr *e = pexpr_or(pexpr_not(e1), pexpr_not(e2));
 			sym_add_constraint(sym, e);
 		}
@@ -1139,8 +1135,7 @@ unsigned int count_counstraints(void)
 	for_all_symbols(i, sym) {
 		if (sym->type == S_UNKNOWN) continue;
 		
-		if (sym->constraints->arr)
-			c += sym->constraints->arr->len;
+		c += sym->constraints->size;
 	}
 	
 	return c;
@@ -1161,7 +1156,9 @@ void sym_add_constraint(struct symbol *sym, struct pexpr *constraint)
 	if (constraint->type == PE_SYMBOL && constraint->left.fexpr == const_false)
 		perror("Adding const_false.");
 	
-	g_array_append_val(sym->constraints->arr, constraint);
+	pexpr_list_add(sym->constraints, constraint);
+	
+// 	g_array_append_val(sym->constraints->arr, constraint);
 	
 // 	char *name = sym_get_name(sym);
 // 	pexpr_print(name, constraint, -1);
@@ -1209,13 +1206,10 @@ void sym_add_constraint_eq(struct symbol *sym, struct pexpr *constraint)
 // 	}
 
 	/* check the constraints for the same symbol */
-	unsigned int i;
-	struct pexpr *e;
-	for (i = 0; i < sym->constraints->arr->len; i++) {
-		e = g_array_index(sym->constraints->arr, struct pexpr *, i);
-
+	struct pexpr_node *node;
+	pexpr_list_for_each(node, sym->constraints) {
 		no_cmp++;
-		if (pexpr_eq(constraint, e)) {
+		if (pexpr_eq(constraint, node->elem)) {
 // 			printf("EQUAL\n");
 			no_eq++;
 // 			if (no_eq % 50 == 0) {
@@ -1229,11 +1223,30 @@ void sym_add_constraint_eq(struct symbol *sym, struct pexpr *constraint)
 		}
 	}
 	
+	
+// 	for (i = 0; i < sym->constraints->arr->len; i++) {
+// 		e = g_array_index(sym->constraints->arr, struct pexpr *, i);
+// 
+// 		no_cmp++;
+// 		if (pexpr_eq(constraint, e)) {
+// 			printf("EQUAL\n");
+// 			no_eq++;
+// 			if (no_eq % 50 == 0) {
+// 				printf("Equiv: %d\n", no_eq);
+// 				printf("Comps: %d\n", no_cmp);
+// 				printf("Total: %d\n", count_counstraints());
+// 				getchar();
+// 			}
+// 			pexpr_free(pe_orig);
+// 			return;
+// 		}
+// 	}
+	
 // 	char *name = sym_get_name(sym);
 // 	pexpr_print(name, constraint, -1);
 	
-	
-	g_array_append_val(sym->constraints->arr, constraint);
+	pexpr_list_add(sym->constraints, constraint);
+
 // 	pexpr_free(pe_orig);
 // 	pexpr_free(constraint);
 }

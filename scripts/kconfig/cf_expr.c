@@ -116,8 +116,7 @@ static void create_fexpr_nonbool(struct symbol *sym)
 {
 	sym->fexpr_y = NULL;
 	sym->fexpr_m = NULL;
-	sym->fexpr_nonbool = malloc(sizeof(struct garray_wrapper *));
-	sym->fexpr_nonbool->arr = g_array_new(false, false, sizeof(struct fexpr *));
+	sym->nb_vals = fexpr_list_init();
 
 	/* default values */
 	char int_values[][2] = {"n", "0", "1"};
@@ -148,7 +147,7 @@ static void create_fexpr_nonbool(struct symbol *sym)
 			break;
 		}
 
-		g_array_append_val(sym->fexpr_nonbool->arr, e);
+		fexpr_list_add(sym->nb_vals, e);
 
 		/* add it to satmap */
 		g_hash_table_insert(satmap, &e->satval, e);
@@ -501,7 +500,7 @@ struct fexpr * sym_create_nonbool_fexpr(struct symbol *sym, char *value)
 	g_hash_table_insert(satmap, &e->satval, e);
 	
 	/* add it to the symbol's list */
-	g_array_append_val(sym->fexpr_nonbool->arr, e);
+	fexpr_list_add(sym->nb_vals, e);
 	
 	return e;
 }
@@ -511,12 +510,10 @@ struct fexpr * sym_create_nonbool_fexpr(struct symbol *sym, char *value)
  */
 struct fexpr * sym_get_nonbool_fexpr(struct symbol *sym, char *value)
 {
-	struct fexpr *e;
-	int i;
-	for (i = 0; i < sym->fexpr_nonbool->arr->len; i++) {
-		e = g_array_index(sym->fexpr_nonbool->arr, struct fexpr *, i);
-		if (strcmp(str_get(&e->nb_val), value) == 0)
-			return e;
+	struct fexpr_node *e;
+	fexpr_list_for_each(e, sym->nb_vals) {
+		if (strcmp(str_get(&e->elem->nb_val), value) == 0)
+			return e->elem;
 	}
 	
 	return NULL;
@@ -1337,6 +1334,313 @@ void pexpr_as_char_short(struct pexpr *e, struct gstr *s, int parent)
 		pexpr_as_char_short(e->left.pexpr, s, PE_NOT);
 		return;
 	}
+}
+
+/* 
+ * init list of fexpr
+ */
+struct fexpr_list * fexpr_list_init()
+{
+	struct fexpr_list *list = xcalloc(1, sizeof(*list));
+	list->head = NULL;
+	list->tail = NULL;
+	list->size = 0;
+	
+	return list;
+}
+
+/* 
+ * init list of fexpr_list
+ */
+struct fexl_list * fexl_list_init()
+{
+	struct fexl_list *list = xcalloc(1, sizeof(*list));
+	list->head = NULL;
+	list->tail = NULL;
+	list->size = 0;
+	
+	return list;
+}
+
+/* 
+ * init list of pexpr
+ */
+struct pexpr_list * pexpr_list_init()
+{
+	struct pexpr_list *list = xcalloc(1, sizeof(*list));
+	list->head = NULL;
+	list->tail = NULL;
+	list->size = 0;
+	
+	return list;
+}
+
+/* 
+ * init list of symbol_fix
+ */
+struct sfix_list * sfix_list_init(void)
+{
+	struct sfix_list *list = xcalloc(1, sizeof(*list));
+	list->head = NULL;
+	list->tail = NULL;
+	list->size = 0;
+	
+	return list;
+}
+
+/* 
+ * init list of symbol_fix
+ */
+struct sfl_list * sfl_list_init(void)
+{
+	struct sfl_list *list = xcalloc(1, sizeof(*list));
+	list->head = NULL;
+	list->tail = NULL;
+	list->size = 0;
+	
+	return list;
+}
+
+/* 
+ * init list of symbol_dvalue
+ */
+struct sdv_list * sdv_list_init(void)
+{
+	struct sdv_list *list = xcalloc(1, sizeof(*list));
+	list->head = NULL;
+	list->tail = NULL;
+	list->size = 0;
+	
+	return list;
+}
+
+/* 
+ * add element to tail of a fexpr_list
+ */
+void fexpr_list_add(struct fexpr_list *list, struct fexpr *fe)
+{
+	struct fexpr_node *node = xcalloc(1, sizeof(*node));
+	node->elem = fe;
+	
+	if (list->size == 0) {
+		list->head = node;
+		list->tail = node;
+	} else {
+		node->prev = list->tail;
+		list->tail = node;
+		node->prev->next = node;
+	}
+
+	list->size++;
+}
+
+/* 
+ * add element to tail of a fexl_list
+ */
+void fexl_list_add(struct fexl_list *list, struct fexpr_list *elem)
+{
+	struct fexl_node *node = xcalloc(1, sizeof(*node));
+	node->elem = elem;
+	
+	if (list->size == 0) {
+		list->head = node;
+		list->tail = node;
+	} else {
+		node->prev = list->tail;
+		list->tail = node;
+		node->prev->next = node;
+	}
+
+	list->size++;
+}
+
+/* 
+ * add element to tail of a pexpr_list
+ */
+void pexpr_list_add(struct pexpr_list *list, struct pexpr *e)
+{
+	struct pexpr_node *node = xcalloc(1, sizeof(*node));
+	node->elem = e;
+	
+	if (list->size == 0) {
+		list->head = node;
+		list->tail = node;
+	} else {
+		node->prev = list->tail;
+		list->tail = node;
+		node->prev->next = node;
+	}
+
+	list->size++;
+}
+
+/* 
+ * add element to tail of a sfix_list
+ */
+void sfix_list_add(struct sfix_list *list, struct symbol_fix *fix)
+{
+	struct sfix_node *node = xcalloc(1, sizeof(*node));
+	node->elem = fix;
+	
+	if (list->size == 0) {
+		list->head = node;
+		list->tail = node;
+	} else {
+		node->prev = list->tail;
+		list->tail = node;
+		node->prev->next = node;
+	}
+
+	list->size++;
+}
+
+/* 
+ * add element to tail of a sfl_list
+ */
+void sfl_list_add(struct sfl_list *list, struct sfix_list *elem)
+{
+	struct sfl_node *node = xcalloc(1, sizeof(*node));
+	node->elem = elem;
+	
+	if (list->size == 0) {
+		list->head = node;
+		list->tail = node;
+	} else {
+		node->prev = list->tail;
+		list->tail = node;
+		node->prev->next = node;
+	}
+
+	list->size++;
+}
+
+/* 
+ * add element to tail of a sdv_list
+ */
+void sdv_list_add(struct sdv_list *list, struct symbol_dvalue *sdv)
+{
+	struct sdv_node *node = xcalloc(1, sizeof(*node));
+	node->elem = sdv;
+	
+	if (list->size == 0) {
+		list->head = node;
+		list->tail = node;
+	} else {
+		node->prev = list->tail;
+		list->tail = node;
+		node->prev->next = node;
+	}
+
+	list->size++;
+}
+
+/* 
+ * delete an element from a fexpr_list
+ */
+void fexpr_list_delete(struct fexpr_list *list, struct fexpr_node *node)
+{
+	assert(node != NULL);
+	if (list->size == 0) return;
+	
+	if (node == list->head)
+		list->head = node->next;
+	else
+		node->prev->next = node->next;
+	
+	if (node == list->tail)
+		list->tail = node->prev;
+	else
+		node->next->prev = node->prev;
+	
+	list->size--;
+	free(node);
+}
+
+/* 
+ * delete an element from a fexpr_list
+ */
+void sfix_list_delete(struct sfix_list *list, struct sfix_node *node)
+{
+	assert(node != NULL);
+	if (list->size == 0) return;
+	
+	if (node == list->head)
+		list->head = node->next;
+	else
+		node->prev->next = node->next;
+	
+	if (node == list->tail)
+		list->tail = node->prev;
+	else
+		node->next->prev = node->prev;
+	
+	list->size--;
+	free(node);
+}
+
+/* 
+ * delete an element from a fexl_list
+ */
+void fexl_list_delete(struct fexl_list *list, struct fexl_node *node)
+{
+	assert(node != NULL);
+	if (list->size == 0) return;
+	
+	if (node == list->head)
+		list->head = node->next;
+	else
+		node->prev->next = node->next;
+	
+	if (node == list->tail)
+		list->tail = node->prev;
+	else
+		node->next->prev = node->prev;
+	
+	list->size--;
+	free(node);
+}
+
+/* 
+ * make a shallow copy of a fexpr_list 
+ */
+struct fexpr_list * fexpr_list_copy(struct fexpr_list *list)
+{
+	struct fexpr_list *ret = fexpr_list_init();
+	struct fexpr_node *node;
+	fexpr_list_for_each(node, list)
+		fexpr_list_add(list, node->elem);
+	
+	return ret;
+}
+
+/* 
+ * make a shallow copy of a fexl_list 
+ */
+struct fexl_list * fexl_list_copy(struct fexl_list *list)
+{
+	struct fexl_list *ret = fexl_list_init();
+	struct fexl_node *node;
+	fexl_list_for_each(node, list)
+		fexl_list_add(list, node->elem);
+	
+	return ret;
+}
+
+/* 
+ * print a fexpr_list
+ */
+void fexpr_list_print(char *title, struct fexpr_list *list)
+{
+	struct fexpr_node *node;
+	printf("%s: [", title);
+	
+	fexpr_list_for_each(node, list) {
+		printf("%s", str_get(&node->elem->name));
+		if (node->next != NULL)
+			printf(", ");
+	}
+	
+	printf("]\n");
 }
 
 /*

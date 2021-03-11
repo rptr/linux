@@ -6,6 +6,24 @@
 #ifndef CF_EXPR_H
 #define CF_EXPR_H
 
+#define fexpr_list_for_each(node, list) \
+	for (node = list->head; node != NULL; node = node->next)
+	
+#define fexl_list_for_each(node, list) \
+	fexpr_list_for_each(node, list)
+
+#define pexpr_list_for_each(node, list) \
+	fexpr_list_for_each(node, list)
+
+#define sdv_list_for_each(node, list) \
+	fexpr_list_for_each(node, list)
+	
+#define sfix_list_for_each(node, list) \
+	fexpr_list_for_each(node, list)
+	
+#define sfl_list_for_each(node, list) \
+	fexpr_list_for_each(node, list)
+
 /* create a fexpr */
 struct fexpr * fexpr_create(int satval, enum fexpr_type type, char *name);
 
@@ -122,6 +140,60 @@ void fexpr_as_char_short(struct fexpr *e, struct gstr *s, int parent);
 
 /* write pn pexpr into a string */
 void pexpr_as_char_short(struct pexpr *e, struct gstr *s, int parent);
+
+/* init list of fexpr */
+struct fexpr_list * fexpr_list_init(void);
+
+/* init list of fexpr_list */
+struct fexl_list * fexl_list_init(void);
+
+/* init list of pexpr */
+struct pexpr_list * pexpr_list_init(void);
+
+/* init list of symbol_fix */
+struct sfix_list * sfix_list_init(void);
+
+/* init list of sfix_list */
+struct sfl_list * sfl_list_init(void);
+
+/* init list of symbol_dvalue */
+struct sdv_list * sdv_list_init(void);
+
+/* add element to tail of a fexpr_list */
+void fexpr_list_add(struct fexpr_list *list, struct fexpr *fe);
+
+/* add element to tail of a fexl_list */
+void fexl_list_add(struct fexl_list *list, struct fexpr_list *elem);
+
+/* add element to tail of a pexpr_list */
+void pexpr_list_add(struct pexpr_list *list, struct pexpr *e);
+
+/* add element to tail of a sfix_list */
+void sfix_list_add(struct sfix_list *list, struct symbol_fix *fix);
+
+/* add element to tail of a sfl_list */
+void sfl_list_add(struct sfl_list *list, struct sfix_list *elem);
+
+/* add element to tail of a sdv_list */
+void sdv_list_add(struct sdv_list *list, struct symbol_dvalue *sdv);
+
+/* delete an element from a fexpr_list */
+void fexpr_list_delete(struct fexpr_list *list, struct fexpr_node *node);
+
+/* delete an element from a fexpr_list */
+void fexl_list_delete(struct fexl_list *list, struct fexl_node *node);
+
+/* delete an element from a sfix_list */
+void sfix_list_delete(struct sfix_list *list, struct sfix_node *node);
+
+/* make a shallow copy of a fexpr_list */
+struct fexpr_list * fexpr_list_copy(struct fexpr_list *list);
+
+/* make a shallow copy of a fexpr_list */
+struct fexl_list * fexl_list_copy(struct fexl_list *list);
+
+/* print a fexpr_list */
+void fexpr_list_print(char *title, struct fexpr_list *list);
 
 /* check whether 2 pexpr are equal */
 bool pexpr_eq(struct pexpr *e1, struct pexpr *e2);

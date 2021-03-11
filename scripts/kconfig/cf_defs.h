@@ -10,8 +10,8 @@
 extern unsigned int sat_variable_nr;
 extern unsigned int tmp_variable_nr;
 extern GHashTable *satmap;
-// extern GHashTable *cnf_clauses_map; /* hash-table with all CNF-clauses */
-extern GArray *sdv_arr; /* array with conflict-symbols */
+
+extern GArray *sdv_symbols; /* array with conflict-symbols */
 extern bool stop_rangefix;
 extern struct fexpr *const_false;
 extern struct fexpr *const_true;
@@ -123,6 +123,26 @@ struct fexpr {
 	
 };
 
+struct fexpr_list {
+	struct fexpr_node *head, *tail;
+	unsigned int size;
+};
+
+struct fexpr_node {
+	struct fexpr *elem;
+	struct fexpr_node *next, *prev;
+};
+
+struct fexl_list {
+	struct fexl_node *head, *tail;
+	unsigned int size;
+};
+
+struct fexl_node {
+	struct fexpr_list *elem;
+	struct fexl_node *next, *prev;
+};
+
 enum pexpr_type {
 	PE_SYMBOL,
 	PE_AND,
@@ -138,6 +158,16 @@ union pexpr_data {
 struct pexpr {
 	enum pexpr_type type;
 	union pexpr_data left, right;
+};
+
+struct pexpr_list {
+	struct pexpr_node *head, *tail;
+	unsigned int size;
+};
+
+struct pexpr_node {
+	struct pexpr *elem;
+	struct pexpr_node *next, *prev;
 };
 
 struct default_map {
@@ -165,6 +195,16 @@ struct symbol_dvalue {
 	};
 };
 
+struct sdv_list {
+	struct sdv_node *head, *tail;
+	unsigned int size;
+};
+
+struct sdv_node {
+	struct symbol_dvalue *elem;
+	struct sdv_node *next, *prev;
+};
+
 enum symbolfix_type {
 	SF_BOOLEAN,	/* boolean/tristate */
 	SF_NONBOOLEAN,	/* string/int/hex */
@@ -186,6 +226,26 @@ struct symbol_fix {
 		/* disallowed non-boolean values */
 		struct gstr disallowed;
 	};
+};
+
+struct sfix_list {
+	struct sfix_node *head, *tail;
+	unsigned int size;
+};
+
+struct sfix_node {
+	struct symbol_fix *elem;
+	struct sfix_node *next, *prev;
+};
+
+struct sfl_list {
+	struct sfl_node *head, *tail;
+	unsigned int size;
+};
+
+struct sfl_node {
+	struct sfix_list *elem;
+	struct sfl_node *next, *prev;
 };
 
 #endif

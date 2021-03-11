@@ -61,8 +61,7 @@ void init_data(void)
  */
 static void create_sat_variables(struct symbol *sym)
 {
-	sym->constraints = malloc(sizeof(struct garray_wrapper));
-	sym->constraints->arr = g_array_new(false, false, sizeof(struct pexpr *));
+	sym->constraints = pexpr_list_init();
 	sym_create_fexpr(sym);
 }
 
@@ -677,12 +676,9 @@ void print_sym_name(struct symbol *sym)
  */
 void print_sym_constraint(struct symbol* sym)
 {
-	struct pexpr *e;
-	int i;
-	for (i = 0; i < sym->constraints->arr->len; i++) {
-		e = g_array_index(sym->constraints->arr, struct pexpr *, i);
-		pexpr_print("::", e, -1);
-	}
+	struct pexpr_node *node;
+	pexpr_list_for_each(node, sym->constraints)
+		pexpr_print("::", node->elem, -1);
 }
 
 /*
@@ -718,7 +714,7 @@ void print_all_symbols(void)
 		
 		print_symbol(sym);
 
-		if (sym->constraints->arr->len > 0) {
+		if (sym->constraints->size > 0) {
 			printf("Constraints:\n");
 			print_sym_constraint(sym);
 			printf("\n");

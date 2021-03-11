@@ -140,8 +140,8 @@ struct symbol {
 	struct pexpr *list_sel_y;
 	struct pexpr *list_sel_m;
 	struct fexpr *noPromptCond;
-	struct garray_wrapper *fexpr_nonbool; /* used for non-booleans */
-	struct garray_wrapper *constraints; /* list of constraints for symbol */
+	struct fexpr_list *nb_vals; /* used for non-booleans */
+	struct pexpr_list *constraints; /* list of constraints for symbol */
 };
 
 #define for_all_symbols(i, sym) for (i = 0; i < SYMBOL_HASHSIZE; i++) for (sym = symbol_hash[i]; sym; sym = sym->next)

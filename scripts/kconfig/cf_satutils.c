@@ -48,7 +48,7 @@ PicoSAT * initialize_picosat(void)
 void construct_cnf_clauses(PicoSAT *p)
 {
 	pico = p;
-	unsigned int i, j;
+	unsigned int i;
 	struct symbol *sym;
 	
 	/* adding unit-clauses for constants */
@@ -63,20 +63,16 @@ void construct_cnf_clauses(PicoSAT *p)
 // 		print_sym_name(sym);
 // 		print_sym_constraint(sym);
 		
-		struct pexpr *e;
-		for (j = 0; j < sym->constraints->arr->len; j++) {
-			e = g_array_index(sym->constraints->arr, struct pexpr *, j);
-			
-// 			print_fexpr("e:", e, -1);
-			
-			if (pexpr_is_cnf(e)) {
+		struct pexpr_node *node;
+		pexpr_list_for_each(node, sym->constraints) {
+			if (pexpr_is_cnf(node->elem)) {
 // 				pexpr_print("CNF:", e, -1);
 // 				getchar();
-				unfold_cnf_clause(e);
+				unfold_cnf_clause(node->elem);
 			} else {
 // 				pexpr_print("!Not CNF:", e, -1);
 // 				getchar();
-				build_cnf_tseytin(e, create_tmpsatvar());
+				build_cnf_tseytin(node->elem, create_tmpsatvar());
 // 				return;
 			}
 		}
@@ -472,10 +468,10 @@ void picosat_solve(PicoSAT *pico)
 static void run_unsat_problem(PicoSAT *pico)
 {
 	/* get the diagnoses from RangeFix */
-	GArray *diagnoses = rangefix_run(pico);
+	struct sfl_list *diagnoses = rangefix_run(pico);
 	
 	/* ask user for solution to apply */
-	GArray *fix = choose_fix(diagnoses);
+	struct sfix_list *fix = choose_fix(diagnoses);
 	
 	/* user chose no action, so exit */
 	if (fix == NULL) return;
@@ -505,8 +501,9 @@ void sym_add_assumption(PicoSAT *pico, struct symbol *sym)
 	}
 	
 	if (sym_is_nonboolean(sym)) {
-		struct fexpr *e = g_array_index(sym->fexpr_nonbool->arr, struct fexpr *, 0);
-		unsigned int i;
+		struct fexpr *e = sym->nb_vals->head->elem;
+
+		struct fexpr_node *node;
 		
 		/* symbol does not have a value */
 		if (!sym_has_value(sym)) {
@@ -514,11 +511,12 @@ void sym_add_assumption(PicoSAT *pico, struct symbol *sym)
 			picosat_assume(pico, e->satval);
 			e->assumption = true;
 			
-			/* set value for all other fexpr */
-			for (i = 1; i < sym->fexpr_nonbool->arr->len; i++) {
-				e = g_array_index(sym->fexpr_nonbool->arr, struct fexpr *, i);
-				picosat_assume(pico, -(e->satval));
-				e->assumption = false;
+			struct fexpr_node *node;
+			fexpr_list_for_each(node, sym->nb_vals) {
+				if (node->prev == NULL) continue;
+				
+				picosat_assume(pico, -(node->elem->satval));
+				node->elem->assumption = false;
 			}
 			
 			return;
@@ -533,14 +531,15 @@ void sym_add_assumption(PicoSAT *pico, struct symbol *sym)
 		const char *string_val = sym_get_string_value(sym);
 		
 		/* set value for all other fexpr */
-		for (i = 1; i < sym->fexpr_nonbool->arr->len; i++) {
-			e = g_array_index(sym->fexpr_nonbool->arr, struct fexpr *, i);
-			if (strcmp(str_get(&e->nb_val), string_val) == 0) {
-				picosat_assume(pico, e->satval);
-				e->assumption = true;
+		fexpr_list_for_each(node, sym->nb_vals) {
+			if (node->prev == NULL) continue;
+			
+			if (strcmp(str_get(&node->elem->nb_val), string_val) == 0) {
+				picosat_assume(pico, node->elem->satval);
+				node->elem->assumption = true;
 			} else {
-				picosat_assume(pico, -(e->satval));
-				e->assumption = false;
+				picosat_assume(pico, -(node->elem->satval));
+				node->elem->assumption = false;
 			}
 		}
 	}

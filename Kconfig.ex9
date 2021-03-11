@@ -23,7 +23,7 @@ config C
 #endchoice
 
 config D
-	tristate "D"
+	bool "D"
 	depends on E && F
 
 config E
@@ -34,3 +34,7 @@ config E
 config F
 	bool "F"
 #	select D
+
+config S
+	int "S"
+	default 16

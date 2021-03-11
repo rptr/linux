@@ -24,6 +24,39 @@ int main(int argc, char *argv[])
 	printf("\nHello configfix!\n\n");
 	
 	run_satconf_cli(argv[1]);
+// 	init_config(argv[1]);
+// 	printf("Init..."); init_data();
+// 	create_constants();
+// 	assign_sat_variables();
+// 	get_constraints(); printf("done.\n");
+// 	
+// 	struct symbol *sym = sym_find("S");
+// 	
+// 	print_sym_name(sym);
+// 	print_sym_constraint(sym);
+// 	
+// 	fexpr_list_print("S:", sym->nb_vals);
+// 	struct fexpr_node *node = sym->nb_vals->head->next;
+// 	struct fexpr *e = node->elem;
+// 	
+// 	fexpr_list_delete(sym->nb_vals, node);
+// 	fexpr_list_print("S:", sym->nb_vals);
+// 	
+// 	fexpr_list_delete(sym->nb_vals, sym->nb_vals->head);
+// 	fexpr_list_print("S:", sym->nb_vals);
+// 	
+// 	fexpr_list_delete(sym->nb_vals, sym->nb_vals->tail);
+// 	fexpr_list_print("S:", sym->nb_vals);
+// 	
+// 	fexpr_list_delete(sym->nb_vals, sym->nb_vals->tail);
+// 	fexpr_list_print("S:", sym->nb_vals);
+// 	
+// 	fexpr_list_delete(sym->nb_vals, sym->nb_vals->tail);
+// 	fexpr_list_print("S:", sym->nb_vals);
+// 	
+// 	fexpr_print("e:", node->elem, -1);
+// 	if (node == NULL)
+// 		printf("is null\n.");
 	
 	return EXIT_SUCCESS;
 }
