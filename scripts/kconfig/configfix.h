@@ -34,9 +34,9 @@ extern "C" {
 
 
 /* external functions */
-GArray * run_satconf(GArray *arr);
+struct sfl_list * run_satconf(struct sdv_list *symbols);
 
-int apply_fix(GArray *diag);
+int apply_fix(struct sfix_list *fix);
 
 int run_satconf_cli(const char *Kconfig_file);
 

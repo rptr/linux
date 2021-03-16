@@ -29,12 +29,14 @@ int main(int argc, char *argv[])
 	/* parse Kconfig-file and read .config */
 	init_config(argv[1]);
 	
-	GArray *diagnoses, *chosen_fix;
-	GArray *symbols;
+	struct sfl_list *diagnoses;
+	struct sfix_list *chosen_fix;
+	struct sdv_list *symbols;
 	
 	while(1) {
 		/* create the array */
-		symbols = g_array_new(false, false, sizeof(struct symbol_dvalue *));
+// 		symbols = g_array_new(false, false, sizeof(struct symbol_dvalue *));
+		symbols = sdv_list_init();
 		
 		/* ask for user input */
 		struct symbol *sym = read_symbol_from_stdin();
@@ -48,7 +50,8 @@ int main(int argc, char *argv[])
 		strtok(input, "\n");
 		
 		struct symbol_dvalue *sdv = sym_create_sdv(sym, input);
-		g_array_append_val(symbols, sdv);
+// 		g_array_append_val(symbols, sdv);
+		sdv_list_add(symbols, sdv);
 		
 		diagnoses = run_satconf(symbols);
 		chosen_fix = choose_fix(diagnoses);
@@ -57,7 +60,7 @@ int main(int argc, char *argv[])
 			apply_fix(chosen_fix);
 		
 		/* clear the array */
-		g_array_free(symbols, TRUE);
+// 		g_array_free(symbols, TRUE);
 	}
 	
 	return EXIT_SUCCESS;

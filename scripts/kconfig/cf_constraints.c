@@ -41,9 +41,9 @@ static void sym_add_range_constraints(struct symbol *sym);
 static void sym_add_nonbool_prompt_constraint(struct symbol *sym);
 
 static struct default_map * create_default_map_entry(struct fexpr *val, struct pexpr *e);
-static GArray * get_defaults(struct symbol *sym);
-static struct pexpr * get_default_y(GArray *arr);
-static struct pexpr * get_default_m(GArray *arr);
+static struct defm_list * get_defaults(struct symbol *sym);
+static struct pexpr * get_default_y(struct defm_list *list);
+static struct pexpr * get_default_m(struct defm_list *list);
 static long long sym_get_range_val(struct symbol *sym, int base);
 
 /* -------------------------------------- */
@@ -542,32 +542,40 @@ static void add_choice_constraints(struct symbol *sym)
 	struct property *prompt = sym_get_prompt(sym);
 	assert(prompt);
 	
-	unsigned int i, j;
 	struct symbol *choice, *choice2;
+	struct sym_node *node, *node2;
 	
 	/* create list of all choice options */
-	GArray *items = g_array_new(false, false, sizeof(struct symbol *));
+// 	GArray *items = g_array_new(false, false, sizeof(struct symbol *));
+	struct sym_list *items = sym_list_init();
 	/* create list of choice options with a prompt */
-	GArray *promptItems = g_array_new(false, false, sizeof(struct symbol *));
+// 	GArray *promptItems = g_array_new(false, false, sizeof(struct symbol *));
+	struct sym_list *promptItems = sym_list_init();
 	
 	struct property *prop;
 	for_all_choices(sym, prop) {
 		struct expr *expr;
 		expr_list_for_each_sym(prop->expr, expr, choice) {
-			g_array_append_val(items, choice);
+			sym_list_add(items, choice);
+// 			g_array_append_val(items, choice);
 			if (sym_get_prompt(choice) != NULL)
-				g_array_append_val(promptItems, choice);
+				sym_list_add(promptItems, choice);
+// 				g_array_append_val(promptItems, choice);
 		}
 	}
 	
 	/* if the choice is set to yes, at least one child must be set to yes */
 // 	struct fexpr *c1 = NULL;
 	struct pexpr *c1 = NULL;
-	for (i = 0; i < promptItems->len; i++) {
-		choice = g_array_index(promptItems, struct symbol *, i);
-// 		c1 = i == 0 ? choice->fexpr_y : fexpr_or(c1, choice->fexpr_y);
-		c1 = i == 0 ? pexf(choice->fexpr_y) : pexpr_or(c1, pexf(choice->fexpr_y));
+	sym_list_for_each(node, promptItems) {
+		choice = node->elem;
+		c1 = node->prev == NULL ? pexf(choice->fexpr_y) : pexpr_or(c1, pexf(choice->fexpr_y));
 	}
+// 	for (i = 0; i < promptItems->len; i++) {
+// 		choice = g_array_index(promptItems, struct symbol *, i);
+// 		c1 = i == 0 ? choice->fexpr_y : fexpr_or(c1, choice->fexpr_y);
+// 		c1 = i == 0 ? pexf(choice->fexpr_y) : pexpr_or(c1, pexf(choice->fexpr_y));
+// 	}
 	if (c1 != NULL) {
 		struct pexpr *c2 = pexpr_implies(pexf(sym->fexpr_y), c1);
 		sym_add_constraint(sym, c2);
@@ -575,18 +583,23 @@ static void add_choice_constraints(struct symbol *sym)
 // 		sym_add_constraint_fexpr(sym, implies(sym->fexpr_y, c1));
 	
 	/* every choice option (even those without a prompt) implies the choice */
-	for (i = 0; i < items->len; i++) {
-		choice = g_array_index(items, struct symbol *, i);
-// 		c1 = implies(sym_get_fexpr_both(choice), sym_get_fexpr_both(sym));
-// 		sym_add_constraint_fexpr(sym, c1);
+	sym_list_for_each(node, items) {
+		choice = node->elem;
 		c1 = pexpr_implies(pexf(sym_get_fexpr_both(choice)), pexf(sym_get_fexpr_both(sym)));
 		sym_add_constraint(sym, c1);
 	}
+// 	for (i = 0; i < items->len; i++) {
+// 		choice = g_array_index(items, struct symbol *, i);
+// 		c1 = implies(sym_get_fexpr_both(choice), sym_get_fexpr_both(sym));
+// 		sym_add_constraint_fexpr(sym, c1);
+// 		c1 = pexpr_implies(pexf(sym_get_fexpr_both(choice)), pexf(sym_get_fexpr_both(sym)));
+// 		sym_add_constraint(sym, c1);
+// 	}
 
 	/* choice options can only select mod, if the entire choice is mod */
 	if (sym->type == S_TRISTATE) {
-		for (i = 0; i < items->len; i++) {
-			choice = g_array_index(items, struct symbol *, i);
+		sym_list_for_each(node, items) {
+			choice = node->elem;
 			if (choice->type == S_TRISTATE) {
 // 				c1 = implies(choice->fexpr_m, sym->fexpr_m);
 // 				sym_add_constraint_fexpr(sym, c1);
@@ -594,48 +607,72 @@ static void add_choice_constraints(struct symbol *sym)
 				sym_add_constraint(sym, c1);
 			}
 		}
+// 		for (i = 0; i < items->len; i++) {
+// 			choice = g_array_index(items, struct symbol *, i);
+// 			if (choice->type == S_TRISTATE) {
+// 				c1 = implies(choice->fexpr_m, sym->fexpr_m);
+// 				sym_add_constraint_fexpr(sym, c1);
+// 				c1 = pexpr_implies(pexf(choice->fexpr_m), pexf(sym->fexpr_m));
+// 				sym_add_constraint(sym, c1);
+// 			}
+// 		}
 	}
 	
 	/* tristate options cannot be m, if the choice symbol is boolean */
 	if (sym->type == S_BOOLEAN) {
-		for (i = 0; i < items->len; i++) {
-			choice = g_array_index(items, struct symbol *, i);
+		sym_list_for_each(node, items) {
+			choice = node->elem;
 			if (choice->type == S_TRISTATE)
 				sym_add_constraint(sym, pexpr_not(pexf(choice->fexpr_m)));
 // 				sym_add_constraint_fexpr(sym, fexpr_not(choice->fexpr_m));
 		}
+// 		for (i = 0; i < items->len; i++) {
+// 			choice = g_array_index(items, struct symbol *, i);
+// 			if (choice->type == S_TRISTATE)
+// 				sym_add_constraint(sym, pexpr_not(pexf(choice->fexpr_m)));
+// 				sym_add_constraint_fexpr(sym, fexpr_not(choice->fexpr_m));
+// 		}
 	}
 	
 	/* all choice options are mutually exclusive for yes */
-	for (i = 0; i < promptItems->len; i++) {
-		choice = g_array_index(promptItems, struct symbol *, i);
-		for (j = i + 1; j < promptItems->len; j++) {
-			choice2 = g_array_index(promptItems, struct symbol *, j);
+	sym_list_for_each(node, promptItems) {
+		choice = node->elem;
+		for (node2 = node->next; node2 != NULL; node2 = node2->next) {
+			choice2 = node2->elem;
 // 			c1 = fexpr_or(fexpr_not(choice->fexpr_y), fexpr_not(choice2->fexpr_y));
 // 			sym_add_constraint_fexpr(sym, c1);
 			c1 = pexpr_or(pexpr_not(pexf(choice->fexpr_y)), pexpr_not(pexf(choice2->fexpr_y)));
 			sym_add_constraint(sym, c1);
 		}
 	}
+// 	for (i = 0; i < promptItems->len; i++) {
+// 		choice = g_array_index(promptItems, struct symbol *, i);
+// 		for (j = i + 1; j < promptItems->len; j++) {
+// 			choice2 = g_array_index(promptItems, struct symbol *, j);
+// 			c1 = fexpr_or(fexpr_not(choice->fexpr_y), fexpr_not(choice2->fexpr_y));
+// 			sym_add_constraint_fexpr(sym, c1);
+// 			c1 = pexpr_or(pexpr_not(pexf(choice->fexpr_y)), pexpr_not(pexf(choice2->fexpr_y)));
+// 			sym_add_constraint(sym, c1);
+// 		}
+// 	}
 	
 	/* if one choice option with a prompt is set to yes,
 	 * then no other option may be set to mod */
 	if (sym->type == S_TRISTATE) {
-		for (i = 0; i < promptItems->len; i++) {
-			choice = g_array_index(promptItems, struct symbol *, i);
-		
-			GArray *tmp_arr = g_array_new(false, false, sizeof(struct symbol *));
-			for (j = 0; j < promptItems->len; j++) {
-				choice2 = g_array_index(promptItems, struct symbol *, j);
-				if (choice2->type == S_TRISTATE)
-					g_array_append_val(tmp_arr, choice2);
-			}
-			if (tmp_arr->len == 0) continue;
+		sym_list_for_each(node, promptItems) {
+			choice = node->elem;
 			
-			for (j = 0; j < tmp_arr->len; j++) {
-				choice2 = g_array_index(tmp_arr, struct symbol *, j);
-// 				c1 = j == 0 ? fexpr_not(choice2->fexpr_m) : fexpr_and(c1, fexpr_not(choice2->fexpr_m));
-				if (j == 0)
+			struct sym_list *tmp = sym_list_init();
+			for (node2 = node->next; node2 != NULL; node2 = node2->next) {
+				choice2 = node2->elem;
+				if (choice2->type == S_TRISTATE)
+					sym_list_add(tmp, choice2);
+			}
+			if (tmp->size == 0) continue;
+			
+			sym_list_for_each(node2, tmp) {
+				choice2 = node2->elem;
+				if (node2->prev == NULL)
 					c1 = pexpr_not(pexf(choice2->fexpr_m));
 				else
 					c1 = pexpr_and(c1, pexpr_not(pexf(choice2->fexpr_m)));
@@ -644,8 +681,32 @@ static void add_choice_constraints(struct symbol *sym)
 			c1 = pexpr_implies(pexf(choice->fexpr_y), c1);
 // 			sym_add_constraint_fexpr(sym, c1);
 			sym_add_constraint(sym, c1);
-			
 		}
+// 		for (i = 0; i < promptItems->len; i++) {
+// 			choice = g_array_index(promptItems, struct symbol *, i);
+// 		
+// 			GArray *tmp_arr = g_array_new(false, false, sizeof(struct symbol *));
+// 			for (j = 0; j < promptItems->len; j++) {
+// 				choice2 = g_array_index(promptItems, struct symbol *, j);
+// 				if (choice2->type == S_TRISTATE)
+// 					g_array_append_val(tmp_arr, choice2);
+// 			}
+// 			if (tmp_arr->len == 0) continue;
+// 			
+// 			for (j = 0; j < tmp_arr->len; j++) {
+// 				choice2 = g_array_index(tmp_arr, struct symbol *, j);
+// 				c1 = j == 0 ? fexpr_not(choice2->fexpr_m) : fexpr_and(c1, fexpr_not(choice2->fexpr_m));
+// 				if (j == 0)
+// 					c1 = pexpr_not(pexf(choice2->fexpr_m));
+// 				else
+// 					c1 = pexpr_and(c1, pexpr_not(pexf(choice2->fexpr_m)));
+// 			}
+// 			c1 = implies(choice->fexpr_y, c1);
+// 			c1 = pexpr_implies(pexf(choice->fexpr_y), c1);
+// 			sym_add_constraint_fexpr(sym, c1);
+// 			sym_add_constraint(sym, c1);
+// 			
+// 		}
 	}
 }
 
@@ -698,7 +759,7 @@ static void add_invisible_constraints(struct symbol *sym)
 	
 
 	
-	GArray *defaults = get_defaults(sym);
+	struct defm_list *defaults = get_defaults(sym);
 	struct pexpr *default_y = get_default_y(defaults);
 	struct pexpr *default_m = get_default_m(defaults);
 	struct pexpr *default_both = pexpr_or(default_y, default_m);
@@ -771,7 +832,7 @@ SKIP_PREV_CONSTRAINT:
 
 	/* if invisible and on by default, then a symbol can only be deactivated by its dependencies */
 	if (sym->type == S_TRISTATE) {
-		if (defaults->len == 0) return;
+		if (defaults->size == 0) return;
 		
 		struct pexpr *e1 = pexpr_implies(npc_p, pexpr_implies(default_y, pexf(sym->fexpr_y)));
 		sym_add_constraint(sym, e1);
@@ -779,7 +840,7 @@ SKIP_PREV_CONSTRAINT:
 		struct pexpr *e2 = pexpr_implies(npc_p, pexpr_implies(default_m, pexf(sym_get_fexpr_both(sym))));
 		sym_add_constraint(sym, e2);
 	} else if (sym->type == S_BOOLEAN) {
-		if (defaults->len == 0) return;
+		if (defaults->size == 0) return;
 		
 		struct pexpr *c = pexpr_implies(default_both, pexf(sym->fexpr_y));
 		
@@ -814,25 +875,30 @@ static void sym_add_nonbool_values_from_ranges(struct symbol *sym)
 static void sym_add_range_constraints(struct symbol *sym)
 {
 	struct property *prop;
-	struct pexpr *prevs, *propCond, *e;
-	unsigned int i;
-	GArray *prevCond = g_array_new(false, false, sizeof(struct pexpr *));
+	struct pexpr *prevs, *propCond;
+// 	GArray *prevCond = g_array_new(false, false, sizeof(struct pexpr *));
+	struct pexpr_list *prevCond = pexpr_list_init();
 	for_all_properties(sym, prop, P_RANGE) {
 		assert(prop != NULL);
 		
 		prevs = pexf(const_true);
 		propCond = prop_get_condition(prop);
 
-		if (prevCond->len == 0) {
+		if (prevCond->size == 0) {
 			prevs = propCond;
 		} else {
-			for (i = 0; i < prevCond->len; i++) {
-				e = g_array_index(prevCond, struct pexpr *, i);
-				prevs = pexpr_and(pexpr_not(e), prevs);
-			}
+			struct pexpr_node *node;
+			pexpr_list_for_each(node, prevCond)
+				prevs = pexpr_and(pexpr_not(node->elem), prevs);
+			
+// 			for (i = 0; i < prevCond->len; i++) {
+// 				e = g_array_index(prevCond, struct pexpr *, i);
+// 				prevs = pexpr_and(pexpr_not(e), prevs);
+// 			}
 			prevs = pexpr_and(propCond, prevs);
 		}
-		g_array_append_val(prevCond, propCond);
+		pexpr_list_add(prevCond, propCond);
+// 		g_array_append_val(prevCond, propCond);
 
 		int base;
 		long long range_min, range_max, tmp;
@@ -936,15 +1002,12 @@ static struct default_map * create_default_map_entry(struct fexpr *val, struct p
 	return map;
 }
 
-static struct pexpr * findDefaultEntry(struct fexpr *val, GArray *defaults)
+static struct pexpr * findDefaultEntry(struct fexpr *val, struct defm_list *defaults)
 {
-	unsigned int i;
-	struct default_map *entry;
-	for (i = 0; i < defaults->len; i++) {
-		entry = g_array_index(defaults, struct default_map *, i);
-		if (val == entry->val)
-			return entry->e;
-	}
+	struct defm_node *node;
+	defm_list_for_each(node, defaults)
+		if (val == node->elem->val)
+			return node->elem->e;
 	
 	return pexf(const_false);
 }
@@ -952,14 +1015,15 @@ static struct pexpr * findDefaultEntry(struct fexpr *val, GArray *defaults)
 /* add a default value to the list */
 // static struct fexpr *covered;
 static struct pexpr *covered;
-static void updateDefaultList(struct fexpr *val, struct pexpr *newCond, GArray *defaults)
+static void updateDefaultList(struct fexpr *val, struct pexpr *newCond, struct defm_list *defaults)
 {
 // 	struct fexpr *prevCond = findDefaultEntry(val, defaults);
 	struct pexpr *prevCond = findDefaultEntry(val, defaults);
 // 	struct fexpr *cond = fexpr_or(prevCond, fexpr_and(newCond, fexpr_not(covered)));
 	struct pexpr *cond = pexpr_or(prevCond, pexpr_and(newCond, pexpr_not(covered)));
 	struct default_map *entry = create_default_map_entry(val, cond);
-	g_array_append_val(defaults, entry);
+	defm_list_add(defaults, entry);
+// 	g_array_append_val(defaults, entry);
 // 	covered = fexpr_or(covered, newCond);
 	covered = pexpr_or(covered, newCond);
 }
@@ -967,11 +1031,12 @@ static void updateDefaultList(struct fexpr *val, struct pexpr *newCond, GArray *
 /*
  * return all defaults for a symbol
  */
-static GArray * get_defaults(struct symbol *sym)
+static struct defm_list * get_defaults(struct symbol *sym)
 {
 	struct property *p;
 // 	struct default_map *map;
-	GArray *defaults = g_array_new(false, false, sizeof(struct default_map *));
+	struct defm_list *defaults = defm_list_init();
+// 	GArray *defaults = g_array_new(false, false, sizeof(struct default_map *));
 	covered = pexf(const_false);
 	
 	struct k_expr *ke_expr;
@@ -1075,13 +1140,13 @@ static GArray * get_defaults(struct symbol *sym)
 /*
  * return the default_map for "y", False if it doesn't exist
  */
-static struct pexpr * get_default_y(GArray *arr)
+static struct pexpr * get_default_y(struct defm_list *list)
 {
-	unsigned int i;
 	struct default_map *entry;
+	struct defm_node *node;
 	
-	for (i = 0; i < arr->len; i++) {
-		entry = g_array_index(arr, struct default_map *, i);
+	defm_list_for_each(node, list) {
+		entry = node->elem;
 		if (entry->val->type == FE_SYMBOL && entry->val->sym == &symbol_yes)
 			return entry->e;
 	}
@@ -1092,13 +1157,13 @@ static struct pexpr * get_default_y(GArray *arr)
 /*
  * return the default map for "m", False if it doesn't exist
  */
-static struct pexpr * get_default_m(GArray *arr)
+static struct pexpr * get_default_m(struct defm_list *list)
 {
-	unsigned int i;
 	struct default_map *entry;
+	struct defm_node *node;
 	
-	for (i = 0; i < arr->len; i++) {
-		entry = g_array_index(arr, struct default_map *, i);
+	defm_list_for_each(node, list) {
+		entry = node->elem;
 		if (entry->val->type == FE_SYMBOL && entry->val->sym == &symbol_mod)
 			return entry->e;
 	}

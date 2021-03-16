@@ -16,7 +16,7 @@ void construct_cnf_clauses(PicoSAT *pico);
 void sat_add_clause(int num, ...);
 
 /* add a clause from GArray to PicoSAT */
-void sat_add_clause_garray(PicoSAT *pico, GArray *arr);
+void sat_add_clause_list(PicoSAT *pico, struct int_list *list);
 
 /* start PicoSAT */
 void picosat_solve(PicoSAT *pico);
@@ -28,6 +28,6 @@ void sym_add_assumption(PicoSAT *pico, struct symbol *sym);
 void sym_add_assumption_tri(PicoSAT *pico, struct symbol *sym, tristate tri_val);
 
 /* add assumptions for the symbols to be changed to the SAT solver */
-void sym_add_assumption_sdv(PicoSAT *pico, GArray *arr);
+void sym_add_assumption_sdv(PicoSAT *pico, struct sdv_list *list);
 
 #endif

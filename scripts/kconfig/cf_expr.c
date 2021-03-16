@@ -1415,6 +1415,45 @@ struct sdv_list * sdv_list_init(void)
 }
 
 /* 
+ * init list of symbols
+ */
+struct sym_list * sym_list_init(void)
+{
+	struct sym_list *list = xcalloc(1, sizeof(*list));
+	list->head = NULL;
+	list->tail = NULL;
+	list->size = 0;
+	
+	return list;
+}
+
+/* 
+ * init list of default_maps
+ */
+struct defm_list * defm_list_init(void)
+{
+	struct defm_list *list = xcalloc(1, sizeof(*list));
+	list->head = NULL;
+	list->tail = NULL;
+	list->size = 0;
+	
+	return list;
+}
+
+/* 
+ * init list of ints
+ */
+struct int_list * int_list_init(void)
+{
+	struct int_list *list = xcalloc(1, sizeof(*list));
+	list->head = NULL;
+	list->tail = NULL;
+	list->size = 0;
+	
+	return list;
+}
+
+/* 
  * add element to tail of a fexpr_list
  */
 void fexpr_list_add(struct fexpr_list *list, struct fexpr *fe)
@@ -1535,6 +1574,66 @@ void sdv_list_add(struct sdv_list *list, struct symbol_dvalue *sdv)
 }
 
 /* 
+ * add element to tail of a sym_list
+ */
+void sym_list_add(struct sym_list *list, struct symbol *sym)
+{
+	struct sym_node *node = xcalloc(1, sizeof(*node));
+	node->elem = sym;
+	
+	if (list->size == 0) {
+		list->head = node;
+		list->tail = node;
+	} else {
+		node->prev = list->tail;
+		list->tail = node;
+		node->prev->next = node;
+	}
+
+	list->size++;
+}
+
+/* 
+ * add element to tail of a defm_list 
+ */
+void defm_list_add(struct defm_list *list, struct default_map *map)
+{
+	struct defm_node *node = xcalloc(1, sizeof(*node));
+	node->elem = map;
+	
+	if (list->size == 0) {
+		list->head = node;
+		list->tail = node;
+	} else {
+		node->prev = list->tail;
+		list->tail = node;
+		node->prev->next = node;
+	}
+
+	list->size++;
+}
+
+/* 
+ * add element to tail of an int_list
+ */
+void int_list_add(struct int_list *list, int i)
+{
+	struct int_node *node = xcalloc(1, sizeof(*node));
+	node->elem = i;
+	
+	if (list->size == 0) {
+		list->head = node;
+		list->tail = node;
+	} else {
+		node->prev = list->tail;
+		list->tail = node;
+		node->prev->next = node;
+	}
+
+	list->size++;
+}
+
+/* 
  * delete an element from a fexpr_list
  */
 void fexpr_list_delete(struct fexpr_list *list, struct fexpr_node *node)
@@ -1639,6 +1738,34 @@ struct fexl_list * fexl_list_copy(struct fexl_list *list)
 	struct fexl_node *node;
 	fexl_list_for_each(node, list)
 		fexl_list_add(ret, node->elem);
+	
+	return ret;
+}
+
+/* 
+ * make a shallow copy of a sdv_list
+ */
+struct sdv_list * sdv_list_copy(struct sdv_list *list)
+{
+	struct sdv_list *ret = sdv_list_init();
+	struct sdv_node *node;
+	sdv_list_for_each(node, list)
+		sdv_list_add(ret, node->elem);
+
+	
+	return ret;
+}
+
+/* 
+ * make a shallow copy of a sfix_list
+ */
+struct sfix_list * sfix_list_copy(struct sfix_list *list)
+{
+	struct sfix_list *ret = sfix_list_init();
+	struct sfix_node *node;
+	sfix_list_for_each(node, list)
+		sfix_list_add(ret, node->elem);
+
 	
 	return ret;
 }

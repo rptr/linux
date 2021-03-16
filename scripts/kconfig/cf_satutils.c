@@ -82,18 +82,20 @@ void construct_cnf_clauses(PicoSAT *p)
 /*
  * helper function to add an expression to a CNF-clause
  */
-static void unfold_cnf_clause_util(GArray *arr, struct pexpr *e)
+static void unfold_cnf_clause_util(struct int_list *list, struct pexpr *e)
 {
 	switch (e->type) {
 	case PE_SYMBOL:
-		g_array_add_ints(2, arr, e->left.fexpr->satval);
+		int_list_add(list, e->left.fexpr->satval);
+// 		g_array_add_ints(2, arr, e->left.fexpr->satval);
 		break;
 	case PE_OR:
-		unfold_cnf_clause_util(arr, e->left.pexpr);
-		unfold_cnf_clause_util(arr, e->right.pexpr);
+		unfold_cnf_clause_util(list, e->left.pexpr);
+		unfold_cnf_clause_util(list, e->right.pexpr);
 		break;
 	case PE_NOT:
-		g_array_add_ints(2, arr, -(e->left.pexpr->left.fexpr->satval));
+		int_list_add(list, -(e->left.pexpr->left.fexpr->satval));
+// 		g_array_add_ints(2, arr, -(e->left.pexpr->left.fexpr->satval));
 		break;
 	default:
 		perror("Not in CNF, FE_EQUALS.");
@@ -107,11 +109,12 @@ static void unfold_cnf_clause(struct pexpr *e)
 {
 	assert(pexpr_is_cnf(e));
 
-	GArray *arr = g_array_new(false, false, sizeof(int *));
+// 	GArray *arr = g_array_new(false, false, sizeof(int *));
+	struct int_list *list = int_list_init();
 	
-	unfold_cnf_clause_util(arr, e);
+	unfold_cnf_clause_util(list, e);
 
-	sat_add_clause_garray(pico, arr);
+	sat_add_clause_list(pico, list);
 }
 
 /*
@@ -292,7 +295,7 @@ void sat_add_clause(int num, ...)
 	va_list valist;
 	int i, *lit;
 	PicoSAT *pico;
-	GArray *arr = g_array_new(false, false, sizeof(int *));
+// 	GArray *arr = g_array_new(false, false, sizeof(int *));
 	
 	/* initialize valist for num number of arguments */
 	va_start(valist, num);
@@ -304,7 +307,7 @@ void sat_add_clause(int num, ...)
 		lit = malloc(sizeof(int));
 		*lit = va_arg(valist, int);
 		picosat_add(pico, *lit);
-		g_array_append_val(arr, lit);
+// 		g_array_append_val(arr, lit);
 	}
 	picosat_add(pico, 0);
 // 	id = malloc(sizeof(int));
@@ -321,24 +324,32 @@ void sat_add_clause(int num, ...)
 }
 
 /* 
- * add a clause from a GArray to PicoSAT 
+ * add a clause from an int_list to PicoSAT 
  */
-void sat_add_clause_garray(PicoSAT *pico, GArray *arr)
+void sat_add_clause_list(PicoSAT *pico, struct int_list *list)
 {
-	int i, *lit;
-
-	for (i = 0; i < arr->len; i++) {
-		lit = g_array_index(arr, int *, i);
-		picosat_add(pico, *lit);
-	}
-	picosat_add(pico, 0);
-// 	id = malloc(sizeof(int));
-// 	*id = picosat_add(pico, 0);
+	struct int_node *node;
+	int_list_for_each(node, list)
+		picosat_add(pico, node->elem);
 	
-	/* add clause to hashmap if not done yet */
-// 	if (!g_hash_table_contains(cnf_clauses_map, id))
-// 		g_hash_table_insert(cnf_clauses_map, id, arr);
+	picosat_add(pico, 0);
 }
+// void sat_add_clause_garray(PicoSAT *pico, GArray *arr)
+// {
+// 	int i, *lit;
+// 
+// 	for (i = 0; i < arr->len; i++) {
+// 		lit = g_array_index(arr, int *, i);
+// 		picosat_add(pico, *lit);
+// 	}
+// 	picosat_add(pico, 0);
+// /*	id = malloc(sizeof(int));
+// 	*id = picosat_add(pico, 0);*/
+// 	
+// 	/* add clause to hashmap if not done yet */
+// /*	if (!g_hash_table_contains(cnf_clauses_map, id))
+// 		g_hash_table_insert(cnf_clauses_map, id, arr);*/
+// }
 
 /*
  * add clauses to the PicoSAT
@@ -595,12 +606,12 @@ void sym_add_assumption_tri(PicoSAT *pico, struct symbol *sym, tristate tri_val)
 /* 
  * add assumptions for the symbols to be changed to the SAT solver
  */
-void sym_add_assumption_sdv(PicoSAT *pico, GArray *arr)
+void sym_add_assumption_sdv(PicoSAT *pico, struct sdv_list *list)
 {
-	unsigned int i;
 	struct symbol_dvalue *sdv;
-	for (i = 0; i < arr->len; i++) {
-		sdv = g_array_index(arr, struct symbol_dvalue *, i);
+	struct sdv_node *node;
+	sdv_list_for_each(node, list) {
+		sdv = node->elem;
 		
 		int lit_y = sdv->sym->fexpr_y->satval;
 		

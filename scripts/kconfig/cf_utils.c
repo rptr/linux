@@ -642,16 +642,12 @@ char * sym_get_name(struct symbol *sym)
 /* 
  * check whether symbol is to be changed 
  */
-bool sym_is_sdv(GArray *arr, struct symbol *sym)
+bool sym_is_sdv(struct sdv_list *list, struct symbol *sym)
 {
-	unsigned int i;
-	struct symbol_dvalue *sdv;
-	for (i = 0; i < arr->len; i++) {
-		sdv = g_array_index(arr, struct symbol_dvalue *, i);
-		
-		if (sym == sdv->sym)
+	struct sdv_node *node;
+	sdv_list_for_each(node, list)
+		if (sym == node->elem->sym)
 			return true;
-	}
 	
 	return false;
 }
@@ -684,18 +680,19 @@ void print_sym_constraint(struct symbol* sym)
 /*
  * print a default map
  */
-void print_default_map(GArray *map)
+void print_default_map(struct defm_list *map)
 {
 	struct default_map *entry;
-	unsigned int i;
+	struct defm_node *node;
 	
-	for (i = 0; i < map->len; i++) {
-		entry = g_array_index(map, struct default_map *, i);
+	defm_list_for_each(node, map) {
+		entry = node->elem;
 		struct gstr s = str_new();
 		str_append(&s, "\t");
 		str_append(&s, str_get(&entry->val->name));
 		str_append(&s, " ->");
 		pexpr_print(strdup(str_get(&s)), entry->e, -1);
+		str_free(&s);
 	}
 }
 
@@ -837,20 +834,20 @@ static void print_imply(struct property *p)
  * add integer to a GArray
  * cannot add values, must use variables
  */
-void g_array_add_ints(int num, ...)
-{
-	va_list valist;
-	int i, *val;
-	
-	va_start(valist, num);
-	
-	GArray *arr = va_arg(valist, GArray *);
-	
-	for (i = 1; i < num; i++) {
-		val = malloc(sizeof(int));
-		*val = va_arg(valist, int);
-		g_array_append_val(arr, val);
-	}
-	
-	va_end(valist);
-}
+// void g_array_add_ints(int num, ...)
+// {
+// 	va_list valist;
+// 	int i, *val;
+// 	
+// 	va_start(valist, num);
+// 	
+// 	GArray *arr = va_arg(valist, GArray *);
+// 	
+// 	for (i = 1; i < num; i++) {
+// 		val = malloc(sizeof(int));
+// 		*val = va_arg(valist, int);
+// 		g_array_append_val(arr, val);
+// 	}
+// 	
+// 	va_end(valist);
+// }

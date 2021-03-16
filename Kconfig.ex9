@@ -24,7 +24,7 @@ config C
 
 config D
 	tristate "D"
-	depends on E && F
+	#depends on E && F
 
 config E
 	bool "E"

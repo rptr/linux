@@ -389,15 +389,7 @@ static void set_assumptions(PicoSAT *pico, struct fexpr_list *c)
 		fexpr_add_assumption(pico, node->elem, node->elem->satval);
 	
 	/* set assumptions for the conflict-symbols */
-	struct sdv_list *symbols = sdv_list_init();
-	unsigned int i;
-	struct symbol_dvalue *sdv;
-	for (i = 0; i < sdv_symbols->len; i++) {
-		sdv = g_array_index(sdv_symbols, struct symbol_dvalue *, i);
-		sdv_list_add(symbols, sdv);
-	}
-	
-	set_assumptions_sdv(pico, symbols);
+	set_assumptions_sdv(pico, sdv_symbols);
 }
 
 /*
@@ -756,25 +748,33 @@ static void print_diagnoses_symbol(struct sfl_list *diag_sym)
 static struct sfix_list * convert_diagnosis(struct fexpr_list *diagnosis)
 {
 	struct sfix_list *diagnosis_symbol = sfix_list_init();
-	unsigned int i;
 	struct fexpr *e;
 	struct symbol_fix *fix;
 	struct symbol_dvalue *sdv;
 	
 	/* set the values for the conflict symbols */
-	for (i = 0; i < sdv_symbols->len; i++) {
-		sdv = g_array_index(sdv_symbols, struct symbol_dvalue *, i);
-// 		fix = malloc(sizeof(struct symbol_fix));
+	struct sdv_node *snode;
+	sdv_list_for_each(snode, sdv_symbols) {
+		sdv = snode->elem;
 		fix = xcalloc(1, sizeof(*fix));
 		fix->sym = sdv->sym;
 		fix->type = SF_BOOLEAN;
 		fix->tri = sdv->tri;
 		sfix_list_add(diagnosis_symbol, fix);
 	}
+// 	for (i = 0; i < sdv_symbols->len; i++) {
+// 		sdv = g_array_index(sdv_symbols, struct symbol_dvalue *, i);
+// 		fix = malloc(sizeof(struct symbol_fix));
+// 		fix = xcalloc(1, sizeof(*fix));
+// 		fix->sym = sdv->sym;
+// 		fix->type = SF_BOOLEAN;
+// 		fix->tri = sdv->tri;
+// 		sfix_list_add(diagnosis_symbol, fix);
+// 	}
 	
-	struct fexpr_node *node;
-	fexpr_list_for_each(node, diagnosis) {
-		e = node->elem;
+	struct fexpr_node * fnode;
+	fexpr_list_for_each(fnode, diagnosis) {
+		e = fnode->elem;
 		
 		/* diagnosis already contains symbol, so continue */
 		if (diagnosis_contains_symbol(diagnosis_symbol, e->sym)) continue;
@@ -917,24 +917,6 @@ static struct sfl_list * minimise_diagnoses(PicoSAT *pico, struct fexl_list *dia
 		sfl_list_add(diagnoses_symbol, diagnosis_symbol);
 	}
 	
-// 	for (i = 0; i < diagnoses->len; i++) {
-// 		d = g_array_index(diagnoses, GArray *, i);
-// 
-// 		
-// 		/* check if symbol gets selected */
-// 		for (j = 0; j < diagnosis_symbol->len; j++) {
-// 			fix = g_array_index(diagnosis_symbol, struct symbol_fix *, j);
-// 		
-// 			
-// 			if (deref == 1)
-// 				g_array_remove_index(diagnosis_symbol, j--);
-// 			
-// 			deref = 0;
-// 		}
-// 		
-// 		g_array_prepend_val(diagnoses_symbol, diagnosis_symbol);
-// 	}
-	
 	end = clock();
 	time = ((double) (end - start)) / CLOCKS_PER_SEC;
 	
@@ -959,9 +941,15 @@ struct sfix_list * choose_fix(struct sfl_list *diag)
 	/* no changes wanted */
 	if (choice == 0) return NULL;
 	
-	printf("\nFIX THIS FUNCTION!!!\n\n");
+	/* invalid choice */
+	if (choice > diag->size) return NULL;
 	
-	return diag->head->elem;
+	unsigned int counter;
+	struct sfl_node *node = diag->head;
+	for (counter = 1; counter < choice; counter++)
+		node = node->next;
+	
+	return node->elem;
 }
 
 

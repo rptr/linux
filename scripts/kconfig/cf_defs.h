@@ -11,19 +11,13 @@ extern unsigned int sat_variable_nr;
 extern unsigned int tmp_variable_nr;
 extern GHashTable *satmap;
 
-extern GArray *sdv_symbols; /* array with conflict-symbols */
+extern struct sdv_list *sdv_symbols; /* array with conflict-symbols */
 extern bool stop_rangefix;
 extern struct fexpr *const_false;
 extern struct fexpr *const_true;
 extern struct fexpr *symbol_yes_fexpr;
 extern struct fexpr *symbol_mod_fexpr;
 extern struct fexpr *symbol_no_fexpr;
-
-/* wrapper for GArray */
-struct garray_wrapper {
-	/* GArray */
-	GArray *arr;
-};
 
 /* different types for k_expr */
 enum kexpr_type {
@@ -176,6 +170,16 @@ struct default_map {
 	struct pexpr *e;
 };
 
+struct defm_list {
+	struct defm_node *head, *tail;
+	unsigned int size;
+};
+
+struct defm_node {
+	struct default_map *elem;
+	struct defm_node *next, *prev;
+};
+
 enum symboldv_type {
 	SDV_BOOLEAN,	/* boolean/tristate */
 	SDV_NONBOOLEAN	/* string/int/hex */
@@ -246,6 +250,26 @@ struct sfl_list {
 struct sfl_node {
 	struct sfix_list *elem;
 	struct sfl_node *next, *prev;
+};
+
+struct sym_list {
+	struct sym_node *head, *tail;
+	unsigned int size;
+};
+
+struct sym_node {
+	struct symbol *elem;
+	struct sym_node *next, *prev;
+};
+
+struct int_list {
+	struct int_node *head, *tail;
+	unsigned int size;
+};
+
+struct int_node {
+	int elem;
+	struct int_node *next, *prev;
 };
 
 #endif

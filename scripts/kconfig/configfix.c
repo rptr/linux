@@ -21,7 +21,7 @@ unsigned int tmp_variable_nr = 1;
 
 GHashTable *satmap = NULL; /* hash table with all SAT-variables and their fexpr */
 GHashTable *cnf_clauses_map; /* hash-table with all CNF-clauses */
-GArray * sdv_symbols; /* array with conflict-symbols */
+struct sdv_list * sdv_symbols; /* array with conflict-symbols */
 
 bool stop_rangefix = false;
 
@@ -33,9 +33,9 @@ struct fexpr *symbol_no_fexpr; /* symbol_no_as fexpr */
 
 static PicoSAT *pico;
 static bool init_done = false;
-static GArray *conflict_syms = NULL;
+static struct sym_list *conflict_syms;
 
-static bool sdv_within_range(GArray *arr);
+static bool sdv_within_range(struct sdv_list *symbols);
 
 /* -------------------------------------- */
 
@@ -133,15 +133,16 @@ int run_satconf_cli(const char *Kconfig_file)
 /*
  * called from satdvconfig
  */
-GArray * run_satconf(GArray *arr)
+// GArray * run_satconf(GArray *arr)
+struct sfl_list * run_satconf(struct sdv_list *symbols)
 {
 	clock_t start, end;
 	double time;
 	
 	/* check whether all values can be applied -> no need to run */
-	if (sdv_within_range(arr)) {
+	if (sdv_within_range(symbols)) {
 		printf("\nAll symbols are already within range.\n\n");
-		return g_array_new(false, false, sizeof(GArray *));
+		return 0;
 	}
 	
 	if (!init_done) {
@@ -190,19 +191,21 @@ GArray * run_satconf(GArray *arr)
 
 	/* copy array with symbols to change */
 // 	sdv_arr = g_array_copy(arr);
-	unsigned int i;
-	struct symbol_dvalue *sdv;
-	sdv_symbols = g_array_new(false, false, sizeof(struct symbol_dvalue *));
-	for (i = 0; i < arr->len; i++) {
-		sdv = g_array_index(arr, struct symbol_dvalue *, i);
-		g_array_append_val(sdv_symbols, sdv);
-	}
+// 	unsigned int i;
+// 	struct symbol_dvalue *sdv;
+// 	sdv_symbols = g_array_new(false, false, sizeof(struct symbol_dvalue *));
+// 	for (i = 0; i < arr->len; i++) {
+// 		sdv = g_array_index(arr, struct symbol_dvalue *, i);
+// 		g_array_append_val(sdv_symbols, sdv);
+// 	}
+	sdv_symbols = sdv_list_copy(symbols);
 	
 	/* add assumptions for conflict-symbols */
 	sym_add_assumption_sdv(pico, sdv_symbols);
 	
 	/* add assumptions for all other symbols */
 	struct symbol *sym;
+	unsigned int i;
 	for_all_symbols(i, sym) {
 		if (sym->type == S_UNKNOWN) continue;
 		
@@ -211,12 +214,17 @@ GArray * run_satconf(GArray *arr)
 	}
 	
 	/* store the conflict symbols */
-	if (conflict_syms != NULL) g_array_free(conflict_syms, false);
-	conflict_syms = g_array_new(false, false, sizeof(struct symbol *));
-	for (i = 0; i < sdv_symbols->len; i++) {
-		sdv = g_array_index(sdv_symbols, struct symbol_dvalue *, i);
-		g_array_append_val(conflict_syms, sdv->sym);
-	}
+	conflict_syms = sym_list_init();
+	struct sdv_node *node;
+	sdv_list_for_each(node, sdv_symbols)
+		sym_list_add(conflict_syms, node->elem->sym);
+	
+// 	if (conflict_syms != NULL) g_array_free(conflict_syms, false);
+// 	conflict_syms = g_array_new(false, false, sizeof(struct symbol *));
+// 	for (i = 0; i < sdv_symbols->len; i++) {
+// 		sdv = g_array_index(sdv_symbols, struct symbol_dvalue *, i);
+// 		g_array_append_val(conflict_syms, sdv->sym);
+// 	}
 
 	printf("Solving SAT-problem...");
 	start = clock();
@@ -227,43 +235,56 @@ GArray * run_satconf(GArray *arr)
 	time = ((double) (end - start)) / CLOCKS_PER_SEC;
 	printf("done. (%.6f secs.)\n\n", time);
 	
-	GArray *ret;
+// 	GArray *ret;
+	struct sfl_list *ret;
 	
 	if (res == PICOSAT_SATISFIABLE) {
 		printf("===> PROBLEM IS SATISFIABLE <===\n");
 		
-		ret = g_array_new(false, false, sizeof(GArray *));
+// 		ret = g_array_new(false, false, sizeof(GArray *));
+		ret = sfl_list_init();
 		
 	} else if (res == PICOSAT_UNSATISFIABLE) {
 		printf("===> PROBLEM IS UNSATISFIABLE <===\n");
 		printf("\n");
 		
-		struct sfl_list *l = rangefix_run(pico);
+		ret = rangefix_run(pico);
 		
-		ret = g_array_new(false, false, sizeof(GArray *));
-		
-		struct sfl_node *node;
-		sfl_list_for_each(node, l) {
-			GArray *diagnosis_symbol = g_array_new(false, false, sizeof(struct symbol_fix *));
-			
-			struct sfix_node *sfnode;
-			sfix_list_for_each(sfnode, node->elem) {
-				g_array_append_val(diagnosis_symbol, sfnode->elem);
-			}
-			
-			g_array_append_val(ret, diagnosis_symbol);
-		}
+// 		for (i = 0; i < )
+// 		i = 0;
+// 		assert(l->size <= 3);
+// 		
+// 		struct sfl_node *node;
+// 		sfl_list_for_each(node, l) {
+// 			&fixes[i] = node->elem;
+// 		}
+// 		
+// 		
+// 		ret = g_array_new(false, false, sizeof(GArray *));
+// 		
+// 		struct sfl_node *node;
+// 		sfl_list_for_each(node, l) {
+// 			GArray *diagnosis_symbol = g_array_new(false, false, sizeof(struct symbol_fix *));
+// 			
+// 			struct sfix_node *sfnode;
+// 			sfix_list_for_each(sfnode, node->elem) {
+// 				g_array_append_val(diagnosis_symbol, sfnode->elem);
+// 			}
+// 			
+// 			g_array_append_val(ret, diagnosis_symbol);
+// 		}
 
 	}
 	else {
 		printf("Unknown if satisfiable.\n");
 		
-		ret = NULL;
+		ret = sfl_list_init();
 	}
 	
 // 	picosat_reset(pico);
 // 	g_hash_table_remove_all(cnf_clauses_map);
-	g_array_free(sdv_symbols, true);
+// TODO
+// 	g_array_free(sdv_symbols, true);
 	return ret;
 }
 
@@ -272,13 +293,10 @@ GArray * run_satconf(GArray *arr)
  */
 static bool sym_is_conflict_sym(struct symbol *sym)
 {
-	unsigned int i;
-	struct symbol *sym2;
-	for (i = 0; i < conflict_syms->len; i++) {
-		sym2 = g_array_index(conflict_syms, struct symbol *, i);
-		
-		if (sym == sym2) return true;
-	}
+	struct sym_node *node;
+	sym_list_for_each(node, conflict_syms)
+		if (sym == node->elem)
+			return true;
 	
 	return false;
 }
@@ -286,12 +304,12 @@ static bool sym_is_conflict_sym(struct symbol *sym)
 /*
  * check whether all conflict symbols are set to their target values
  */
-static bool syms_have_target_value(GArray *arr)
+static bool syms_have_target_value(struct sfix_list *list)
 {
-	unsigned int i;
 	struct symbol_fix *fix;
-	for (i = 0; i < arr->len; i++) {
-		fix = g_array_index(arr, struct symbol_fix *, i);
+	struct sfix_node *node;
+	sfix_list_for_each(node, list) {
+		fix = node->elem;
 		
 		if (!sym_is_conflict_sym(fix->sym)) continue;
 		
@@ -312,42 +330,47 @@ static bool syms_have_target_value(GArray *arr)
  * 
  * apply the fixes from a diagnosis
  */
-int apply_fix(GArray* diag)
+// int apply_fix(GArray* diag)
+int apply_fix(struct sfix_list *fix)
 {
-	struct symbol_fix *fix;
-	unsigned int i, no_symbols_set = 0, iterations = 0, manually_changed = 0;
-// 	GArray *tmp = g_array_copy(diag);
-	GArray *tmp = g_array_new(false, false, sizeof(struct symbol_fix *));
-	for (i = 0; i < diag->len; i++) {
-		fix = g_array_index(diag, struct symbol_fix *, i);
-		g_array_append_val(tmp, fix);
-	}
+	struct symbol_fix * sfix;
+	struct sfix_node *node, *next;
+	unsigned int no_symbols_set = 0, iterations = 0, manually_changed = 0;
+	
+	struct sfix_list *tmp = sfix_list_copy(fix);
 
 	printf("Trying to apply fixes now...\n");
 	
-	while (no_symbols_set < diag->len && !syms_have_target_value(diag)) {
+
+	while (no_symbols_set < fix->size && !syms_have_target_value(fix)) {
 // 	while (!syms_have_target_value(diag)) {
-		if (iterations > diag->len * 2) {
+		if (iterations > fix->size * 2) {
 			printf("\nCould not apply all values :-(.\n");
 			return manually_changed;
 		}
 		
-		for (i = 0; i < tmp->len; i++) {
-			fix = g_array_index(tmp, struct symbol_fix *, i);
+// 		sfix_list_for_each(node, tmp) {
+		for (node = tmp->head; node != NULL;) {
+// 		for (i = 0; i < tmp->len; i++) {
+			sfix = node->elem;
 			
 			/* update symbol's current value */
-			sym_calc_value(fix->sym);
+			sym_calc_value(sfix->sym);
 			
 			/* value already set? */
-			if (fix->type == SF_BOOLEAN) {
-				if (fix->tri == sym_get_tristate_value(fix->sym)) {
-					g_array_remove_index(tmp, i--);
+			if (sfix->type == SF_BOOLEAN) {
+				if (sfix->tri == sym_get_tristate_value(sfix->sym)) {
+					next = node->next;
+					sfix_list_delete(tmp, node);
+					node = next;
 					no_symbols_set++;
 					continue;
 				}
-			} else if (fix->type == SF_NONBOOLEAN) {
-				if (strcmp(str_get(&fix->nb_val),sym_get_string_value(fix->sym)) == 0) {
-					g_array_remove_index(tmp, i--);
+			} else if (sfix->type == SF_NONBOOLEAN) {
+				if (strcmp(str_get(&sfix->nb_val),sym_get_string_value(sfix->sym)) == 0) {
+					next = node->next;
+					sfix_list_delete(tmp, node);
+					node = next;
 					no_symbols_set++;
 					continue;
 				}
@@ -357,12 +380,14 @@ int apply_fix(GArray* diag)
 
 				
 			/* could not set value, try next */
-			if (fix->type == SF_BOOLEAN) {
-				if (!sym_set_tristate_value(fix->sym, fix->tri)) {
+			if (sfix->type == SF_BOOLEAN) {
+				if (!sym_set_tristate_value(sfix->sym, sfix->tri)) {
+					node = node->next;
 					continue;
 				}
-			} else if (fix->type == SF_NONBOOLEAN) {
-				if (!sym_set_string_value(fix->sym, str_get(&fix->nb_val))) {
+			} else if (sfix->type == SF_NONBOOLEAN) {
+				if (!sym_set_string_value(sfix->sym, str_get(&sfix->nb_val))) {
+					node = node->next;
 					continue;
 				}
 			} else {
@@ -372,13 +397,15 @@ int apply_fix(GArray* diag)
 			
 			/* could set value, remove from tmp */
 			manually_changed++;
-			if (fix->type == SF_BOOLEAN) {
-				printf("%s set to %s.\n", sym_get_name(fix->sym), tristate_get_char(fix->tri));
-			} else if (fix->type == SF_NONBOOLEAN) {
-				printf("%s set to %s.\n", sym_get_name(fix->sym), str_get(&fix->nb_val));
+			if (sfix->type == SF_BOOLEAN) {
+				printf("%s set to %s.\n", sym_get_name(sfix->sym), tristate_get_char(sfix->tri));
+			} else if (sfix->type == SF_NONBOOLEAN) {
+				printf("%s set to %s.\n", sym_get_name(sfix->sym), str_get(&sfix->nb_val));
 			}
 			
-			g_array_remove_index(tmp, i--);
+			next = node->next;
+			sfix_list_delete(tmp, node);
+			node = next;
 			no_symbols_set++;
 		}
 		iterations++;
@@ -401,12 +428,13 @@ void interrupt_rangefix(void)
 /*
  * check whether all symbols are already within range
  */
-static bool sdv_within_range(GArray *arr)
+static bool sdv_within_range(struct sdv_list *symbols)
 {
-	unsigned int i;
 	struct symbol_dvalue *sdv;
-	for (i = 0; i < arr->len; i++) {
-		sdv = g_array_index(arr, struct symbol_dvalue *, i);
+	struct sdv_node *node;
+	
+	sdv_list_for_each(node, symbols) {
+		sdv = node->elem;
 		
 		assert(sym_is_boolean(sdv->sym));
 		

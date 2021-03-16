@@ -84,7 +84,7 @@ struct pexpr * prop_get_condition(struct property *prop);
 char * sym_get_name(struct symbol *sym);
 
 /* check whether symbol is to be changed */
-bool sym_is_sdv(GArray *arr, struct symbol *sym);
+bool sym_is_sdv(struct sdv_list *list, struct symbol *sym);
 
 /* print a symbol's name */
 void print_sym_name(struct symbol *sym);
@@ -93,12 +93,9 @@ void print_sym_name(struct symbol *sym);
 void print_sym_constraint(struct symbol *sym);
 
 /* print a default map */
-void print_default_map(GArray *map);
+void print_default_map(struct defm_list *map);
 
 /* print all symbols */
 void print_all_symbols(void);
-
-/* add an integer to a GArray */
-void g_array_add_ints(int num, ...);
 
 #endif

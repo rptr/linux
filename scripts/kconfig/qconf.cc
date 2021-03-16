@@ -1126,7 +1126,8 @@ void ConflictsView::applyFixButtonClick(){
 	}
 
 	GArray* selected_solution = g_array_index(solution_output,GArray * , solution_number);
-	apply_fix(selected_solution);
+	// TODO glib
+	apply_fix(NULL);
 
 	ConfigView::updateListAll();
 }
@@ -1365,7 +1366,9 @@ void ConflictsView::runSatConfAsync()
 	}
 	fixConflictsAction_->setText("Cancel");
 	// conflictsToolBar->repaint();
-	solution_output = run_satconf(wanted_symbols);
+	// TODO glib
+	struct sfl_list *ret = run_satconf(NULL);
+// 	solution_output = run_satconf(wanted_symbols);
 	std::cerr << "run_satconf finished....." << std::endl;
 	free(p);
 	g_array_free (wanted_symbols,FALSE);
