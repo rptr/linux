@@ -183,6 +183,9 @@ void fexpr_list_delete(struct fexpr_list *list, struct fexpr_node *node);
 /* delete an element from a fexpr_list */
 void fexl_list_delete(struct fexl_list *list, struct fexl_node *node);
 
+/* delete the first occurence of elem in an fexl_list */
+void fexl_list_delete_elem(struct fexl_list *list, struct fexpr_list *elem);
+
 /* delete an element from a sfix_list */
 void sfix_list_delete(struct sfix_list *list, struct sfix_node *node);
 
@@ -194,6 +197,9 @@ struct fexl_list * fexl_list_copy(struct fexl_list *list);
 
 /* print a fexpr_list */
 void fexpr_list_print(char *title, struct fexpr_list *list);
+
+/* print a fexl_list */
+void fexl_list_print(char *title, struct fexl_list *list);
 
 /* check whether 2 pexpr are equal */
 bool pexpr_eq(struct pexpr *e1, struct pexpr *e2);

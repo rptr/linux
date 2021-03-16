@@ -76,8 +76,6 @@ struct sfl_list * rangefix_run(PicoSAT *pico)
 	time = ((double) (end - start)) / CLOCKS_PER_SEC;
 	printf("done. (%.6f secs.)\n", time);
 	
-// 	printf("\n");
-	
 	if (PRINT_DIAGNOSES) {
 		printf("Diagnoses (only for debugging):\n");
 		print_diagnoses(diagnoses);
@@ -105,20 +103,7 @@ static struct fexl_list * generate_diagnoses(PicoSAT *pico)
 	struct fexl_list *R = fexl_list_init();
 	struct fexpr_list *X, *e, *x_set, *E1, *E2;
 	struct fexl_list *E_R_Union;
-	unsigned int k;
-	
-	/* TO BE REMOVED AGAIN, JUST FOR TESTING */
-// 	k = 0;
-// 	while (k < 10) {
-// 		if (stop_rangefix) {
-// 			stop_rangefix = false;
-// 			return R;
-// 		}
-// 		k++;
-// 		sleep(1);
-// 	}
-// 	return R;
-	
+
 	/* create constraint set C */
 	add_fexpr_to_constraint_set(C);
 	
@@ -175,7 +160,7 @@ static struct fexl_list * generate_diagnoses(PicoSAT *pico)
 			continue;
 			
 		} else if (res == PICOSAT_UNSATISFIABLE) {
-
+// 			printf("UNSATISFIABLE\n");
 		} else if (res == PICOSAT_UNKNOWN) {
 			printf("UNKNOWN\n");
 		} else {
@@ -198,7 +183,7 @@ static struct fexl_list * generate_diagnoses(PicoSAT *pico)
 		if (PRINT_UNSAT_CORE)
 			print_unsat_core(X);
 		
-		struct fexl_node *node;
+		struct fexl_node *node, *tmp;
 		for (node = E->head; node != NULL;) {
 // 		fexl_list_for_each(node, E) {
 			/* get partial diagnosis */
@@ -206,8 +191,11 @@ static struct fexl_list * generate_diagnoses(PicoSAT *pico)
 			
 			/* check, if there is an intersection between e and X
 			 * if there is, go to the next partial diagnosis */
-			if (has_intersection(e, X)) continue;
-			
+			if (has_intersection(e, X)) {
+				node = node->next;
+				continue;
+			}
+
 			/* for each fexpr in the core */
 			struct fexpr_node *fnode;
 			fexpr_list_for_each(fnode, X) {
@@ -222,7 +210,7 @@ static struct fexl_list * generate_diagnoses(PicoSAT *pico)
 				
 				/* create (E\e) ∪ R */
 				E_R_Union = fexl_list_copy(E);
-				fexl_list_delete(E_R_Union, node);
+				fexl_list_delete_elem(E_R_Union, e);
 				E_R_Union = fexl_list_union(E_R_Union, R);
 				
 				bool E2_subset_of_E1 = false;
@@ -251,10 +239,9 @@ static struct fexl_list * generate_diagnoses(PicoSAT *pico)
 			// TODO free e
 // 			g_array_free(e, false);
 			
-			struct fexl_node *tmp = node->next;
+			tmp = node->next;
 			fexl_list_delete(E, node);
 			node = tmp;
-
 		}
 		// TODO
 // 		g_array_free(X, false);
@@ -265,7 +252,7 @@ DIAGNOSES_FOUND:
 	// TODO double check freeing memory
 // 	g_array_free(C, false);
 // 	g_array_free(E, false);
-	
+
 	return R;
 }
 
@@ -591,17 +578,18 @@ static struct fexpr_list * fexpr_list_union(struct fexpr_list *A, struct fexpr_l
 {
 	struct fexpr_list *ret = fexpr_list_copy(A);
 	struct fexpr_node *node1, *node2;
-	bool found = false;
-
-	fexpr_list_for_each(node1, A) {
-		fexpr_list_for_each(node2, B) {
-			if (node1->elem == node2->elem) {
+	bool found;
+	
+	fexpr_list_for_each(node2, B) {
+		found = false;
+		fexpr_list_for_each(node1, A) {
+			if (node2->elem == node1->elem) {
 				found = true;
 				break;
 			}
 		}
 		if (!found)
-			fexpr_list_add(ret, node1->elem);
+			fexpr_list_add(ret, node2->elem);
 	}
 	
 	return ret;
@@ -614,17 +602,18 @@ static struct fexl_list * fexl_list_union(struct fexl_list *A, struct fexl_list 
 {
 	struct fexl_list *ret = fexl_list_copy(A);
 	struct fexl_node *node1, *node2;
-	bool found = false;
-
-	fexl_list_for_each(node1, A) {
-		fexl_list_for_each(node2, B) {
-			if (node1->elem == node2->elem) {
+	bool found;
+	
+	fexpr_list_for_each(node2, B) {
+		found = false;
+		fexpr_list_for_each(node1, A) {
+			if (node2->elem == node1->elem) {
 				found = true;
 				break;
 			}
 		}
 		if (!found)
-			fexl_list_add(ret, node1->elem);
+			fexl_list_add(ret, node2->elem);
 	}
 	
 	return ret;
@@ -902,7 +891,10 @@ static struct sfl_list * minimise_diagnoses(PicoSAT *pico, struct fexl_list *dia
 			fix = snode->elem;
 			
 			/* symbol is never selected, continue */
-			if (!fix->sym->fexpr_sel_y) continue;
+			if (!fix->sym->fexpr_sel_y) {
+				snode = snode->next;
+				continue;
+			}
 			
 			/* check, if the symbol was selected anyway */
 			if (fix->sym->type == S_BOOLEAN && fix->tri == yes) {
@@ -917,11 +909,12 @@ static struct sfl_list * minimise_diagnoses(PicoSAT *pico, struct fexl_list *dia
 				struct sfix_node *tmp = snode->next;
 				sfix_list_delete(diagnosis_symbol, snode);
 				snode = tmp;
+			} else {
+				deref = 0;
+				snode = snode->next;
 			}
-			
-			deref = 0;
 		}
-// 		sfl_list_add(diagnoses_symbol, diagnosis_symbol);
+		sfl_list_add(diagnoses_symbol, diagnosis_symbol);
 	}
 	
 // 	for (i = 0; i < diagnoses->len; i++) {

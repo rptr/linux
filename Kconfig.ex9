@@ -23,7 +23,7 @@ config C
 #endchoice
 
 config D
-	bool "D"
+	tristate "D"
 	depends on E && F
 
 config E

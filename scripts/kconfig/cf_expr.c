@@ -1601,6 +1601,23 @@ void fexl_list_delete(struct fexl_list *list, struct fexl_node *node)
 }
 
 /* 
+ * delete the first occurence of elem in an fexl_list
+ */
+void fexl_list_delete_elem(struct fexl_list *list, struct fexpr_list *elem)
+{
+	struct fexl_node *node, *to_delete = NULL;
+	fexl_list_for_each(node, list) {
+		if (node->elem == elem) {
+			to_delete = node;
+			break;
+		}
+	}
+	
+	if (to_delete != NULL)
+		fexl_list_delete(list, to_delete);
+}
+
+/* 
  * make a shallow copy of a fexpr_list 
  */
 struct fexpr_list * fexpr_list_copy(struct fexpr_list *list)
@@ -1608,7 +1625,7 @@ struct fexpr_list * fexpr_list_copy(struct fexpr_list *list)
 	struct fexpr_list *ret = fexpr_list_init();
 	struct fexpr_node *node;
 	fexpr_list_for_each(node, list)
-		fexpr_list_add(list, node->elem);
+		fexpr_list_add(ret, node->elem);
 	
 	return ret;
 }
@@ -1621,7 +1638,7 @@ struct fexl_list * fexl_list_copy(struct fexl_list *list)
 	struct fexl_list *ret = fexl_list_init();
 	struct fexl_node *node;
 	fexl_list_for_each(node, list)
-		fexl_list_add(list, node->elem);
+		fexl_list_add(ret, node->elem);
 	
 	return ret;
 }
@@ -1641,6 +1658,18 @@ void fexpr_list_print(char *title, struct fexpr_list *list)
 	}
 	
 	printf("]\n");
+}
+
+/*
+ * print a fexl_list
+ */
+void fexl_list_print(char *title, struct fexl_list *list)
+{
+	struct fexl_node *node;
+	printf("%s:\n", title);
+	
+	fexl_list_for_each(node, list)
+		fexpr_list_print(":", node->elem);
 }
 
 /*
