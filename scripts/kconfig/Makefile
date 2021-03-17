@@ -206,11 +206,11 @@ HOSTLDLIBS_cfoutconfig		= $(shell pkg-config --libs glib-2.0)
 HOSTCFLAGS_cfoutconfig.o	= $(shell pkg-config --cflags glib-2.0)
 
 HOSTCFLAGS_configfix.o		= $(shell pkg-config --cflags glib-2.0)
-# HOSTCFLAGS_cf_constraints.o	= $(shell pkg-config --cflags glib-2.0)
-# HOSTCFLAGS_cf_expr.o		= $(shell pkg-config --cflags glib-2.0)
-# HOSTCFLAGS_cf_rangefix.o	= $(shell pkg-config --cflags glib-2.0)
-# HOSTCFLAGS_cf_satutils.o	= $(shell pkg-config --cflags glib-2.0)
-# HOSTCFLAGS_cf_utils.o 		= $(shell pkg-config --cflags glib-2.0)
+HOSTCFLAGS_cf_constraints.o	= $(shell pkg-config --cflags glib-2.0)
+HOSTCFLAGS_cf_expr.o		= $(shell pkg-config --cflags glib-2.0)
+HOSTCFLAGS_cf_rangefix.o	= $(shell pkg-config --cflags glib-2.0)
+HOSTCFLAGS_cf_satutils.o	= $(shell pkg-config --cflags glib-2.0)
+HOSTCFLAGS_cf_utils.o 		= $(shell pkg-config --cflags glib-2.0)
 HOSTCFLAGS_picosat.o		= -DTRACE -Wno-missing-prototypes -Wno-pointer-compare
 ### configfix end ###
 
