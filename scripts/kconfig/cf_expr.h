@@ -138,6 +138,9 @@ bool pexpr_is_symbol(struct pexpr *e);
 /* check whether the fexpr is a constant (true/false) */
 bool fexpr_is_constant(struct fexpr *e);
 
+/* add a fexpr to the satmap */
+void fexpr_add_to_satmap(struct fexpr *e);
+
 /* print an fexpr */
 void fexpr_print(char *tag, struct fexpr *e, int parent);
 

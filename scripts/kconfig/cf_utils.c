@@ -16,6 +16,8 @@
 
 #include "configfix.h"
 
+#define SATMAP_INIT_SIZE 2
+
 static struct k_expr * gcc_version_eval(struct expr *e);
 static struct k_expr * expr_eval_unequal_bool(struct expr *e);
 
@@ -39,19 +41,9 @@ void init_config(const char *Kconfig_file)
  */
 void init_data(void)
 {
-	/* initialize map with all CNF clauses */
-// 	cnf_clauses_map = g_hash_table_new_full(
-// 		g_int_hash, g_int_equal, //< This is an integer hash.
-// 		free, //< Call "free" on the key (made with "malloc").
-// 		NULL //< Call "free" on the value (made with "strdup").
-// 	);
-	
 	/* create hashtable with all fexpr */
-	satmap = g_hash_table_new_full(
-		g_int_hash, g_int_equal, //< This is an integer hash.
-		NULL, //< Call "free" on the key (made with "malloc").
-		free //< Call "free" on the value (made with "strdup").
-	);
+	satmap = xcalloc(SATMAP_INIT_SIZE, sizeof(*satmap));
+	satmap_size = SATMAP_INIT_SIZE;
 	
 	printf("done.\n");
 }
@@ -90,10 +82,10 @@ void create_constants(void)
 	
 	/* create TRUE and FALSE constants */
 	const_false = fexpr_create(sat_variable_nr++, FE_FALSE, "0");
-	g_hash_table_insert(satmap, &const_false->satval, const_false);
+	fexpr_add_to_satmap(const_false);
 
 	const_true = fexpr_create(sat_variable_nr++, FE_TRUE, "1");
-	g_hash_table_insert(satmap, &const_true->satval, const_true);
+	fexpr_add_to_satmap(const_true);
 	
 	/* add fexpr of constants to tristate constants */
 	symbol_yes.fexpr_y = const_true;
@@ -128,8 +120,7 @@ struct fexpr * create_tmpsatvar(void)
 {
 	struct fexpr *t = fexpr_create(sat_variable_nr++, FE_TMPSATVAR, "");
 	str_append(&t->name, get_tmp_var_as_char(tmp_variable_nr++));
-	/* add it to satmap */
-	g_hash_table_insert(satmap, &t->satval, t);
+	fexpr_add_to_satmap(t);
 	
 	return t;
 }
@@ -204,17 +195,6 @@ struct k_expr * get_const_true_as_kexpr()
 	struct k_expr *ke = malloc(sizeof(struct k_expr));
 	ke->type = KE_CONST_TRUE;
 	return ke;
-}
-
-/*
- * given a satval, return the corresponding fexpr from satmap
- * return NULL, if key is not found
- */
-struct fexpr * get_fexpr_from_satmap(int key)
-{
-	int *index = malloc(sizeof(*index));
-	*index = abs(key);
-	return (struct fexpr *) g_hash_table_lookup(satmap, index);
 }
 
 /*

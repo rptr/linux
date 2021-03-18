@@ -9,7 +9,8 @@
 /* external variables */
 extern unsigned int sat_variable_nr;
 extern unsigned int tmp_variable_nr;
-extern GHashTable *satmap;
+extern struct fexpr *satmap; // map SAT variables to fexpr
+extern size_t satmap_size;
 
 extern struct sdv_list *sdv_symbols; /* array with conflict-symbols */
 extern bool stop_rangefix;

@@ -38,11 +38,6 @@ struct k_expr * get_const_false_as_kexpr(void);
 /* return the constant TRUE as a k_expr */
 struct k_expr * get_const_true_as_kexpr(void);
 
-
-/* retrieve value from satmap given a key (sat_variable_nr) */
-struct fexpr * get_fexpr_from_satmap(int key);
-
-
 /* parse an expr as a k_expr */
 struct k_expr * parse_expr(struct expr *e, struct k_expr *parent);
 

@@ -747,8 +747,7 @@ static void add_invisible_constraints(struct symbol *sym)
 	str_append(&npc->name, sym_get_name(sym));
 	str_append(&npc->name, "_NPC");
 	sym->noPromptCond = npc;
-	/* add it to satmap */
-	g_hash_table_insert(satmap, &npc->satval, npc);
+	fexpr_add_to_satmap(npc);
 	
 	struct pexpr *npc_p = pexf(npc);
 	

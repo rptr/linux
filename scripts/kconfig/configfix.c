@@ -19,8 +19,9 @@
 unsigned int sat_variable_nr = 1;
 unsigned int tmp_variable_nr = 1;
 
-GHashTable *satmap = NULL; /* hash table with all SAT-variables and their fexpr */
-GHashTable *cnf_clauses_map; /* hash-table with all CNF-clauses */
+struct fexpr *satmap;
+size_t satmap_size;
+
 struct sdv_list * sdv_symbols; /* array with conflict-symbols */
 
 bool stop_rangefix = false;
@@ -73,8 +74,7 @@ int run_satconf_cli(const char *Kconfig_file)
 		printf("done. (%.6f secs.)\n", time);
 		
 		init_done = true;
-	}
-	
+	}	
 	
 // 	return EXIT_SUCCESS;
 	
