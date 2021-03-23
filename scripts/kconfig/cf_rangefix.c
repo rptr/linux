@@ -537,7 +537,7 @@ static struct fexpr_list * get_difference(struct fexpr_list *C, struct fexpr_lis
 	fexpr_list_for_each(node1, C) {
 		found = false;
 		fexpr_list_for_each(node2, E0) {
-			if (node1->elem == node2->elem) {
+			if (node1->elem->satval == node2->elem->satval) {
 				found = true;
 				break;
 			}
@@ -557,7 +557,7 @@ static bool has_intersection(struct fexpr_list *e, struct fexpr_list *X)
 	struct fexpr_node *node1, *node2;
 	fexpr_list_for_each(node1, e)
 		fexpr_list_for_each(node2, X)
-			if (node1->elem == node2->elem)
+			if (node1->elem->satval == node2->elem->satval)
 				return true;
 	
 	return false;
@@ -575,7 +575,7 @@ static struct fexpr_list * fexpr_list_union(struct fexpr_list *A, struct fexpr_l
 	fexpr_list_for_each(node2, B) {
 		found = false;
 		fexpr_list_for_each(node1, A) {
-			if (node2->elem == node1->elem) {
+			if (node2->elem->satval == node1->elem->satval) {
 				found = true;
 				break;
 			}
@@ -596,9 +596,9 @@ static struct fexl_list * fexl_list_union(struct fexl_list *A, struct fexl_list 
 	struct fexl_node *node1, *node2;
 	bool found;
 	
-	fexpr_list_for_each(node2, B) {
+	fexl_list_for_each(node2, B) {
 		found = false;
-		fexpr_list_for_each(node1, A) {
+		fexl_list_for_each(node1, A) {
 			if (node2->elem == node1->elem) {
 				found = true;
 				break;
@@ -622,7 +622,7 @@ static bool is_subset_of(struct fexpr_list *A, struct fexpr_list *B)
 	fexpr_list_for_each(node1, A) {
 		found = false;
 		fexpr_list_for_each(node2, B) {
-			if (node1->elem == node2->elem) {
+			if (node1->elem->satval == node2->elem->satval) {
 				found = true;
 				break;
 			}
@@ -661,7 +661,7 @@ static bool diagnosis_contains_fexpr(struct fexpr_list *diagnosis, struct fexpr 
 	struct fexpr_node *node;
 
 	fexpr_list_for_each(node, diagnosis)
-		if (node->elem == e)
+		if (node->elem->satval == e->satval)
 			return true;
 	
 	return false;
@@ -762,15 +762,6 @@ static struct sfix_list * convert_diagnosis(struct fexpr_list *diagnosis)
 		fix->tri = sdv->tri;
 		sfix_list_add(diagnosis_symbol, fix);
 	}
-// 	for (i = 0; i < sdv_symbols->len; i++) {
-// 		sdv = g_array_index(sdv_symbols, struct symbol_dvalue *, i);
-// 		fix = malloc(sizeof(struct symbol_fix));
-// 		fix = xcalloc(1, sizeof(*fix));
-// 		fix->sym = sdv->sym;
-// 		fix->type = SF_BOOLEAN;
-// 		fix->tri = sdv->tri;
-// 		sfix_list_add(diagnosis_symbol, fix);
-// 	}
 	
 	struct fexpr_node * fnode;
 	fexpr_list_for_each(fnode, diagnosis) {
@@ -1021,7 +1012,7 @@ static const char * calculate_new_string_value(struct fexpr *e, struct fexpr_lis
 		e2 = node->elem;
 		
 		/* not interested in other symbols or the same fexpr */
-		if (e->sym != e2->sym || e == e2) continue;
+		if (e->sym != e2->sym || e->satval == e2->satval) continue;
 		
 		return str_get(&e2->nb_val);
 	}
