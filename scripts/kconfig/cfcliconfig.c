@@ -35,7 +35,6 @@ int main(int argc, char *argv[])
 	
 	while(1) {
 		/* create the array */
-// 		symbols = g_array_new(false, false, sizeof(struct symbol_dvalue *));
 		symbols = sdv_list_init();
 		
 		/* ask for user input */
@@ -50,7 +49,6 @@ int main(int argc, char *argv[])
 		strtok(input, "\n");
 		
 		struct symbol_dvalue *sdv = sym_create_sdv(sym, input);
-// 		g_array_append_val(symbols, sdv);
 		sdv_list_add(symbols, sdv);
 		
 		diagnoses = run_satconf(symbols);
@@ -58,9 +56,6 @@ int main(int argc, char *argv[])
 		
 		if (chosen_fix != NULL)
 			apply_fix(chosen_fix);
-		
-		/* clear the array */
-// 		g_array_free(symbols, TRUE);
 	}
 	
 	return EXIT_SUCCESS;

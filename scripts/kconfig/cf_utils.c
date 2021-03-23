@@ -809,25 +809,3 @@ static void print_imply(struct property *p)
 	}
 	printf("\n");
 }
-
-/*
- * add integer to a GArray
- * cannot add values, must use variables
- */
-// void g_array_add_ints(int num, ...)
-// {
-// 	va_list valist;
-// 	int i, *val;
-// 	
-// 	va_start(valist, num);
-// 	
-// 	GArray *arr = va_arg(valist, GArray *);
-// 	
-// 	for (i = 1; i < num; i++) {
-// 		val = malloc(sizeof(int));
-// 		*val = va_arg(valist, int);
-// 		g_array_append_val(arr, val);
-// 	}
-// 	
-// 	va_end(valist);
-// }

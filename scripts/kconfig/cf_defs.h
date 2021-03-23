@@ -65,10 +65,6 @@ struct k_expr {
 /* different types for f_expr */
 enum fexpr_type {
 	FE_SYMBOL,
-	FE_AND,
-	FE_OR,
-	FE_NOT,
-	FE_EQUALS,
 	FE_NPC, /* no prompt condition */
 	FE_TRUE,  /* constant of value True */
 	FE_FALSE,  /* constant of value False */
