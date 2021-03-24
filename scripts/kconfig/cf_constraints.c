@@ -155,7 +155,6 @@ void get_constraints(void)
 		/* only continue for tristates */
 		if (sym->type == S_BOOLEAN) continue;
         
-		// TODO double check
 		struct pexpr *sel_m = pexpr_implies(pexf(sym->fexpr_sel_m), sym_get_fexpr_both(sym));
 		sym_add_constraint(sym, sel_m);
         
@@ -232,7 +231,6 @@ static void build_tristate_constraint_clause(struct symbol *sym)
 	sym_add_constraint(sym, c);
 
 	/* X_m -> MODULES */
-	// TODO doublecheck that
 	if (modules_sym->fexpr_y != NULL) {
 		struct pexpr *c2 = pexpr_implies(X_m, modules);
 		sym_add_constraint(sym, c2);
@@ -383,16 +381,13 @@ static void add_dependencies_nonbool(struct symbol *sym)
 	assert(!sym->rev_dep.expr);
 	
 	struct k_expr *ke_dirdep = parse_expr(sym->dir_dep.expr, NULL);
-	
 	struct pexpr *dep_both = calculate_pexpr_both(ke_dirdep);
-// 	struct pexpr *sel_both = sym->rev_dep.expr ? calculate_pexpr_both(ke_revdep) : pexf(const_false);
 	
-	// TODO check
-// 	if (sel_both->type == PE_SYMBOL && sel_both->left.fexpr != const_false)
-// 		perror("Non-boolean symbol has reverse dependencies.");
+	if (dep_both->type == PE_SYMBOL && dep_both->left.fexpr != const_false)
+		perror("Non-boolean symbol has reverse dependencies.");
 
 	struct pexpr *nb_vals = pexf(const_false);
-	struct fexpr_node * node;
+	struct fexpr_node *node;
 	/* can skip the first non-boolean value, since this is 'n' */
 	fexpr_list_for_each(node, sym->nb_vals) {
 		if (node->prev == NULL) continue;

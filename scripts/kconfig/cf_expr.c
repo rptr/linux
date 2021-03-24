@@ -1251,6 +1251,53 @@ void fexl_list_print(char *title, struct fexl_list *list)
 		fexpr_list_print(":", node->elem);
 }
 
+/* 
+ * free an fexpr_list
+ */
+void fexpr_list_free(struct fexpr_list *list)
+{
+	struct fexpr_node *node = list->head, *tmp;
+	
+	while (node != NULL) {
+		tmp = node->next;
+		free(node);
+		node = tmp;
+	}
+	
+	free(list);
+}
+
+/* 
+ * free an fexl_list
+ */
+void fexl_list_free(struct fexl_list *list){
+	struct fexl_node *node = list->head, *tmp;
+	
+	while (node != NULL) {
+		tmp = node->next;
+		free(node);
+		node = tmp;
+	}
+	
+	free(list);
+}
+
+/* 
+ * free a sdv_list
+ */
+void sdv_list_free(struct sdv_list *list)
+{
+	struct sdv_node *node = list->head, *tmp;
+	
+	while (node != NULL) {
+		tmp = node->next;
+		free(node);
+		node = tmp;
+	}
+	
+	free(list);
+}
+
 /*
  * simplify a pexpr in-place
  * 	pexpr && False -> False

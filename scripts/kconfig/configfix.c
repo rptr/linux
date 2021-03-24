@@ -133,7 +133,6 @@ int run_satconf_cli(const char *Kconfig_file)
 /*
  * called from satdvconfig
  */
-// GArray * run_satconf(GArray *arr)
 struct sfl_list * run_satconf(struct sdv_list *symbols)
 {
 	clock_t start, end;
@@ -190,14 +189,6 @@ struct sfl_list * run_satconf(struct sdv_list *symbols)
 // 	return EXIT_SUCCESS;
 
 	/* copy array with symbols to change */
-// 	sdv_arr = g_array_copy(arr);
-// 	unsigned int i;
-// 	struct symbol_dvalue *sdv;
-// 	sdv_symbols = g_array_new(false, false, sizeof(struct symbol_dvalue *));
-// 	for (i = 0; i < arr->len; i++) {
-// 		sdv = g_array_index(arr, struct symbol_dvalue *, i);
-// 		g_array_append_val(sdv_symbols, sdv);
-// 	}
 	sdv_symbols = sdv_list_copy(symbols);
 	
 	/* add assumptions for conflict-symbols */
@@ -218,13 +209,6 @@ struct sfl_list * run_satconf(struct sdv_list *symbols)
 	struct sdv_node *node;
 	sdv_list_for_each(node, sdv_symbols)
 		sym_list_add(conflict_syms, node->elem->sym);
-	
-// 	if (conflict_syms != NULL) g_array_free(conflict_syms, false);
-// 	conflict_syms = g_array_new(false, false, sizeof(struct symbol *));
-// 	for (i = 0; i < sdv_symbols->len; i++) {
-// 		sdv = g_array_index(sdv_symbols, struct symbol_dvalue *, i);
-// 		g_array_append_val(conflict_syms, sdv->sym);
-// 	}
 
 	printf("Solving SAT-problem...");
 	start = clock();
@@ -235,13 +219,10 @@ struct sfl_list * run_satconf(struct sdv_list *symbols)
 	time = ((double) (end - start)) / CLOCKS_PER_SEC;
 	printf("done. (%.6f secs.)\n\n", time);
 	
-// 	GArray *ret;
 	struct sfl_list *ret;
-	
 	if (res == PICOSAT_SATISFIABLE) {
 		printf("===> PROBLEM IS SATISFIABLE <===\n");
 		
-// 		ret = g_array_new(false, false, sizeof(GArray *));
 		ret = sfl_list_init();
 		
 	} else if (res == PICOSAT_UNSATISFIABLE) {
@@ -249,42 +230,15 @@ struct sfl_list * run_satconf(struct sdv_list *symbols)
 		printf("\n");
 		
 		ret = rangefix_run(pico);
-		
-// 		for (i = 0; i < )
-// 		i = 0;
-// 		assert(l->size <= 3);
-// 		
-// 		struct sfl_node *node;
-// 		sfl_list_for_each(node, l) {
-// 			&fixes[i] = node->elem;
-// 		}
-// 		
-// 		
-// 		ret = g_array_new(false, false, sizeof(GArray *));
-// 		
-// 		struct sfl_node *node;
-// 		sfl_list_for_each(node, l) {
-// 			GArray *diagnosis_symbol = g_array_new(false, false, sizeof(struct symbol_fix *));
-// 			
-// 			struct sfix_node *sfnode;
-// 			sfix_list_for_each(sfnode, node->elem) {
-// 				g_array_append_val(diagnosis_symbol, sfnode->elem);
-// 			}
-// 			
-// 			g_array_append_val(ret, diagnosis_symbol);
-// 		}
-
 	}
 	else {
 		printf("Unknown if satisfiable.\n");
 		
 		ret = sfl_list_init();
 	}
+
+	sdv_list_free(sdv_symbols);
 	
-// 	picosat_reset(pico);
-// 	g_hash_table_remove_all(cnf_clauses_map);
-// TODO
-// 	g_array_free(sdv_symbols, true);
 	return ret;
 }
 

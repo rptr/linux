@@ -90,7 +90,4 @@ void print_sym_constraint(struct symbol *sym);
 /* print a default map */
 void print_default_map(struct defm_list *map);
 
-/* print all symbols */
-void print_all_symbols(void);
-
 #endif

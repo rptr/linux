@@ -194,6 +194,15 @@ void fexpr_list_print(char *title, struct fexpr_list *list);
 /* print a fexl_list */
 void fexl_list_print(char *title, struct fexl_list *list);
 
+/* free an fexpr_list */
+void fexpr_list_free(struct fexpr_list *list);
+
+/* free an fexl_list */
+void fexl_list_free(struct fexl_list *list);
+
+/* free a sdv_list */
+void sdv_list_free(struct sdv_list *list);
+
 /* check whether 2 pexpr are equal */
 bool pexpr_eq(struct pexpr *e1, struct pexpr *e2);
 

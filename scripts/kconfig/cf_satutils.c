@@ -33,7 +33,6 @@ static PicoSAT *pico;
  */
 PicoSAT * initialize_picosat(void)
 {
-	// TODO
 	printf("\nInitializing PicoSAT...");
 	PicoSAT *pico = picosat_init();
 	picosat_enable_trace_generation(pico);

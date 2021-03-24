@@ -149,10 +149,9 @@ static struct fexl_list * generate_diagnoses(PicoSAT *pico)
 			if (E0->size > 0)
 				fexl_list_add(R, E0);
 			else
-				;//g_array_free(E0, false);
+				fexpr_list_free(E0);
 			
-			// TODO
-// 			g_array_free(c, false);
+			fexpr_list_free(c);
 			
 			if (R->size >= MAX_DIAGNOSES)
 				goto DIAGNOSES_FOUND;
@@ -227,31 +226,28 @@ static struct fexl_list * generate_diagnoses(PicoSAT *pico)
 					}
 				}
 				
-				// TODO free E_R_Union
+				fexl_list_free(E_R_Union);
 				
 				/* ∄ E" ⊆ E' */
 				if (!E2_subset_of_E1)
 					fexl_list_add(E, E1);
 				else
-					;// TODO free E1
+					fexpr_list_free(E1);
 			}
 			
-			// TODO free e
-// 			g_array_free(e, false);
+			fexpr_list_free(e);
 			
 			tmp = node->next;
 			fexl_list_delete(E, node);
 			node = tmp;
 		}
-		// TODO
-// 		g_array_free(X, false);
-// 		g_array_free(c, false);
+		fexpr_list_free(X);
+		fexpr_list_free(c);
 	}
 
 DIAGNOSES_FOUND:
-	// TODO double check freeing memory
-// 	g_array_free(C, false);
-// 	g_array_free(E, false);
+	fexpr_list_free(C);
+	fexl_list_free(E);
 
 	return R;
 }
@@ -518,7 +514,8 @@ static struct fexpr_list * minimise_unsat_core(PicoSAT *pico, struct fexpr_list 
 		if (res == PICOSAT_UNSATISFIABLE)
 			fexpr_list_delete(C, node);
 		
-		// TODO free c_set and t
+		fexpr_list_free(c_set);
+		fexpr_list_free(t);
 	}
 	
 	return C;
@@ -770,7 +767,6 @@ static struct sfix_list * convert_diagnosis(struct fexpr_list *diagnosis)
 		/* diagnosis already contains symbol, so continue */
 		if (diagnosis_contains_symbol(diagnosis_symbol, e->sym)) continue;
 		
-		// TODO for disallowed
 		enum symbolfix_type type;
 		if (sym_is_boolean(e->sym))
 			type = SF_BOOLEAN;
@@ -781,7 +777,6 @@ static struct sfix_list * convert_diagnosis(struct fexpr_list *diagnosis)
 		fix = symbol_fix_create(e, type, diagnosis);
 		
 		sfix_list_add(diagnosis_symbol, fix);
-
 	}
 	
 	return diagnosis_symbol;
