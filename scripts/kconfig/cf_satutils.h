@@ -16,7 +16,7 @@ void construct_cnf_clauses(PicoSAT *pico);
 void sat_add_clause(int num, ...);
 
 /* add a clause from GArray to PicoSAT */
-void sat_add_clause_list(PicoSAT *pico, struct int_list *list);
+void sat_add_clause_arr(PicoSAT *pico);
 
 /* start PicoSAT */
 void picosat_solve(PicoSAT *pico);

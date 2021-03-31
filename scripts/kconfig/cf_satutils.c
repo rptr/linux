@@ -81,20 +81,30 @@ void construct_cnf_clauses(PicoSAT *p)
 /*
  * helper function to add an expression to a CNF-clause
  */
-static void unfold_cnf_clause_util(struct int_list *list, struct pexpr *e)
+static int *arr;
+static size_t arr_size, arr_elements;
+static const size_t INIT_ARR_SIZE = 2;
+static void int_add_to_satarr(int *arr, int val)
+{
+	if (arr_elements >= arr_size) {
+		arr = xrealloc(arr, arr_size * 2 * sizeof(int));
+		arr_size *= 2;
+	}
+	arr[arr_elements++] = val;
+}
+
+static void unfold_cnf_clause_util(struct pexpr *e)
 {
 	switch (e->type) {
 	case PE_SYMBOL:
-		int_list_add(list, e->left.fexpr->satval);
-// 		g_array_add_ints(2, arr, e->left.fexpr->satval);
+		int_add_to_satarr(arr, e->left.fexpr->satval);
 		break;
 	case PE_OR:
-		unfold_cnf_clause_util(list, e->left.pexpr);
-		unfold_cnf_clause_util(list, e->right.pexpr);
+		unfold_cnf_clause_util(e->left.pexpr);
+		unfold_cnf_clause_util(e->right.pexpr);
 		break;
 	case PE_NOT:
-		int_list_add(list, -(e->left.pexpr->left.fexpr->satval));
-// 		g_array_add_ints(2, arr, -(e->left.pexpr->left.fexpr->satval));
+		int_add_to_satarr(arr, -(e->left.pexpr->left.fexpr->satval));
 		break;
 	default:
 		perror("Not in CNF, FE_EQUALS.");
@@ -108,12 +118,14 @@ static void unfold_cnf_clause(struct pexpr *e)
 {
 	assert(pexpr_is_cnf(e));
 
-// 	GArray *arr = g_array_new(false, false, sizeof(int *));
-	struct int_list *list = int_list_init();
+	arr = xcalloc(INIT_ARR_SIZE, sizeof(int));
+	arr_elements = 0;
+	arr_size = INIT_ARR_SIZE;
 	
-	unfold_cnf_clause_util(list, e);
-
-	sat_add_clause_list(pico, list);
+	unfold_cnf_clause_util(e);
+	
+	sat_add_clause_arr(pico);
+	free(arr);
 }
 
 /*
@@ -315,11 +327,11 @@ void sat_add_clause(int num, ...)
 /* 
  * add a clause from an int_list to PicoSAT 
  */
-void sat_add_clause_list(PicoSAT *pico, struct int_list *list)
+void sat_add_clause_arr(PicoSAT *pico)
 {
-	struct int_node *node;
-	int_list_for_each(node, list)
-		picosat_add(pico, node->elem);
+	size_t t;
+	for (t = 0; t < arr_elements; t++)
+		picosat_add(pico, arr[t]);
 	
 	picosat_add(pico, 0);
 }

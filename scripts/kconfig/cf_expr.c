@@ -893,19 +893,6 @@ struct defm_list * defm_list_init(void)
 }
 
 /* 
- * init list of ints
- */
-struct int_list * int_list_init(void)
-{
-	struct int_list *list = xcalloc(1, sizeof(*list));
-	list->head = NULL;
-	list->tail = NULL;
-	list->size = 0;
-	
-	return list;
-}
-
-/* 
  * add element to tail of a fexpr_list
  */
 void fexpr_list_add(struct fexpr_list *list, struct fexpr *fe)
@@ -1052,26 +1039,6 @@ void defm_list_add(struct defm_list *list, struct default_map *map)
 {
 	struct defm_node *node = xcalloc(1, sizeof(*node));
 	node->elem = map;
-	
-	if (list->size == 0) {
-		list->head = node;
-		list->tail = node;
-	} else {
-		node->prev = list->tail;
-		list->tail = node;
-		node->prev->next = node;
-	}
-
-	list->size++;
-}
-
-/* 
- * add element to tail of an int_list
- */
-void int_list_add(struct int_list *list, int i)
-{
-	struct int_node *node = xcalloc(1, sizeof(*node));
-	node->elem = i;
 	
 	if (list->size == 0) {
 		list->head = node;

@@ -29,9 +29,6 @@
 
 #define defm_list_for_each(node, list) \
 	fexpr_list_for_each(node, list)
-	
-#define int_list_for_each(node, list) \
-	fexpr_list_for_each(node, list)
 
 /* create a fexpr */
 struct fexpr * fexpr_create(int satval, enum fexpr_type type, char *name);
@@ -134,9 +131,6 @@ struct sym_list * sym_list_init(void);
 /* init list of default_maps */
 struct defm_list * defm_list_init(void);
 
-/* init list of ints */
-struct int_list * int_list_init(void);
-
 /* add element to tail of a fexpr_list */
 void fexpr_list_add(struct fexpr_list *list, struct fexpr *fe);
 
@@ -160,9 +154,6 @@ void sym_list_add(struct sym_list *list, struct symbol *sym);
 
 /* add element to tail of a defm_list */
 void defm_list_add(struct defm_list *list, struct default_map *map);
-
-/* add element to tail of an int_list */
-void int_list_add(struct int_list *list, int i);
 
 /* delete an element from a fexpr_list */
 void fexpr_list_delete(struct fexpr_list *list, struct fexpr_node *node);

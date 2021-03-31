@@ -259,14 +259,4 @@ struct sym_node {
 	struct sym_node *next, *prev;
 };
 
-struct int_list {
-	struct int_node *head, *tail;
-	unsigned int size;
-};
-
-struct int_node {
-	int elem;
-	struct int_node *next, *prev;
-};
-
 #endif
