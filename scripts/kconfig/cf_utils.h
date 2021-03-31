@@ -28,34 +28,17 @@ char * get_tmp_var_as_char(int i);
 /* return a tristate value as a char * */
 char * tristate_get_char(tristate val);
 
+/* check whether an expr can evaluate to mod */
+bool expr_can_evaluate_to_mod(struct expr *e);
 
-/* check if a k_expr can evaluate to mod */
-bool can_evaluate_to_mod(struct k_expr *e);
-
-/* return the constant FALSE as a k_expr */
-struct k_expr * get_const_false_as_kexpr(void);
-
-/* return the constant TRUE as a k_expr */
-struct k_expr * get_const_true_as_kexpr(void);
-
-/* parse an expr as a k_expr */
-struct k_expr * parse_expr(struct expr *e, struct k_expr *parent);
+/* parse an expr as a pexpr */
+struct pexpr * expr_parse_to_pexpr(struct expr *e);
 
 /* print an expr */
 void print_expr(char *tag, struct expr *e, int prevtoken);
 
-/* print some debug info about the tree structure of k_expr */
-void debug_print_kexpr(struct k_expr *e);
-
-/* print a kexpr */
-void print_kexpr(char *tag, struct k_expr *e);
-
-/* write a kexpr into a string */
-void kexpr_as_char(struct k_expr *e, struct gstr *s);
-
-
 /* check, if the symbol is a tristate-constant */
-bool is_tristate_constant(struct symbol *sym);
+bool sym_is_tristate_constant(struct symbol *sym);
 
 /* check, if a symbol is of type boolean or tristate */
 bool sym_is_boolean(struct symbol *sym);

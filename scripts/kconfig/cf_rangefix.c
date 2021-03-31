@@ -74,7 +74,7 @@ struct sfl_list * rangefix_run(PicoSAT *pico)
 
 	end = clock();
 	time = ((double) (end - start)) / CLOCKS_PER_SEC;
-	printf("done. (%.6f secs.)\n", time);
+	printf("Generating diagnoses...done. (%.6f secs.)\n", time);
 	
 	if (PRINT_DIAGNOSES) {
 		printf("Diagnoses (only for debugging):\n");

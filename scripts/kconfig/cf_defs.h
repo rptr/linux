@@ -20,48 +20,6 @@ extern struct fexpr *symbol_yes_fexpr;
 extern struct fexpr *symbol_mod_fexpr;
 extern struct fexpr *symbol_no_fexpr;
 
-/* different types for k_expr */
-enum kexpr_type {
-	KE_SYMBOL,
-	KE_AND,
-	KE_OR,
-	KE_NOT,
-	KE_EQUAL,
-	KE_UNEQUAL,
-	KE_CONST_FALSE,
-	KE_CONST_TRUE
-};
-
-/* struct for an expression, built like a tree structure */
-struct k_expr {
-	/* parent k_expr */
-	struct k_expr *parent;
-	
-	/* type of the k_expr */
-	enum kexpr_type type;
-	
-	/* temporary SAT variable associated with this k_expr */
-	struct tmp_sat_variable *t;
-
-	union {
-		/* symbol */
-		struct {
-			struct symbol *sym;
-			tristate tri;
-		};
-		/* AND, OR, NOT */
-		struct {
-			struct k_expr *left;
-			struct k_expr *right;
-		};
-		/* EQUAL, UNEQUAL */
-		struct {
-			struct symbol *eqsym;
-			struct symbol *eqvalue;
-		};
-	};
-};
-
 /* different types for f_expr */
 enum fexpr_type {
 	FE_SYMBOL,

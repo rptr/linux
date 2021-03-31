@@ -18,9 +18,6 @@
 
 #define SATMAP_INIT_SIZE 2
 
-static struct k_expr * gcc_version_eval(struct expr *e);
-static struct k_expr * expr_eval_unequal_bool(struct expr *e);
-
 static void print_expr_util(struct expr *e, int prevtoken);
 
 /*
@@ -148,172 +145,23 @@ char * tristate_get_char(tristate val)
 	}
 }
 
-/*
- * check if a k_expr can evaluate to mod
+/* 
+ *check whether an expr can evaluate to mod
  */
-bool can_evaluate_to_mod(struct k_expr *e)
+bool expr_can_evaluate_to_mod(struct expr *e)
 {
 	if (!e) return false;
 	
 	switch (e->type) {
-	case KE_SYMBOL:
-		return e->sym == &symbol_mod || e->sym->type == S_TRISTATE ? true : false;
-	case KE_AND:
-	case KE_OR:
-		return can_evaluate_to_mod(e->left) || can_evaluate_to_mod(e->right);
-	case KE_NOT:
-		return can_evaluate_to_mod(e->left);
-	case KE_EQUAL:
-	case KE_UNEQUAL:
-	case KE_CONST_FALSE:
-	case KE_CONST_TRUE:
-		return false;
-	}
-	
-	return false;
-}
-
-/*
- * return the constant FALSE as a k_expr
- */
-struct k_expr * get_const_false_as_kexpr()
-{
-	struct k_expr *ke = malloc(sizeof(struct k_expr));
-	ke->type = KE_CONST_FALSE;
-	return ke;
-}
-
-/*
- * return the constant TRUE as a k_expr
- */
-struct k_expr * get_const_true_as_kexpr()
-{
-	struct k_expr *ke = malloc(sizeof(struct k_expr));
-	ke->type = KE_CONST_TRUE;
-	return ke;
-}
-
-/*
- * evaluate an unequality with GCC_VERSION
- */
-static struct k_expr * gcc_version_eval(struct expr* e)
-{
-	if (!e) get_const_false_as_kexpr();
-	
-	long long actual_gcc_ver, sym_gcc_ver;
-	if (e->left.sym == sym_find("GCC_VERSION")) {
-		actual_gcc_ver = strtoll(sym_get_string_value(e->left.sym), NULL, 10);
-		sym_gcc_ver = strtoll(e->right.sym->name, NULL, 10);
-	} else {
-		actual_gcc_ver = strtoll(sym_get_string_value(e->right.sym), NULL, 10);
-		sym_gcc_ver = strtoll(e->left.sym->name, NULL, 10);
-	}
-	
-	switch (e->type) {
-	case E_LTH:
-		return actual_gcc_ver < sym_gcc_ver ? get_const_true_as_kexpr() : get_const_false_as_kexpr();
-	case E_LEQ:
-		return actual_gcc_ver <= sym_gcc_ver ? get_const_true_as_kexpr() : get_const_false_as_kexpr();
-	case E_GTH:
-		return actual_gcc_ver > sym_gcc_ver ? get_const_true_as_kexpr() : get_const_false_as_kexpr();
-	case E_GEQ:
-		return actual_gcc_ver >= sym_gcc_ver ? get_const_true_as_kexpr() : get_const_false_as_kexpr();
-	default:
-		perror("Wrong type in gcc_version_eval.");
-	}
-	
-	return get_const_false_as_kexpr();
-}
-
-/*
- * evaluate an unequality with 2 boolean symbols
- */
-static struct k_expr * expr_eval_unequal_bool(struct expr *e)
-{
-	if (!e) get_const_false_as_kexpr();
-	
-	assert(sym_is_boolean(e->left.sym));
-	assert(sym_is_boolean(e->right.sym));
-	
-	int val_left = sym_get_tristate_value(e->left.sym);
-	int val_right = sym_get_tristate_value(e->right.sym);
-	
-	switch (e->type) {
-	case E_LTH:
-		return val_left < val_right ? get_const_true_as_kexpr() : get_const_false_as_kexpr();
-	case E_LEQ:
-		return val_left <= val_right ? get_const_true_as_kexpr() : get_const_false_as_kexpr();
-	case E_GTH:
-		return val_left > val_right ? get_const_true_as_kexpr() : get_const_false_as_kexpr();
-	case E_GEQ:
-		return val_left >= val_right ? get_const_true_as_kexpr() : get_const_false_as_kexpr();
-	default:
-		perror("Wrong type in expr_eval_unequal_bool.");
-	}
-	
-	return get_const_false_as_kexpr();
-}
-
-
-/*
- * parse an expr as a k_expr
- */
-struct k_expr * parse_expr(struct expr *e, struct k_expr *parent)
-{
-	struct k_expr *ke = malloc(sizeof(struct k_expr));
-	ke->parent = parent;
-// 	print_expr("expr:", e, E_NONE);
-// 	printf("type: %d\n", e->type);
-
-	switch (e->type) {
 	case E_SYMBOL:
-		ke->type = KE_SYMBOL;
-		ke->sym = e->left.sym;
-		ke->tri = no;
-		return ke;
+		return e->left.sym == &symbol_mod || e->left.sym->type == S_TRISTATE ? true : false;
 	case E_AND:
-		ke->type = KE_AND;
-		ke->left = parse_expr(e->left.expr, ke);
-		ke->right = parse_expr(e->right.expr, ke);
-		return ke;
 	case E_OR:
-		ke->type = KE_OR;
-		ke->left = parse_expr(e->left.expr, ke);
-		ke->right = parse_expr(e->right.expr, ke);
-		return ke;
+		return expr_can_evaluate_to_mod(e->left.expr) || expr_can_evaluate_to_mod(e->right.expr);
 	case E_NOT:
-		ke->type = KE_NOT;
-		ke->left = parse_expr(e->left.expr, ke);
-		ke->right = NULL;
-		return ke;
-	case E_EQUAL:
-		ke->type = KE_EQUAL;
-		ke->eqsym = e->left.sym;
-		ke->eqvalue = e->right.sym;
-		return ke;
-	case E_UNEQUAL:
-		ke->type = KE_UNEQUAL;
-		ke->eqsym = e->left.sym;
-		ke->eqvalue = e->right.sym;
-		return ke;
-	case E_LTH:
-	case E_LEQ:
-	case E_GTH:
-	case E_GEQ:
-		// TODO
-// 		print_expr("UNEQUAL:", e, 0);
-		
-		/* "special" hack for GCC_VERSION */
-		if (expr_contains_symbol(e, sym_find("GCC_VERSION")))
-			return gcc_version_eval(e);
-		
-		/* "special" hack for CRAMFS <= MTD */
-		if (expr_contains_symbol(e, sym_find("CRAMFS")) && expr_contains_symbol(e, sym_find("MTD")))
-			return expr_eval_unequal_bool(e);
-		
-		return get_const_false_as_kexpr();
+		return expr_can_evaluate_to_mod(e->left.expr);
 	default:
-		return NULL;
+		return false;
 	}
 }
 
@@ -398,140 +246,10 @@ void print_expr(char *tag, struct expr *e, int prevtoken)
 	printf("\n");
 }
 
-
-/*
- * print a kexpr
- */
-static void print_kexpr_util(struct k_expr *e)
-{
-	if (!e) return;
-
-	switch (e->type) {
-	case KE_SYMBOL:
-		printf("%s", sym_get_name(e->sym));
-		if (e->tri == mod)
-			printf("_m");
-		break;
-	case KE_AND:
-		printf("(");
-		print_kexpr_util(e->left);
-		printf(" && ");
-		print_kexpr_util(e->right);
-		printf(")");
-		break;
-	case KE_OR:
-		printf("(");
-		print_kexpr_util(e->left);
-		printf(" || ");
-		print_kexpr_util(e->right);
-		printf(")");
-		break;
-	case KE_NOT:
-		printf("!");
-		print_kexpr_util(e->left);
-		break;
-	case KE_EQUAL:
-	case KE_UNEQUAL:
-		printf("%s", e->eqsym->name);
-		printf("%s", e->type == KE_EQUAL ? "=" : "!=");
-		printf("%s", e->eqvalue->name);
-		break;
-	case KE_CONST_FALSE:
-		printf("0");
-		break;
-	case KE_CONST_TRUE:
-		printf("1");
-		break;
-	}
-}
-void print_kexpr(char *tag, struct k_expr *e)
-{
-	printf("%s ", tag);
-	print_kexpr_util(e);
-	printf("\n");
-}
-
-/*
- * print some debug info about the tree structure of k_expr
- */
-void debug_print_kexpr(struct k_expr *e)
-{
-	if (!e) return;
-	
-	#if DEBUG_KEXPR
-		printf("e-type: %s", kexpr_type[e->type]);
-		if (e->parent)
-			printf(", parent %s", kexpr_type[e->parent->type]);
-		printf("\n");
-		switch (e->type) {
-		case KE_SYMBOL:
-			printf("name %s\n", e->sym->name);
-			break;
-		case KE_AND:
-		case KE_OR:
-			printf("left child: %s\n", kexpr_type[e->left->type]);
-			printf("right child: %s\n", kexpr_type[e->right->type]);
-			debug_print_kexpr(e->left);
-			debug_print_kexpr(e->right);
-			break;
-		case KE_NOT:
-		default:
-			printf("child: %s\n", kexpr_type[e->left->type]);
-			debug_print_kexpr(e->left);
-			break;
-		}
-		
-	#endif
-}
-
-/*
- * write a kexpr into a string
- */
-void kexpr_as_char(struct k_expr *e, struct gstr *s)
-{
-	if (!e) return;
-	
-	switch (e->type) {
-	case KE_SYMBOL:
-		str_append(s, e->sym->name);
-		return;
-	case KE_AND:
-		str_append(s, "(");
-		kexpr_as_char(e->left, s);
-		str_append(s, " && ");
-		kexpr_as_char(e->right, s);
-		str_append(s, ")");
-		return;
-	case KE_OR:
-		str_append(s, "(");
-		kexpr_as_char(e->left, s);
-		str_append(s, " || ");
-		kexpr_as_char(e->right, s);
-		str_append(s, ")");
-		return;
-	case KE_NOT:
-		str_append(s, "!");
-		kexpr_as_char(e->left, s);
-		return;
-	case KE_EQUAL:
-	case KE_UNEQUAL:
-		str_append(s, e->eqsym->name);
-		str_append(s, e->type == KE_EQUAL ? "=" : "!=");
-		str_append(s, e->eqvalue->name);
-		break;
-	case KE_CONST_FALSE:
-		str_append(s, "0");
-		break;
-	case KE_CONST_TRUE:
-		str_append(s, "1");
-		break;
-	}
-}
-
 /*
  * check, if the symbol is a tristate-constant
  */
-bool is_tristate_constant(struct symbol *sym) {
+bool sym_is_tristate_constant(struct symbol *sym) {
 	return sym == &symbol_yes || sym == &symbol_mod || sym == &symbol_no;
 }
 
@@ -548,7 +266,7 @@ bool sym_is_boolean(struct symbol *sym)
  */
 bool sym_is_bool_or_triconst(struct symbol *sym)
 {
-	return is_tristate_constant(sym) || sym_is_boolean(sym);
+	return sym_is_tristate_constant(sym) || sym_is_boolean(sym);
 }
 
 /*
@@ -596,9 +314,7 @@ struct pexpr * prop_get_condition(struct property *prop)
 	if (!prop->visible.expr)
 		return pexf(const_true);
 	
-	struct k_expr *ke = parse_expr(prop->visible.expr, NULL);
-	
-	return calculate_pexpr_both(ke);
+	return expr_calculate_pexpr_both(prop->visible.expr);
 }
 
 /*

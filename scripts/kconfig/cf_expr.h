@@ -36,19 +36,20 @@ struct fexpr * fexpr_create(int satval, enum fexpr_type type, char *name);
 /* create the fexpr for a symbol */
 void sym_create_fexpr (struct symbol *sym);
 
-struct pexpr * calculate_pexpr_both(struct k_expr *e);
-struct pexpr * calculate_pexpr_y(struct k_expr *e);
-struct pexpr * calculate_pexpr_m(struct k_expr *e);
-struct pexpr * calculate_pexpr_y_and(struct k_expr *a, struct k_expr *b);
-struct pexpr * calculate_pexpr_m_and(struct k_expr *a, struct k_expr *b);
-struct pexpr * calculate_pexpr_both_and(struct k_expr *a, struct k_expr *b);
-struct pexpr * calculate_pexpr_y_or(struct k_expr *a, struct k_expr *b);
-struct pexpr * calculate_pexpr_m_or(struct k_expr *a, struct k_expr *b);
-struct pexpr * calculate_pexpr_both_or(struct k_expr *a, struct k_expr *b);
-struct pexpr * calculate_pexpr_y_not(struct k_expr *a);
-struct pexpr * calculate_pexpr_m_not(struct k_expr *a);
-struct pexpr * calculate_pexpr_y_equals(struct k_expr *a);
-struct pexpr * calculate_pexpr_y_unequals(struct k_expr *a);
+struct pexpr * expr_calculate_pexpr_both(struct expr *e);
+struct pexpr * expr_calculate_pexpr_y(struct expr *e);
+struct pexpr * expr_calculate_pexpr_m(struct expr *e);
+struct pexpr * expr_calculate_pexpr_y_and(struct expr *a, struct expr *b);
+struct pexpr * expr_calculate_pexpr_m_and(struct expr *a, struct expr *b);
+struct pexpr * expr_calculate_pexpr_both_and(struct expr *a, struct expr *b);
+struct pexpr * expr_calculate_pexpr_y_or(struct expr *a, struct expr *b);
+struct pexpr * expr_calculate_pexpr_m_or(struct expr *a, struct expr *b);
+struct pexpr * expr_calculate_pexpr_both_or(struct expr *a, struct expr *b);
+struct pexpr * expr_calculate_pexpr_y_not(struct expr * e);
+struct pexpr * expr_calculate_pexpr_m_not(struct expr *e);
+struct pexpr * expr_calculate_pexpr_y_equals(struct expr *e);
+struct pexpr * expr_calculate_pexpr_y_unequals(struct expr *e);
+struct pexpr * expr_calculate_pexpr_y_comp(struct expr *e);
 
 /* macro to create a pexpr of type AND */
 struct pexpr * pexpr_and(struct pexpr *a, struct pexpr *b);

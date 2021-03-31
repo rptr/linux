@@ -243,14 +243,11 @@ static void build_tristate_constraint_clause(struct symbol *sym)
  */
 static void add_selects_kcr(struct symbol *sym)
 {
-	/* parse reverse dependency */
-	struct k_expr *ke = parse_expr(sym->rev_dep.expr, NULL);
-	
-	struct pexpr *rdep_y = calculate_pexpr_y(ke);
+	struct pexpr *rdep_y = expr_calculate_pexpr_y(sym->rev_dep.expr);
 	struct pexpr *c1 = pexpr_implies(rdep_y, pexf(sym->fexpr_y));
 	sym_add_constraint(sym, c1);
 	
-	struct pexpr *rdep_both = calculate_pexpr_both(ke);
+	struct pexpr *rdep_both = expr_calculate_pexpr_both(sym->rev_dep.expr);
 	struct pexpr *c2 = pexpr_implies(rdep_both, sym_get_fexpr_both(sym));
 	sym_add_constraint(sym, c2);
 }
@@ -273,9 +270,8 @@ static void add_selects(struct symbol *sym)
 		struct pexpr *cond_y = pexf(const_true);
 		struct pexpr *cond_both = pexf(const_true);
 		if (p->visible.expr) {
-			struct k_expr *ke = parse_expr(p->visible.expr, NULL);
-			cond_y = calculate_pexpr_y(ke);
-			cond_both = calculate_pexpr_both(ke);
+			cond_y = expr_calculate_pexpr_y(p->visible.expr);
+			cond_both = expr_calculate_pexpr_both(p->visible.expr);
 		}
 		
 		struct pexpr *e1 = pexpr_implies(pexpr_and(cond_y, pexf(sym->fexpr_y)), pexf(selected->fexpr_sel_y));
@@ -318,13 +314,11 @@ static void add_dependencies_bool(struct symbol *sym)
 {
 	assert(sym_is_boolean(sym));
 	assert(sym->dir_dep.expr);
-	
-	struct k_expr *ke_dirdep = parse_expr(sym->dir_dep.expr, NULL);
-	
-	struct pexpr *dep_both = calculate_pexpr_both(ke_dirdep);
+
+	struct pexpr *dep_both = expr_calculate_pexpr_both(sym->dir_dep.expr);
 	
 	if (sym->type == S_TRISTATE) {
-		struct pexpr *dep_y = calculate_pexpr_y(ke_dirdep);
+		struct pexpr *dep_y = expr_calculate_pexpr_y(sym->dir_dep.expr);
 		struct pexpr *sel_y = sym->rev_dep.expr ? pexf(sym->fexpr_sel_y) : pexf(const_false);
 		
 		struct pexpr *c1 = pexpr_implies(pexf(sym->fexpr_y), pexpr_or(dep_y, sel_y));
@@ -349,16 +343,13 @@ static void add_dependencies_bool_kcr(struct symbol *sym)
 	assert(sym_is_boolean(sym));
 	assert(sym->dir_dep.expr);
 	
-	struct k_expr *ke_dirdep = parse_expr(sym->dir_dep.expr, NULL);
-	struct k_expr *ke_revdep = sym->rev_dep.expr ? parse_expr(sym->rev_dep.expr, NULL) : get_const_false_as_kexpr();
+	struct pexpr *dep_both = expr_calculate_pexpr_both(sym->dir_dep.expr);
 	
-	struct pexpr *dep_both = calculate_pexpr_both(ke_dirdep);
-	
-	struct pexpr *sel_both = sym->rev_dep.expr ? calculate_pexpr_both(ke_revdep) : pexf(const_false);
+	struct pexpr *sel_both = sym->rev_dep.expr ? expr_calculate_pexpr_both(sym->rev_dep.expr) : pexf(const_false);
 	
 	if (sym->type == S_TRISTATE) {
-		struct pexpr *dep_y = calculate_pexpr_y(ke_dirdep);
-		struct pexpr *sel_y = calculate_pexpr_y(ke_revdep);
+		struct pexpr *dep_y = expr_calculate_pexpr_y(sym->dir_dep.expr);
+		struct pexpr *sel_y = expr_calculate_pexpr_y(sym->rev_dep.expr);
 		struct pexpr *c1 = pexpr_implies(pexf(sym->fexpr_y), pexpr_or(dep_y, sel_y));
 		sym_add_constraint(sym, c1);
 		
@@ -380,11 +371,7 @@ static void add_dependencies_nonbool(struct symbol *sym)
 	assert(sym->dir_dep.expr);
 	assert(!sym->rev_dep.expr);
 	
-	struct k_expr *ke_dirdep = parse_expr(sym->dir_dep.expr, NULL);
-	struct pexpr *dep_both = calculate_pexpr_both(ke_dirdep);
-	
-	if (dep_both->type == PE_SYMBOL && dep_both->left.fexpr != const_false)
-		perror("Non-boolean symbol has reverse dependencies.");
+	struct pexpr *dep_both = expr_calculate_pexpr_both(sym->dir_dep.expr);
 
 	struct pexpr *nb_vals = pexf(const_false);
 	struct fexpr_node *node;
@@ -409,8 +396,7 @@ static void add_choice_prompt_cond(struct symbol* sym)
 	struct property *prompt = sym_get_prompt(sym);
 	assert(prompt);
 	
-	struct k_expr *ke = prompt->visible.expr ? parse_expr(prompt->visible.expr, NULL) : get_const_true_as_kexpr();
-	struct pexpr *promptCondition = calculate_pexpr_both(ke);
+	struct pexpr *promptCondition = prompt->visible.expr ? expr_calculate_pexpr_both(prompt->visible.expr) : pexf(const_true);
 
 	struct pexpr *fe_both = sym_get_fexpr_both(sym);
 
@@ -433,21 +419,21 @@ static void add_choice_dependencies(struct symbol *sym)
 	struct property *prompt = sym_get_prompt(sym);
 	assert(prompt);
 	
-	struct k_expr *ke_dirdep;
+	struct expr *to_parse;
 	if (sym_is_choice(sym)) {
 		if (!prompt->visible.expr)
 			return;
-		ke_dirdep = parse_expr(prompt->visible.expr, NULL);
+		to_parse = prompt->visible.expr;
 	} else {
 		if (!sym->dir_dep.expr)
 			return;
-		ke_dirdep = parse_expr(sym->dir_dep.expr, NULL);
+		to_parse = sym->dir_dep.expr;
 	}
 
-	struct pexpr *dep_both = calculate_pexpr_both(ke_dirdep);
+	struct pexpr *dep_both = expr_calculate_pexpr_both(to_parse);
 		
 	if (sym->type == S_TRISTATE) {
-		struct pexpr *dep_y = calculate_pexpr_y(ke_dirdep);
+		struct pexpr *dep_y = expr_calculate_pexpr_y(to_parse);
 		struct pexpr *c1 = pexpr_implies(pexf(sym->fexpr_y), dep_y);
 		sym_add_constraint_eq(sym, c1);
 		
@@ -578,9 +564,8 @@ static void add_invisible_constraints(struct symbol *sym)
 		promptCondition_yes = pexf(const_false);
 		nopromptCond = pexf(const_true);
 	} else {
-		struct k_expr *ke_promptCond = parse_expr(prompt->visible.expr, NULL);
-		promptCondition_both = calculate_pexpr_both(ke_promptCond);
-		promptCondition_yes = calculate_pexpr_y(ke_promptCond);
+		promptCondition_both = expr_calculate_pexpr_both(prompt->visible.expr);
+		promptCondition_yes = expr_calculate_pexpr_y(prompt->visible.expr);
 		nopromptCond = pexpr_not(promptCondition_both);
 	}
 	
@@ -857,27 +842,24 @@ static struct defm_list * get_defaults(struct symbol *sym)
 // 	struct default_map *map;
 	struct defm_list *defaults = defm_list_init();
 	covered = pexf(const_false);
-	
-	struct k_expr *ke_expr;
+
+	struct expr *vis_cond;
 	struct pexpr *expr_yes;
 	struct pexpr *expr_mod;
 	struct pexpr *expr_both;
 	
 	for_all_defaults(sym, p) {
-		ke_expr = p->visible.expr ? parse_expr(p->visible.expr, NULL) : get_const_true_as_kexpr();
-		expr_yes = calculate_pexpr_y(ke_expr);
-		expr_mod = calculate_pexpr_m(ke_expr);
-		expr_both = calculate_pexpr_both(ke_expr);
-		
-		struct k_expr *ke_v = parse_expr(p->expr, NULL);
-
-// 		print_expr("v/expr:", p->expr, E_NONE);
-// 		printf("type: %d\n", p->expr->type);
-		
-		
-// 		assert(p->visible.expr);
-// 		print_expr("expr/visible.expr:", p->visible.expr, E_NONE);
-// 		assert(p->visible.expr);
+		if (p->visible.expr) {
+			vis_cond = p->visible.expr;
+			expr_yes = expr_calculate_pexpr_y(vis_cond);
+			expr_mod = expr_calculate_pexpr_m(vis_cond);
+			expr_both = expr_calculate_pexpr_both(vis_cond);
+		} else {
+			vis_cond = NULL;
+			expr_yes = pexf(const_true);
+			expr_mod = pexf(const_true);
+			expr_both = pexf(const_true);
+		}
 		
 		/* if tristate and def.value = y */
 		if (p->expr->type == E_SYMBOL && sym->type == S_TRISTATE && p->expr->left.sym == &symbol_yes) {
@@ -888,7 +870,7 @@ static struct defm_list * get_defaults(struct symbol *sym)
 			updateDefaultList(symbol_mod_fexpr, expr_mod, defaults);
 		}
 		/* if def.value = n/m/y */
-		else if (p->expr->type == E_SYMBOL && is_tristate_constant(p->expr->left.sym)) {
+		else if (p->expr->type == E_SYMBOL && sym_is_tristate_constant(p->expr->left.sym)) {
 // 			printf("IS TRISTATECONSTANT\n");
 			assert(sym_is_boolean(sym));
 			struct fexpr *s = const_true;
@@ -922,16 +904,15 @@ static struct defm_list * get_defaults(struct symbol *sym)
 		} 
 		/* any expression which evaluates to n/m/y for a tristate */
 		else if (sym->type == S_TRISTATE) {
-// 			printf("IS TRISTATE EXPRESSION\n");
-			struct k_expr *ke = malloc(sizeof(struct k_expr));
-			ke->parent = NULL;
-			ke->type = KE_AND;
-			ke->left = ke_expr;
-			ke->right = ke_v;
+			struct pexpr *e1 = expr_calculate_pexpr_y(p->expr);
+			if (vis_cond != NULL)
+				e1 = pexpr_and(e1, expr_calculate_pexpr_y(vis_cond));
+			updateDefaultList(symbol_yes_fexpr, e1, defaults);
 			
-			updateDefaultList(symbol_yes_fexpr, calculate_pexpr_y(ke), defaults);
-			
-			updateDefaultList(symbol_mod_fexpr, calculate_pexpr_m(ke), defaults);
+			struct pexpr *e2 = expr_calculate_pexpr_m(p->expr);
+			if (vis_cond != NULL)
+				e2 = pexpr_and(e2, expr_calculate_pexpr_m(vis_cond));
+			updateDefaultList(symbol_mod_fexpr, e2, defaults);
 		}
 		/* if non-boolean && def.value = non-boolean symbol */
 		else if (p->expr->type == E_SYMBOL && sym_is_nonboolean(sym) && sym_is_nonboolean(p->expr->left.sym)){
@@ -943,13 +924,11 @@ static struct defm_list * get_defaults(struct symbol *sym)
 		else {
 // 			printf("IS ELSE EXPRESSION\n");
 			assert(sym->type == S_BOOLEAN);
-			struct k_expr *ke = malloc(sizeof(struct k_expr));
-			ke->parent = NULL;
-			ke->type = KE_AND;
-			ke->left = ke_expr;
-			ke->right = ke_v;
 			
-			updateDefaultList(symbol_yes_fexpr, calculate_pexpr_both(ke), defaults);
+			struct pexpr *e3 = expr_calculate_pexpr_both(p->expr);
+			if (vis_cond != NULL)
+				e3 = pexpr_and(e3, expr_calculate_pexpr_both(vis_cond));
+			updateDefaultList(symbol_yes_fexpr, e3, defaults);
 		}
 	}
 	
