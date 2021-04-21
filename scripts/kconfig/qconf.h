@@ -287,7 +287,7 @@ public:
   // Apply fixes button on the solution view
 	QPushButton* applyFixButton{nullptr};
 
-  GArray* solution_output{nullptr};
+    struct sfl_list * solution_output{nullptr};
 
 	QToolBar *conflictsToolBar;
 	struct menu * currentSelectedMenu ;

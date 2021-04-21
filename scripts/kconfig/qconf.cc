@@ -1125,9 +1125,10 @@ void ConflictsView::applyFixButtonClick(){
 		return;
 	}
 
-	GArray* selected_solution = g_array_index(solution_output,GArray * , solution_number);
+	// GArray* selected_solution = g_array_index(solution_output,GArray * , solution_number);
+	struct sfix_list * selected_solution = select_solution(solution_output, solution_number);
 	// TODO glib
-	apply_fix(NULL);
+	apply_fix(selected_solution);
 
 	ConfigView::updateListAll();
 }
@@ -1250,15 +1251,16 @@ void ConflictsView::changeSolutionTable(int solution_number){
 	if(solution_output == nullptr || solution_number < 0){
 		return;
 	}
-	GArray* selected_solution = g_array_index(solution_output,GArray * , solution_number);
+	// GArray* selected_solution = g_array_index(solution_output,GArray * , solution_number);
+	struct sfix_list* selected_solution = select_solution(solution_output, solution_number);
 	current_solution_number = solution_number;
 // 	std::cout << "solution length =" << unsigned(selected_solution->len) << std::endl;
 	// solutionTable->clearContents();
 	solutionTable->setRowCount(0);
-	for (unsigned int i = 0; i <selected_solution->len; i++)
+	for (unsigned int i = 0; i <selected_solution->size; i++)
 	{
 		solutionTable->insertRow(solutionTable->rowCount());
-		struct symbol_fix* cur_symbol = g_array_index(selected_solution,struct symbol_fix*,i);
+		struct symbol_fix* cur_symbol = select_symbol(selected_solution,i);
 
 		QTableWidgetItem* symbol_name = new QTableWidgetItem(cur_symbol->sym->name);
 		auto green = QColor(0,170,0);
@@ -1302,8 +1304,9 @@ void ConflictsView::UpdateConflictsViewColorization(void)
 		QTableWidgetItem *symbol =  solutionTable->item(i,0);
 
 		//symbol from solution list
-		GArray* selected_solution = g_array_index(solution_output,GArray * ,current_solution_number);
-		struct symbol_fix* cur_symbol = g_array_index(selected_solution,struct symbol_fix*,i);
+		struct sfix_list * selected_solution = select_solution(solution_output, current_solution_number);
+		// GArray* selected_solution = g_array_index(solution_output,GArray * ,current_solution_number);
+		struct symbol_fix* cur_symbol = select_symbol(selected_solution,i);
 
 		// if symbol is editable but the value is not the target value from solution we got, the color is red
 		// if symbol is editable but the value is the target value from solution we got, the color is green
@@ -1347,14 +1350,18 @@ void ConflictsView::UpdateConflictsViewColorization(void)
 }
 void ConflictsView::runSatConfAsync()
 {
-	GArray* wanted_symbols = g_array_sized_new(FALSE,TRUE,sizeof(struct symbol_dvalue *),conflictsTable->rowCount());
+	// GArray* wanted_symbols = g_array_sized_new(FALSE,TRUE,sizeof(struct symbol_dvalue *),conflictsTable->rowCount());
 	//loop through the rows in conflicts table adding each row into the array:
 	struct symbol_dvalue* p = nullptr;
 	p = static_cast<struct symbol_dvalue*>(calloc(conflictsTable->rowCount(),sizeof(struct symbol_dvalue)));
 	if (!p)
 		return;
+
+	struct sdv_list *wanted_symbols = sdv_list_init();
+
 	for (int i = 0; i < conflictsTable->rowCount(); i++)
 	{
+
 		struct symbol_dvalue *tmp = (p+i);
 		auto _symbol = conflictsTable->item(i,0)->text().toUtf8().data();
 		struct symbol* sym = sym_find(_symbol);
@@ -1362,16 +1369,17 @@ void ConflictsView::runSatConfAsync()
 		tmp->sym = sym;
 		tmp->type = static_cast<symboldv_type>(sym->type == symbol_type::S_BOOLEAN?0:1);
 		tmp->tri = string_value_to_tristate(conflictsTable->item(i,1)->text());
-		g_array_append_val(wanted_symbols,tmp);
+		sdv_list_add(wanted_symbols,tmp);
+		// g_array_append_val(wanted_symbols,tmp);
 	}
 	fixConflictsAction_->setText("Cancel");
 	// conflictsToolBar->repaint();
 	// TODO glib
-	struct sfl_list *ret = run_satconf(NULL);
+	struct sfl_list *ret = run_satconf(wanted_symbols);
 // 	solution_output = run_satconf(wanted_symbols);
 	std::cerr << "run_satconf finished....." << std::endl;
 	free(p);
-	g_array_free (wanted_symbols,FALSE);
+	// g_array_free (wanted_symbols,FALSE);
 	emit resultsReady();
 	std::cerr << "emmitted resultsready()" <<std::endl;;
 	{
@@ -1387,15 +1395,15 @@ void ConflictsView::updateResults(void)
 	std::cerr << "updating results.." <<std::endl;
 	fixConflictsAction_->setText("Calculate Fixes");
 	// conflictsToolBar->repaint();
-	if (!(solution_output == nullptr || solution_output->len == 0))
+	if (!(solution_output == nullptr || solution_output->size == 0))
 	{
 		solutionSelector->clear();
-		for (unsigned int i = 0; i < solution_output->len; i++)
+		for (unsigned int i = 0; i < solution_output->size; i++)
 		{
 			solutionSelector->addItem(QString::number(i+1));
 		}
 		// populate the solution table from the first solution gotten
-		numSolutionLabel->setText(QString("Solutions: (%1) found").arg(solution_output->len));
+		numSolutionLabel->setText(QString("Solutions: (%1) found").arg(solution_output->size));
 		changeSolutionTable(0);
 	}
 	if (runSatConfAsyncThread->joinable()){

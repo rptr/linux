@@ -42,6 +42,9 @@ int run_satconf_cli(const char *Kconfig_file);
 
 void interrupt_rangefix(void);
 
+struct sfix_list * select_solution(struct sfl_list* solutions,int index);
+struct symbol_fix * select_symbol(struct sfix_list* solution,int index);
+
 
 /* make functions accessible from xconfig */
 #ifdef __cplusplus
