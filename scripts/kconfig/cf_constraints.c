@@ -53,6 +53,7 @@ static void debug_info(void)
 {
 	unsigned int i;
 	struct symbol *sym;
+
 	sym = sym_find("REGMAP_I2C");
 	if (sym->dir_dep.expr)
 		print_expr("dep:", sym->dir_dep.expr, E_NONE);
@@ -90,7 +91,8 @@ void get_constraints(void)
 			build_tristate_constraint_clause(sym);
 
 		/* build constraints for select statements
-		 * need to treat choice symbols seperately */
+		 * need to treat choice symbols separately
+		 */
 		if (!KCR_CMP) {
 			add_selects(sym);
 		} else {
@@ -120,17 +122,17 @@ void get_constraints(void)
 		if (sym_is_choice(sym))
 			add_choice_constraints(sym);
 
-		// 		if (sym->name && strcmp(sym->name, "CRAMFS_MTD") == 0) {
-		// 			printf("PRINTING CRAMFS_MTD\n");
-		// 			print_symbol(sym);
-		// 			print_sym_constraint(sym);
-		// 		}
+		//		if (sym->name && strcmp(sym->name, "CRAMFS_MTD") == 0) {
+		//			printf("PRINTING CRAMFS_MTD\n");
+		//			print_symbol(sym);
+		//			print_sym_constraint(sym);
+		//		}
 
 		/* build invisible constraints */
 		add_invisible_constraints(sym);
 	}
 
-	/* 
+	/*
 	 * build the constraints for select-variables
 	 * skip non-Booleans, choice symbols/options och symbols without rev_dir
 	 */
@@ -148,10 +150,9 @@ void get_constraints(void)
 		if (!sym->rev_dep.expr)
 			continue;
 
-		// 		assert(sym->rev_dep.expr != NULL);
-		if (sym->list_sel_y == NULL) {
+		//		assert(sym->rev_dep.expr != NULL);
+		if (sym->list_sel_y == NULL)
 			continue;
-		}
 
 		struct pexpr *sel_y = pexpr_implies(pexf(sym->fexpr_sel_y),
 						    pexf(sym->fexpr_y));
@@ -174,7 +175,7 @@ void get_constraints(void)
 		sym_add_constraint(sym, c2);
 	}
 
-	/* 
+	/*
 	 * build constraints for non-booleans
 	 * these constraints might add "known values"
 	 */
@@ -188,9 +189,9 @@ void get_constraints(void)
 			sym_add_nonbool_values_from_ranges(sym);
 
 		/* build invisible constraints */
-		// 		struct property *prompt = sym_get_prompt(sym);
-		// 		if (prompt != NULL && prompt->visible.expr)
-		// 			add_invisible_constraints(sym, prompt);
+		//		struct property *prompt = sym_get_prompt(sym);
+		//		if (prompt != NULL && prompt->visible.expr)
+		//			add_invisible_constraints(sym, prompt);
 
 		/* the symbol must have a value, if there is a prompt */
 		if (sym_has_prompt(sym))
@@ -199,12 +200,14 @@ void get_constraints(void)
 		/* add current value to possible values */
 		if (!sym->flags || !(sym->flags & SYMBOL_VALID))
 			sym_calc_value(sym);
+
 		const char *curr = sym_get_string_value(sym);
+
 		if (strcmp(curr, "") != 0)
 			sym_create_nonbool_fexpr(sym, (char *)curr);
 	}
 
-	/* 
+	/*
 	 * build constraints for non-booleans, part deux
 	 * the following constraints will not add any "known values"
 	 */
@@ -226,7 +229,7 @@ void get_constraints(void)
 		sym_nonbool_at_most_1(sym);
 	}
 
-	// 	printf("done.\n");
+	//	printf("done.\n");
 }
 
 /*
@@ -241,8 +244,8 @@ static void build_tristate_constraint_clause(struct symbol *sym)
 	/* -X v -X_m */
 	struct pexpr *X = pexf(sym->fexpr_y), *X_m = pexf(sym->fexpr_m),
 		     *modules = pexf(modules_sym->fexpr_y);
-
 	struct pexpr *c = pexpr_or(pexpr_not(X), pexpr_not(X_m));
+
 	sym_add_constraint(sym, c);
 
 	/* X_m -> MODULES */
@@ -260,10 +263,11 @@ static void add_selects_kcr(struct symbol *sym)
 {
 	struct pexpr *rdep_y = expr_calculate_pexpr_y(sym->rev_dep.expr);
 	struct pexpr *c1 = pexpr_implies(rdep_y, pexf(sym->fexpr_y));
-	sym_add_constraint(sym, c1);
 
 	struct pexpr *rdep_both = expr_calculate_pexpr_both(sym->rev_dep.expr);
 	struct pexpr *c2 = pexpr_implies(rdep_both, sym_get_fexpr_both(sym));
+
+	sym_add_constraint(sym, c1);
 	sym_add_constraint(sym, c2);
 }
 
@@ -274,7 +278,9 @@ static void add_selects_kcr(struct symbol *sym)
 static void add_selects(struct symbol *sym)
 {
 	assert(sym_is_boolean(sym));
+
 	struct property *p;
+
 	for_all_properties(sym, p, P_SELECT)
 	{
 		struct symbol *selected = p->expr->left.sym;
@@ -286,6 +292,7 @@ static void add_selects(struct symbol *sym)
 
 		struct pexpr *cond_y = pexf(const_true);
 		struct pexpr *cond_both = pexf(const_true);
+
 		if (p->visible.expr) {
 			cond_y = expr_calculate_pexpr_y(p->visible.expr);
 			cond_both = expr_calculate_pexpr_both(p->visible.expr);
@@ -356,12 +363,11 @@ static void add_dependencies_bool(struct symbol *sym)
 		struct pexpr *c1 = pexpr_implies(pexf(sym->fexpr_y),
 						 pexpr_or(dep_y, sel_y));
 
-		sym_add_constraint(sym, c1);
-
 		struct pexpr *c2 = pexpr_implies(
 			pexf(sym->fexpr_m),
 			pexpr_or(dep_both, sym_get_fexpr_sel_both(sym)));
 
+		sym_add_constraint(sym, c1);
 		sym_add_constraint(sym, c2);
 	} else if (sym->type == S_BOOLEAN) {
 		struct pexpr *c = pexpr_implies(
@@ -466,9 +472,11 @@ static void add_choice_dependencies(struct symbol *sym)
 	assert(sym_is_choice(sym) || sym_is_choice_value(sym));
 
 	struct property *prompt = sym_get_prompt(sym);
+
 	assert(prompt);
 
 	struct expr *to_parse;
+
 	if (sym_is_choice(sym)) {
 		if (!prompt->visible.expr)
 			return;
@@ -484,12 +492,13 @@ static void add_choice_dependencies(struct symbol *sym)
 	if (sym->type == S_TRISTATE) {
 		struct pexpr *dep_y = expr_calculate_pexpr_y(to_parse);
 		struct pexpr *c1 = pexpr_implies(pexf(sym->fexpr_y), dep_y);
-		sym_add_constraint_eq(sym, c1);
-
 		struct pexpr *c2 = pexpr_implies(pexf(sym->fexpr_m), dep_both);
+
+		sym_add_constraint_eq(sym, c1);
 		sym_add_constraint_eq(sym, c2);
 	} else if (sym->type == S_BOOLEAN) {
 		struct pexpr *c = pexpr_implies(pexf(sym->fexpr_y), dep_both);
+
 		sym_add_constraint_eq(sym, c);
 	}
 }
@@ -513,8 +522,7 @@ static void add_choice_constraints(struct symbol *sym)
 	struct sym_list *promptItems = sym_list_init();
 
 	struct property *prop;
-	for_all_choices(sym, prop)
-	{
+	for_all_choices(sym, prop) {
 		struct expr *expr;
 		expr_list_for_each_sym(prop->expr, expr, choice)
 		{
@@ -917,9 +925,8 @@ static struct pexpr *findDefaultEntry(struct fexpr *val,
 				      struct defm_list *defaults)
 {
 	struct defm_node *node;
-	defm_list_for_each(node,
-			   defaults) if (val ==
-					 node->elem->val) return node->elem->e;
+	defm_list_for_each(node, defaults)
+		if (val == node->elem->val) return node->elem->e;
 
 	return pexf(const_false);
 }
