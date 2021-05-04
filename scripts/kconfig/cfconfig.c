@@ -21,10 +21,8 @@
 int main(int argc, char *argv[])
 {
 	printf("\nHello configfix!\n\n");
-	
+
 	run_satconf_cli(argv[1]);
-	
+
 	return EXIT_SUCCESS;
 }
-
-

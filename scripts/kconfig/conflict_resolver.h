@@ -13,22 +13,17 @@
 extern "C" {
 #endif
 
-enum symbol_status {
-	UNSATISFIED,
-	SATISFIED
-};
+enum symbol_status { UNSATISFIED, SATISFIED };
 
-typedef struct
-{
+typedef struct {
 	QString symbol;
 	QString change_needed;
 	enum symbol_status status;
 	tristate req; // change requested
-} Constraint ;
+} Constraint;
 
 QString tristate_value_to_string(tristate val);
 tristate string_value_to_tristate(QString s);
-
 
 #ifdef __cplusplus
 }

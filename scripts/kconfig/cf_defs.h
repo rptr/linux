@@ -24,31 +24,31 @@ extern struct fexpr *symbol_no_fexpr;
 enum fexpr_type {
 	FE_SYMBOL,
 	FE_NPC, /* no prompt condition */
-	FE_TRUE,  /* constant of value True */
-	FE_FALSE,  /* constant of value False */
-	FE_NONBOOL,  /* for all non-(boolean/tristate) known values */
+	FE_TRUE, /* constant of value True */
+	FE_FALSE, /* constant of value False */
+	FE_NONBOOL, /* for all non-(boolean/tristate) known values */
 	FE_CHOICE, /* symbols of type choice */
 	FE_SELECT, /* auxiliary variable for selected symbols */
-	FE_TMPSATVAR /* temporary sat-variable (Tseytin) */ 
+	FE_TMPSATVAR /* temporary sat-variable (Tseytin) */
 };
 
 /* struct for a propositional logic formula */
 struct fexpr {
 	/* name of the feature expr */
 	struct gstr name;
-	
+
 	/* associated symbol */
 	struct symbol *sym;
-	
+
 	/* integer value for the SAT solver */
 	int satval;
-	
+
 	/* assumption in the last call to PicoSAT */
 	bool assumption;
-	
+
 	/* type of the fexpr */
 	enum fexpr_type type;
-	
+
 	union {
 		/* symbol */
 		struct {
@@ -69,7 +69,6 @@ struct fexpr {
 			struct gstr nb_val;
 		};
 	};
-	
 };
 
 struct fexpr_list {
@@ -92,12 +91,7 @@ struct fexl_node {
 	struct fexl_node *next, *prev;
 };
 
-enum pexpr_type {
-	PE_SYMBOL,
-	PE_AND,
-	PE_OR,
-	PE_NOT
-};
+enum pexpr_type { PE_SYMBOL, PE_AND, PE_OR, PE_NOT };
 
 union pexpr_data {
 	struct pexpr *pexpr;
@@ -121,7 +115,7 @@ struct pexpr_node {
 
 struct default_map {
 	struct fexpr *val;
-	
+
 	struct pexpr *e;
 };
 
@@ -136,19 +130,19 @@ struct defm_node {
 };
 
 enum symboldv_type {
-	SDV_BOOLEAN,	/* boolean/tristate */
-	SDV_NONBOOLEAN	/* string/int/hex */
+	SDV_BOOLEAN, /* boolean/tristate */
+	SDV_NONBOOLEAN /* string/int/hex */
 };
 
 struct symbol_dvalue {
 	struct symbol *sym;
-	
+
 	enum symboldv_type type;
-	
+
 	union {
 		/* boolean/tristate */
 		tristate tri;
-		
+
 		/* string/int/hex */
 		struct gstr nb_val;
 	};
@@ -165,23 +159,23 @@ struct sdv_node {
 };
 
 enum symbolfix_type {
-	SF_BOOLEAN,	/* boolean/tristate */
-	SF_NONBOOLEAN,	/* string/int/hex */
-	SF_DISALLOWED	/* disallowed non-boolean values */
+	SF_BOOLEAN, /* boolean/tristate */
+	SF_NONBOOLEAN, /* string/int/hex */
+	SF_DISALLOWED /* disallowed non-boolean values */
 };
 
 struct symbol_fix {
 	struct symbol *sym;
-	
+
 	enum symbolfix_type type;
-	
+
 	union {
 		/* boolean/tristate */
 		tristate tri;
-		
+
 		/* string/int/hex */
 		struct gstr nb_val;
-		
+
 		/* disallowed non-boolean values */
 		struct gstr disallowed;
 	};

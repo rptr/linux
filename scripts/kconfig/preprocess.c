@@ -12,7 +12,7 @@
 #include "list.h"
 #include "lkc.h"
 
-#define ARRAY_SIZE(arr)		(sizeof(arr) / sizeof((arr)[0]))
+#define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
 
 static char *expand_string_with_args(const char *in, int argc, char *argv[]);
 static char *expand_string(const char *in);
@@ -69,7 +69,7 @@ static char *env_expand(const char *name)
 	if (!*name)
 		return NULL;
 
-	list_for_each_entry(e, &env_list, node) {
+	list_for_each_entry (e, &env_list, node) {
 		if (!strcmp(name, e->name))
 			return xstrdup(e->value);
 	}
@@ -91,7 +91,7 @@ void env_write_dep(FILE *f, const char *autoconfig_name)
 {
 	struct env *e, *tmp;
 
-	list_for_each_entry_safe(e, tmp, &env_list, node) {
+	list_for_each_entry_safe (e, tmp, &env_list, node) {
 		fprintf(f, "ifneq \"$(%s)\" \"%s\"\n", e->name, e->value);
 		fprintf(f, "%s: FORCE\n", autoconfig_name);
 		fprintf(f, "endif\n");
@@ -181,23 +181,23 @@ static char *do_shell(int argc, char *argv[])
 static char *do_warning_if(int argc, char *argv[])
 {
 	if (!strcmp(argv[0], "y"))
-		fprintf(stderr, "%s:%d: %s\n",
-			current_file->name, yylineno, argv[1]);
+		fprintf(stderr, "%s:%d: %s\n", current_file->name, yylineno,
+			argv[1]);
 
 	return xstrdup("");
 }
 
 static const struct function function_table[] = {
 	/* Name		MIN	MAX	Function */
-	{ "error-if",	2,	2,	do_error_if },
-	{ "filename",	0,	0,	do_filename },
-	{ "info",	1,	1,	do_info },
-	{ "lineno",	0,	0,	do_lineno },
-	{ "shell",	1,	1,	do_shell },
-	{ "warning-if",	2,	2,	do_warning_if },
+	{ "error-if", 2, 2, do_error_if },
+	{ "filename", 0, 0, do_filename },
+	{ "info", 1, 1, do_info },
+	{ "lineno", 0, 0, do_lineno },
+	{ "shell", 1, 1, do_shell },
+	{ "warning-if", 2, 2, do_warning_if },
 };
 
-#define FUNCTION_MAX_ARGS		16
+#define FUNCTION_MAX_ARGS 16
 
 static char *function_expand(const char *name, int argc, char *argv[])
 {
@@ -240,7 +240,7 @@ static struct variable *variable_lookup(const char *name)
 {
 	struct variable *v;
 
-	list_for_each_entry(v, &variable_list, node) {
+	list_for_each_entry (v, &variable_list, node) {
 		if (!strcmp(name, v->name))
 			return v;
 	}
@@ -333,7 +333,7 @@ void variable_all_del(void)
 {
 	struct variable *v, *tmp;
 
-	list_for_each_entry_safe(v, tmp, &variable_list, node)
+	list_for_each_entry_safe (v, tmp, &variable_list, node)
 		variable_del(v);
 }
 
@@ -407,8 +407,8 @@ static char *eval_clause(const char *str, size_t len, int argc, char *argv[])
 	name = expand_string_with_args(new_argv[0], argc, argv);
 	new_argc--;
 	for (i = 0; i < new_argc; i++)
-		new_argv[i] = expand_string_with_args(new_argv[i + 1],
-						      argc, argv);
+		new_argv[i] =
+			expand_string_with_args(new_argv[i + 1], argc, argv);
 
 	/* Search for variables */
 	res = variable_expand(name, new_argc, new_argv);
@@ -492,8 +492,8 @@ char *expand_dollar(const char **str)
 	return expand_dollar_with_args(str, 0, NULL);
 }
 
-static char *__expand_string(const char **str, bool (*is_end)(char c),
-			     int argc, char *argv[])
+static char *__expand_string(const char **str, bool (*is_end)(char c), int argc,
+			     char *argv[])
 {
 	const char *in, *p;
 	char *expansion, *out;

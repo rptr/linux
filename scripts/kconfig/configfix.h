@@ -15,14 +15,11 @@ extern "C" {
 #define LKC_DIRECT_LINK
 #include "lkc.h"
 
-
 /* include glib */
 #include <glib.h>
 
-
 /* include own definitions */
 #include "cf_defs.h"
-
 
 /* include other header files needed */
 #include "picosat.h"
@@ -32,16 +29,14 @@ extern "C" {
 #include "cf_satutils.h"
 #include "cf_utils.h"
 
-
 /* external functions */
-struct sfl_list * run_satconf(struct sdv_list *symbols);
+struct sfl_list *run_satconf(struct sdv_list *symbols);
 
 int apply_fix(struct sfix_list *fix);
 
 int run_satconf_cli(const char *Kconfig_file);
 
 void interrupt_rangefix(void);
-
 
 /* make functions accessible from xconfig */
 #ifdef __cplusplus

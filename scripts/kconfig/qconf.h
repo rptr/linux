@@ -33,38 +33,34 @@ class ConfigItem;
 class ConfigMainWindow;
 
 class ConfigSettings : public QSettings {
-public:
+    public:
 	ConfigSettings();
-	QList<int> readSizes(const QString& key, bool *ok);
-	bool writeSizes(const QString& key, const QList<int>& value);
+	QList<int> readSizes(const QString &key, bool *ok);
+	bool writeSizes(const QString &key, const QList<int> &value);
 };
 
-enum colIdx {
-	promptColIdx, nameColIdx, dataColIdx
-};
-enum listMode {
-	singleMode, menuMode, symbolMode, fullMode, listMode
-};
-enum optionMode {
-	normalOpt = 0, allOpt, promptOpt
-};
+enum colIdx { promptColIdx, nameColIdx, dataColIdx };
+enum listMode { singleMode, menuMode, symbolMode, fullMode, listMode };
+enum optionMode { normalOpt = 0, allOpt, promptOpt };
 
 class ConfigList : public QTreeWidget {
 	Q_OBJECT
 	typedef class QTreeWidget Parent;
-public:
+
+    public:
 	ConfigList(QWidget *parent, const char *name = 0);
 	~ConfigList();
 	void reinit(void);
-	ConfigItem* findConfigItem(struct menu *);
-	void setSelected(QTreeWidgetItem *item, bool enable) {
+	ConfigItem *findConfigItem(struct menu *);
+	void setSelected(QTreeWidgetItem *item, bool enable)
+	{
 		for (int i = 0; i < selectedItems().size(); i++)
 			selectedItems().at(i)->setSelected(false);
 
 		item->setSelected(enable);
 	}
 
-protected:
+    protected:
 	void keyPressEvent(QKeyEvent *e);
 	void mousePressEvent(QMouseEvent *e);
 	void mouseReleaseEvent(QMouseEvent *e);
@@ -73,28 +69,28 @@ protected:
 	void focusInEvent(QFocusEvent *e);
 	void contextMenuEvent(QContextMenuEvent *e);
 
-public slots:
+    public slots:
 	void setRootMenu(struct menu *menu);
 
 	void updateList();
-	void setValue(ConfigItem* item, tristate val);
-	void changeValue(ConfigItem* item);
+	void setValue(ConfigItem *item, tristate val);
+	void changeValue(ConfigItem *item);
 	void updateSelection(void);
 	void saveSettings(void);
 	void setOptionMode(QAction *action);
 	void setShowName(bool on);
 
-signals:
+    signals:
 	void menuChanged(struct menu *menu);
 	void menuSelected(struct menu *menu);
 	void itemSelected(struct menu *menu);
 	void parentSelected(void);
 	void gotFocus(struct menu *);
-	void selectionChanged(QList<QTreeWidgetItem*> selection);
+	void selectionChanged(QList<QTreeWidgetItem *> selection);
 	void UpdateConflictsViewColorization();
 	void showNameChanged(bool on);
 
-public:
+    public:
 	void updateListAll(void)
 	{
 		updateAll = true;
@@ -106,7 +102,7 @@ public:
 
 	bool menuSkip(struct menu *);
 
-	void updateMenuList(ConfigItem *parent, struct menu*);
+	void updateMenuList(ConfigItem *parent, struct menu *);
 	void updateMenuList(struct menu *menu);
 
 	bool updateAll;
@@ -117,30 +113,37 @@ public:
 	struct menu *rootEntry;
 	QPalette disabledColorGroup;
 	QPalette inactivedColorGroup;
-	QMenu* headerPopup;
+	QMenu *headerPopup;
 
 	static QList<ConfigList *> allLists;
 	static void updateListForAll();
 	static void updateListAllForAll();
 
-	static QAction *showNormalAction, *showAllAction, *showPromptAction, *addSymbolsFromContextMenu;
+	static QAction *showNormalAction, *showAllAction, *showPromptAction,
+		*addSymbolsFromContextMenu;
 };
 
 class ConfigItem : public QTreeWidgetItem {
 	typedef class QTreeWidgetItem Parent;
-public:
-	ConfigItem(ConfigList *parent, ConfigItem *after, struct menu *m, bool v)
-	: Parent(parent, after), nextItem(0), menu(m), visible(v), goParent(false)
+
+    public:
+	ConfigItem(ConfigList *parent, ConfigItem *after, struct menu *m,
+		   bool v)
+		: Parent(parent, after), nextItem(0), menu(m), visible(v),
+		  goParent(false)
 	{
 		init();
 	}
-	ConfigItem(ConfigItem *parent, ConfigItem *after, struct menu *m, bool v)
-	: Parent(parent, after), nextItem(0), menu(m), visible(v), goParent(false)
+	ConfigItem(ConfigItem *parent, ConfigItem *after, struct menu *m,
+		   bool v)
+		: Parent(parent, after), nextItem(0), menu(m), visible(v),
+		  goParent(false)
 	{
 		init();
 	}
 	ConfigItem(ConfigList *parent, ConfigItem *after, bool v)
-	: Parent(parent, after), nextItem(0), menu(0), visible(v), goParent(true)
+		: Parent(parent, after), nextItem(0), menu(0), visible(v),
+		  goParent(true)
 	{
 		init();
 	}
@@ -148,31 +151,33 @@ public:
 	void init(void);
 	void updateMenu(void);
 	void testUpdateMenu(bool v);
-	ConfigList* listView() const
+	ConfigList *listView() const
 	{
-		return (ConfigList*)Parent::treeWidget();
+		return (ConfigList *)Parent::treeWidget();
 	}
-	ConfigItem* firstChild() const
+	ConfigItem *firstChild() const
 	{
 		return (ConfigItem *)Parent::child(0);
 	}
-	ConfigItem* nextSibling()
+	ConfigItem *nextSibling()
 	{
 		ConfigItem *ret = NULL;
 		ConfigItem *_parent = (ConfigItem *)parent();
 
-		if(_parent) {
-			ret = (ConfigItem *)_parent->child(_parent->indexOfChild(this)+1);
+		if (_parent) {
+			ret = (ConfigItem *)_parent->child(
+				_parent->indexOfChild(this) + 1);
 		} else {
 			QTreeWidget *_treeWidget = treeWidget();
-			ret = (ConfigItem *)_treeWidget->topLevelItem(_treeWidget->indexOfTopLevelItem(this)+1);
+			ret = (ConfigItem *)_treeWidget->topLevelItem(
+				_treeWidget->indexOfTopLevelItem(this) + 1);
 		}
 
 		return ret;
 	}
 	// TODO: Implement paintCell
 
-	ConfigItem* nextItem;
+	ConfigItem *nextItem;
 	struct menu *menu;
 	bool visible;
 	bool goParent;
@@ -185,47 +190,59 @@ public:
 class ConfigLineEdit : public QLineEdit {
 	Q_OBJECT
 	typedef class QLineEdit Parent;
-public:
-	ConfigLineEdit(ConfigView* parent);
-	ConfigView* parent(void) const
+
+    public:
+	ConfigLineEdit(ConfigView *parent);
+	ConfigView *parent(void) const
 	{
-		return (ConfigView*)Parent::parent();
+		return (ConfigView *)Parent::parent();
 	}
 	void show(ConfigItem *i);
 	void keyPressEvent(QKeyEvent *e);
 
-public:
+    public:
 	ConfigItem *item;
 };
 
 class ConfigView : public QWidget {
 	Q_OBJECT
 	typedef class QWidget Parent;
-public:
-	ConfigView(QWidget* parent, const char *name = 0);
+
+    public:
+	ConfigView(QWidget *parent, const char *name = 0);
 	~ConfigView(void);
 	static void updateList();
 	static void updateListAll(void);
 
-	bool showName(void) const { return list->showName; }
-	bool showRange(void) const { return list->showRange; }
-	bool showData(void) const { return list->showData; }
-public slots:
+	bool showName(void) const
+	{
+		return list->showName;
+	}
+	bool showRange(void) const
+	{
+		return list->showRange;
+	}
+	bool showData(void) const
+	{
+		return list->showData;
+	}
+    public slots:
 	void setShowName(bool);
 	void setShowRange(bool);
 	void setShowData(bool);
 
-	void ShowContextMenu(const QPoint& p);
-signals:
+	void ShowContextMenu(const QPoint &p);
+    signals:
 	void showNameChanged(bool);
 	void showRangeChanged(bool);
 	void showDataChanged(bool);
-public:
-	ConfigList* list;
-	ConfigLineEdit* lineEdit;
 
-	static ConfigView* viewList;
-	ConfigView* nextView;
+    public:
+	ConfigList *list;
+	ConfigLineEdit *lineEdit;
+
+	static ConfigView *viewList;
+	ConfigView *nextView;
 
 	static QAction *showNormalAction;
 	static QAction *showAllAction;
@@ -233,17 +250,18 @@ public:
 	static QAction *addSymbolsFromContextMenu;
 };
 class ConflictsView : public QWidget {
-	ConfigLineEdit* lineEdit;
+	ConfigLineEdit *lineEdit;
 	Q_OBJECT
 	typedef class QWidget Parent;
-public:
-	ConflictsView(QWidget* parent, const char *name = 0);
+
+    public:
+	ConflictsView(QWidget *parent, const char *name = 0);
 	~ConflictsView(void);
-	void addSymbol(struct menu * m);
+	void addSymbol(struct menu *m);
 	int current_solution_number = -1;
 
-public slots:
-    void cellClicked(int, int);
+    public slots:
+	void cellClicked(int, int);
 	void changeAll();
 	//triggerd by Qactions on the tool bar that adds/remove symbol
 	void addSymbol();
@@ -254,67 +272,67 @@ public slots:
 	void changeToNo();
 	void changeToYes();
 	void changeToModule();
-	void selectionChanged(QList<QTreeWidgetItem*> selection);
-
+	void selectionChanged(QList<QTreeWidgetItem *> selection);
 
 	void applyFixButtonClick();
 	void UpdateConflictsViewColorization();
 	void updateResults();
 
+	// switches the solution table with selected solution index from  solution_output
+	void changeSolutionTable(int solution_number);
 
-
-  // switches the solution table with selected solution index from  solution_output
-  void changeSolutionTable(int solution_number);
-
-  // calls satconfig to solve to get wanted value to current value
-  void calculateFixes();
-signals:
+	// calls satconfig to solve to get wanted value to current value
+	void calculateFixes();
+    signals:
 	void showNameChanged(bool);
 	void showRangeChanged(bool);
 	void showDataChanged(bool);
-    void conflictSelected(struct menu *);
+	void conflictSelected(struct menu *);
 	void refreshMenu();
 	void resultsReady();
-public:
-	QTableWidget* conflictsTable;
+
+    public:
+	QTableWidget *conflictsTable;
 	QList<Constraint> constraints;
 
-  // the comobox on the right hand side. used to select a solutio after
-  // getting solution from satconfig
-  QComboBox* solutionSelector{nullptr};
+	// the comobox on the right hand side. used to select a solutio after
+	// getting solution from satconfig
+	QComboBox *solutionSelector{ nullptr };
 
-  // the table which shows the selected solution showing variable = New value changes
-	QTableWidget* solutionTable{nullptr};
+	// the table which shows the selected solution showing variable = New value changes
+	QTableWidget *solutionTable{ nullptr };
 
-  // Apply fixes button on the solution view
-	QPushButton* applyFixButton{nullptr};
+	// Apply fixes button on the solution view
+	QPushButton *applyFixButton{ nullptr };
 
-  GArray* solution_output{nullptr};
+	GArray *solution_output{ nullptr };
 
 	QToolBar *conflictsToolBar;
-	struct menu * currentSelectedMenu ;
-	QLabel* numSolutionLabel{nullptr};
+	struct menu *currentSelectedMenu;
+	QLabel *numSolutionLabel{ nullptr };
 	//currently selected config items in configlist.
-	QList<QTreeWidgetItem*> currentSelection;
-	QAction *fixConflictsAction_{nullptr};
+	QList<QTreeWidgetItem *> currentSelection;
+	QAction *fixConflictsAction_{ nullptr };
 	void runSatConfAsync();
-	std::thread* runSatConfAsyncThread{nullptr};
+	std::thread *runSatConfAsyncThread{ nullptr };
 
 	std::mutex satconf_mutex;
 	std::condition_variable satconf_cancellation_cv;
-	bool satconf_cancelled{false};
+	bool satconf_cancelled{ false };
 
 	//colorize the symbols
 	// void ColorizeSolutionTable();
 };
 
-class ConfigItemDelegate : public QStyledItemDelegate
-{
-private:
+class ConfigItemDelegate : public QStyledItemDelegate {
+    private:
 	struct menu *menu;
-public:
+
+    public:
 	ConfigItemDelegate(QObject *parent = nullptr)
-		: QStyledItemDelegate(parent) {}
+		: QStyledItemDelegate(parent)
+	{
+	}
 	QWidget *createEditor(QWidget *parent,
 			      const QStyleOptionViewItem &option,
 			      const QModelIndex &index) const override;
@@ -326,26 +344,31 @@ class ConfigInfoView : public QTextBrowser {
 	Q_OBJECT
 	typedef class QTextBrowser Parent;
 	QMenu *contextMenu;
-public:
-	ConfigInfoView(QWidget* parent, const char *name = 0);
-	bool showDebug(void) const { return _showDebug; }
 
-public slots:
+    public:
+	ConfigInfoView(QWidget *parent, const char *name = 0);
+	bool showDebug(void) const
+	{
+		return _showDebug;
+	}
+
+    public slots:
 	void setInfo(struct menu *menu);
 	void saveSettings(void);
 	void setShowDebug(bool);
-	void clicked (const QUrl &url);
+	void clicked(const QUrl &url);
 
-signals:
+    signals:
 	void showDebugChanged(bool);
 	void menuSelected(struct menu *);
 
-protected:
+    protected:
 	void symbolInfo(void);
 	void menuInfo(void);
 	QString debug_info(struct symbol *sym);
 	static QString print_filter(const QString &str);
-	static void expr_print_help(void *data, struct symbol *sym, const char *str);
+	static void expr_print_help(void *data, struct symbol *sym,
+				    const char *str);
 	void contextMenuEvent(QContextMenuEvent *event);
 
 	struct symbol *sym;
@@ -356,26 +379,26 @@ protected:
 class ConfigSearchWindow : public QDialog {
 	Q_OBJECT
 	typedef class QDialog Parent;
-public:
+
+    public:
 	ConfigSearchWindow(ConfigMainWindow *parent);
 
-public slots:
+    public slots:
 	void saveSettings(void);
 	void search(void);
 	void UpdateConflictsViewColorizationFowarder();
-signals:
+    signals:
 	void UpdateConflictsViewColorization();
 
-protected:
-	QLineEdit* editField;
-	QPushButton* searchButton;
-	QSplitter* split;
+    protected:
+	QLineEdit *editField;
+	QPushButton *searchButton;
+	QSplitter *split;
 	ConfigList *list;
-	ConfigInfoView* info;
+	ConfigInfoView *info;
 
 	struct symbol **result;
 };
-
 
 class ConfigMainWindow : public QMainWindow {
 	Q_OBJECT
@@ -383,9 +406,10 @@ class ConfigMainWindow : public QMainWindow {
 	char *configname;
 	static QAction *saveAction;
 	static void conf_changed(void);
-public:
+
+    public:
 	ConfigMainWindow(void);
-public slots:
+    public slots:
 	void changeMenu(struct menu *);
 	void changeItens(struct menu *);
 	void setMenuLink(struct menu *);
@@ -404,14 +428,14 @@ public slots:
 	void conflictSelected(struct menu *);
 	void refreshMenu();
 
-protected:
+    protected:
 	void closeEvent(QCloseEvent *e);
 
 	ConfigSearchWindow *searchWindow;
 	ConfigList *menuList;
 	ConfigList *configList;
 	ConfigInfoView *helpText;
-    ConflictsView *conflictsView;
+	ConflictsView *conflictsView;
 	QToolBar *toolBar;
 	QToolBar *conflictsToolBar;
 	QAction *backAction;
@@ -423,12 +447,11 @@ protected:
 	QSplitter *split3;
 };
 
-class dropAbleView : public QTableWidget
-{
-public:
-    dropAbleView(QWidget *parent = nullptr);
-    ~dropAbleView();
+class dropAbleView : public QTableWidget {
+    public:
+	dropAbleView(QWidget *parent = nullptr);
+	~dropAbleView();
 
-protected:
-    void dropEvent(QDropEvent *event);
+    protected:
+	void dropEvent(QDropEvent *event);
 };

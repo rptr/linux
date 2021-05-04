@@ -7,7 +7,7 @@
 #define CF_SATUTILS_H
 
 /* initialize PicoSAT */
-PicoSAT * initialize_picosat(void);
+PicoSAT *initialize_picosat(void);
 
 /* construct the CNF-clauses from the constraints */
 void construct_cnf_clauses(PicoSAT *pico);
@@ -22,7 +22,8 @@ void picosat_solve(PicoSAT *pico);
 void sym_add_assumption(PicoSAT *pico, struct symbol *sym);
 
 /* add assumption for a boolean symbol to the SAT-solver */
-void sym_add_assumption_tri(PicoSAT *pico, struct symbol *sym, tristate tri_val);
+void sym_add_assumption_tri(PicoSAT *pico, struct symbol *sym,
+			    tristate tri_val);
 
 /* add assumptions for the symbols to be changed to the SAT solver */
 void sym_add_assumption_sdv(PicoSAT *pico, struct sdv_list *list);

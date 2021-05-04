@@ -25,7 +25,7 @@ extern "C" {
 #endif
 static inline const char *CONFIG_prefix(void)
 {
-	return getenv( "CONFIG_" ) ?: CONFIG_;
+	return getenv("CONFIG_") ?: CONFIG_;
 }
 #undef CONFIG_
 #define CONFIG_ CONFIG_prefix()
@@ -65,7 +65,7 @@ int yylex(void);
 
 struct gstr {
 	size_t len;
-	char  *s;
+	char *s;
 	/*
 	* when max_width is not zero long lines in string s (if any) get
 	* wrapped not to exceed the max_width value
@@ -86,7 +86,8 @@ void menu_end_menu(void);
 void menu_add_entry(struct symbol *sym);
 void menu_add_dep(struct expr *dep);
 void menu_add_visibility(struct expr *dep);
-struct property *menu_add_prompt(enum prop_type type, char *prompt, struct expr *dep);
+struct property *menu_add_prompt(enum prop_type type, char *prompt,
+				 struct expr *dep);
 void menu_add_expr(enum prop_type type, struct expr *expr, struct expr *dep);
 void menu_add_symbol(enum prop_type type, struct symbol *sym, struct expr *dep);
 void menu_finalize(struct menu *parent);
@@ -117,7 +118,6 @@ static inline tristate sym_get_tristate_value(struct symbol *sym)
 {
 	return sym->curr.tri;
 }
-
 
 static inline struct symbol *sym_get_choice_value(struct symbol *sym)
 {

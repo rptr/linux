@@ -37,7 +37,7 @@ void init_data(void)
 	/* create hashtable with all fexpr */
 	satmap = xcalloc(SATMAP_INIT_SIZE, sizeof(*satmap));
 	satmap_size = SATMAP_INIT_SIZE;
-	
+
 	printf("done.\n");
 }
 
@@ -57,12 +57,11 @@ void assign_sat_variables(void)
 {
 	unsigned int i;
 	struct symbol *sym;
-	
+
 	printf("Creating SAT-variables...");
-	
-	for_all_symbols(i, sym)
-		create_sat_variables(sym);
-	
+
+	for_all_symbols(i, sym) create_sat_variables(sym);
+
 	printf("done.\n");
 }
 
@@ -72,66 +71,66 @@ void assign_sat_variables(void)
 void create_constants(void)
 {
 	printf("Creating constants...");
-	
+
 	/* create TRUE and FALSE constants */
 	const_false = fexpr_create(sat_variable_nr++, FE_FALSE, "0");
 	fexpr_add_to_satmap(const_false);
 
 	const_true = fexpr_create(sat_variable_nr++, FE_TRUE, "1");
 	fexpr_add_to_satmap(const_true);
-	
+
 	/* add fexpr of constants to tristate constants */
 	symbol_yes.fexpr_y = const_true;
 	symbol_yes.fexpr_m = const_false;
-	
+
 	symbol_mod.fexpr_y = const_false;
 	symbol_mod.fexpr_m = const_true;
-	
+
 	symbol_no.fexpr_y = const_false;
 	symbol_no.fexpr_m = const_false;
-	
+
 	/* create symbols yes/mod/no as fexpr */
 	symbol_yes_fexpr = fexpr_create(0, FE_SYMBOL, "y");
 	symbol_yes_fexpr->sym = &symbol_yes;
 	symbol_yes_fexpr->tri = yes;
-	
+
 	symbol_mod_fexpr = fexpr_create(0, FE_SYMBOL, "m");
 	symbol_mod_fexpr->sym = &symbol_mod;
 	symbol_mod_fexpr->tri = mod;
-	
+
 	symbol_no_fexpr = fexpr_create(0, FE_SYMBOL, "n");
 	symbol_no_fexpr->sym = &symbol_no;
 	symbol_no_fexpr->tri = no;
-	
+
 	printf("done.\n");
 }
 
 /*
  * create a temporary SAT-variable
  */
-struct fexpr * create_tmpsatvar(void)
+struct fexpr *create_tmpsatvar(void)
 {
 	struct fexpr *t = fexpr_create(sat_variable_nr++, FE_TMPSATVAR, "");
 	str_append(&t->name, get_tmp_var_as_char(tmp_variable_nr++));
 	fexpr_add_to_satmap(t);
-	
+
 	return t;
 }
 
 /*
  * return a temporary SAT variable as string
  */
-char * get_tmp_var_as_char(int i)
+char *get_tmp_var_as_char(int i)
 {
 	char *val = malloc(sizeof(char) * 18);
-	snprintf(val, 18,"T_%d", i);
+	snprintf(val, 18, "T_%d", i);
 	return val;
 }
 
 /*
  * return a tristate value as a char *
  */
-char * tristate_get_char(tristate val)
+char *tristate_get_char(tristate val)
 {
 	switch (val) {
 	case yes:
@@ -150,14 +149,19 @@ char * tristate_get_char(tristate val)
  */
 bool expr_can_evaluate_to_mod(struct expr *e)
 {
-	if (!e) return false;
-	
+	if (!e)
+		return false;
+
 	switch (e->type) {
 	case E_SYMBOL:
-		return e->left.sym == &symbol_mod || e->left.sym->type == S_TRISTATE ? true : false;
+		return e->left.sym == &symbol_mod ||
+				       e->left.sym->type == S_TRISTATE ?
+				     true :
+				     false;
 	case E_AND:
 	case E_OR:
-		return expr_can_evaluate_to_mod(e->left.expr) || expr_can_evaluate_to_mod(e->right.expr);
+		return expr_can_evaluate_to_mod(e->left.expr) ||
+		       expr_can_evaluate_to_mod(e->right.expr);
 	case E_NOT:
 		return expr_can_evaluate_to_mod(e->left.expr);
 	default:
@@ -170,7 +174,8 @@ bool expr_can_evaluate_to_mod(struct expr *e)
  */
 static void print_expr_util(struct expr *e, int prevtoken)
 {
-	if (!e) return;
+	if (!e)
+		return;
 
 	switch (e->type) {
 	case E_SYMBOL:
@@ -249,7 +254,8 @@ void print_expr(char *tag, struct expr *e, int prevtoken)
 /*
  * check, if the symbol is a tristate-constant
  */
-bool sym_is_tristate_constant(struct symbol *sym) {
+bool sym_is_tristate_constant(struct symbol *sym)
+{
 	return sym == &symbol_yes || sym == &symbol_mod || sym == &symbol_no;
 }
 
@@ -274,7 +280,8 @@ bool sym_is_bool_or_triconst(struct symbol *sym)
  */
 bool sym_is_nonboolean(struct symbol *sym)
 {
-	return sym->type == S_INT || sym->type == S_HEX || sym->type == S_STRING;
+	return sym->type == S_INT || sym->type == S_HEX ||
+	       sym->type == S_STRING;
 }
 
 /*
@@ -284,8 +291,7 @@ bool sym_has_prompt(struct symbol *sym)
 {
 	struct property *prop;
 
-	for_all_prompts(sym, prop)
-		return true;
+	for_all_prompts(sym, prop) return true;
 
 	return false;
 }
@@ -293,34 +299,33 @@ bool sym_has_prompt(struct symbol *sym)
 /*
  * return the prompt of the symbol if there is one, NULL otherwise
  */
-struct property * sym_get_prompt(struct symbol *sym)
+struct property *sym_get_prompt(struct symbol *sym)
 {
 	struct property *prop;
-	
-	for_all_prompts(sym, prop)
-		return prop;
-	
+
+	for_all_prompts(sym, prop) return prop;
+
 	return NULL;
 }
 
 /*
  * return the condition for the property, True if there is none
  */
-struct pexpr * prop_get_condition(struct property *prop)
+struct pexpr *prop_get_condition(struct property *prop)
 {
 	assert(prop != NULL);
-	
+
 	/* if there is no condition, return True */
 	if (!prop->visible.expr)
 		return pexf(const_true);
-	
+
 	return expr_calculate_pexpr_both(prop->visible.expr);
 }
 
 /*
  * return the name of the symbol or the prompt-text, if it is a choice symbol
  */
-char * sym_get_name(struct symbol *sym)
+char *sym_get_name(struct symbol *sym)
 {
 	if (sym_is_choice(sym)) {
 		struct property *prompt = sym_get_prompt(sym);
@@ -337,10 +342,8 @@ char * sym_get_name(struct symbol *sym)
 bool sym_is_sdv(struct sdv_list *list, struct symbol *sym)
 {
 	struct sdv_node *node;
-	sdv_list_for_each(node, list)
-		if (sym == node->elem->sym)
-			return true;
-	
+	sdv_list_for_each(node, list) if (sym == node->elem->sym) return true;
+
 	return false;
 }
 
@@ -353,7 +356,7 @@ void print_sym_name(struct symbol *sym)
 	if (sym_is_choice(sym)) {
 		struct property *prompt = sym_get_prompt(sym);
 		printf("(Choice) %s", prompt->text);
-	} else  {
+	} else {
 		printf("%s", sym->name);
 	}
 	printf("\n");
@@ -362,7 +365,7 @@ void print_sym_name(struct symbol *sym)
 /*
  * print all constraints for a symbol
  */
-void print_sym_constraint(struct symbol* sym)
+void print_sym_constraint(struct symbol *sym)
 {
 	struct pexpr_node *node;
 	pexpr_list_for_each(node, sym->constraints)
@@ -376,8 +379,9 @@ void print_default_map(struct defm_list *map)
 {
 	struct default_map *entry;
 	struct defm_node *node;
-	
-	defm_list_for_each(node, map) {
+
+	defm_list_for_each(node, map)
+	{
 		entry = node->elem;
 		struct gstr s = str_new();
 		str_append(&s, "\t");

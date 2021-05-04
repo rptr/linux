@@ -131,8 +131,7 @@ static bool randomize_choice_values(struct symbol *csym)
 
 	/* count entries in choice block */
 	cnt = 0;
-	expr_list_for_each_sym(prop->expr, e, sym)
-		cnt++;
+	expr_list_for_each_sym(prop->expr, e, sym) cnt++;
 
 	/*
 	 * find a random value and set it to yes,
@@ -141,7 +140,8 @@ static bool randomize_choice_values(struct symbol *csym)
 	def = rand() % cnt;
 
 	cnt = 0;
-	expr_list_for_each_sym(prop->expr, e, sym) {
+	expr_list_for_each_sym(prop->expr, e, sym)
+	{
 		if (def == cnt++) {
 			sym->def[S_DEF_USER].tri = yes;
 			csym->def[S_DEF_USER].val = sym;
@@ -227,7 +227,8 @@ static bool conf_set_all_new_symbols(enum conf_def_mode mode)
 		}
 	}
 
-	for_all_symbols(i, sym) {
+	for_all_symbols(i, sym)
+	{
 		if (sym_has_value(sym) || sym->flags & SYMBOL_VALID)
 			continue;
 		switch (sym_get_type(sym)) {
@@ -264,7 +265,6 @@ static bool conf_set_all_new_symbols(enum conf_def_mode mode)
 		default:
 			break;
 		}
-
 	}
 
 	sym_clear_all_valid();
@@ -279,14 +279,16 @@ static bool conf_set_all_new_symbols(enum conf_def_mode mode)
 	 * and the rest to no.
 	 */
 	if (mode != def_random) {
-		for_all_symbols(i, csym) {
+		for_all_symbols(i, csym)
+		{
 			if ((sym_is_choice(csym) && !sym_has_value(csym)) ||
 			    sym_is_choice_value(csym))
 				csym->flags |= SYMBOL_NEED_SET_CHOICE_VALUES;
 		}
 	}
 
-	for_all_symbols(i, csym) {
+	for_all_symbols(i, csym)
+	{
 		if (sym_has_value(csym) || !sym_is_choice(csym))
 			continue;
 
@@ -309,7 +311,8 @@ static void conf_rewrite_mod_or_yes(enum conf_def_mode mode)
 	tristate old_val = (mode == def_y2m) ? yes : mod;
 	tristate new_val = (mode == def_y2m) ? mod : yes;
 
-	for_all_symbols(i, sym) {
+	for_all_symbols(i, sym)
+	{
 		if (sym_get_type(sym) == S_TRISTATE &&
 		    sym->def[S_DEF_USER].tri == old_val)
 			sym->def[S_DEF_USER].tri = new_val;
@@ -374,7 +377,7 @@ static int conf_string(struct menu *menu)
 			}
 			/* fall through */
 		default:
-			line[strlen(line)-1] = 0;
+			line[strlen(line) - 1] = 0;
 			def = line;
 		}
 		if (def && sym_set_string_value(sym, def))
@@ -444,7 +447,7 @@ static int conf_sym(struct menu *menu)
 		}
 		if (sym_set_tristate_value(sym, newval))
 			return 0;
-help:
+	help:
 		print_help(menu);
 	}
 }
@@ -473,7 +476,8 @@ static int conf_choice(struct menu *menu)
 		case no:
 			return 1;
 		case mod:
-			printf("%*s%s\n", indent - 1, "", menu_get_prompt(menu));
+			printf("%*s%s\n", indent - 1, "",
+			       menu_get_prompt(menu));
 			return 0;
 		case yes:
 			break;
@@ -491,7 +495,8 @@ static int conf_choice(struct menu *menu)
 			if (!menu_is_visible(child))
 				continue;
 			if (!child->sym) {
-				printf("%*c %s\n", indent, '*', menu_get_prompt(child));
+				printf("%*c %s\n", indent, '*',
+				       menu_get_prompt(child));
 				continue;
 			}
 			cnt++;
@@ -592,12 +597,9 @@ static void conf(struct menu *menu)
 		case P_COMMENT:
 			prompt = menu_get_prompt(menu);
 			if (prompt)
-				printf("%*c\n%*c %s\n%*c\n",
-					indent, '*',
-					indent, '*', prompt,
-					indent, '*');
-		default:
-			;
+				printf("%*c\n%*c %s\n%*c\n", indent, '*',
+				       indent, '*', prompt, indent, '*');
+		default:;
 		}
 	}
 
@@ -643,7 +645,6 @@ static void check_conf(struct menu *menu)
 	if (sym && !sym_has_value(sym) &&
 	    (sym_is_changeable(sym) ||
 	     (sym_is_choice(sym) && sym_get_tristate_value(sym) == yes))) {
-
 		switch (input_mode) {
 		case listnewconfig:
 			if (sym->name) {
@@ -652,11 +653,13 @@ static void check_conf(struct menu *menu)
 				if (sym->type == S_STRING) {
 					str = sym_get_string_value(sym);
 					str = sym_escape_string_value(str);
-					printf("%s%s=%s\n", CONFIG_, sym->name, str);
+					printf("%s%s=%s\n", CONFIG_, sym->name,
+					       str);
 					free((void *)str);
 				} else {
 					str = sym_get_string_value(sym);
-					printf("%s%s=%s\n", CONFIG_, sym->name, str);
+					printf("%s%s=%s\n", CONFIG_, sym->name,
+					       str);
 				}
 			}
 			break;
@@ -679,24 +682,24 @@ static void check_conf(struct menu *menu)
 }
 
 static struct option long_opts[] = {
-	{"help",          no_argument,       NULL,            'h'},
-	{"silent",        no_argument,       NULL,            's'},
-	{"oldaskconfig",  no_argument,       &input_mode_opt, oldaskconfig},
-	{"oldconfig",     no_argument,       &input_mode_opt, oldconfig},
-	{"syncconfig",    no_argument,       &input_mode_opt, syncconfig},
-	{"defconfig",     required_argument, &input_mode_opt, defconfig},
-	{"savedefconfig", required_argument, &input_mode_opt, savedefconfig},
-	{"allnoconfig",   no_argument,       &input_mode_opt, allnoconfig},
-	{"allyesconfig",  no_argument,       &input_mode_opt, allyesconfig},
-	{"allmodconfig",  no_argument,       &input_mode_opt, allmodconfig},
-	{"alldefconfig",  no_argument,       &input_mode_opt, alldefconfig},
-	{"randconfig",    no_argument,       &input_mode_opt, randconfig},
-	{"listnewconfig", no_argument,       &input_mode_opt, listnewconfig},
-	{"helpnewconfig", no_argument,       &input_mode_opt, helpnewconfig},
-	{"olddefconfig",  no_argument,       &input_mode_opt, olddefconfig},
-	{"yes2modconfig", no_argument,       &input_mode_opt, yes2modconfig},
-	{"mod2yesconfig", no_argument,       &input_mode_opt, mod2yesconfig},
-	{NULL, 0, NULL, 0}
+	{ "help", no_argument, NULL, 'h' },
+	{ "silent", no_argument, NULL, 's' },
+	{ "oldaskconfig", no_argument, &input_mode_opt, oldaskconfig },
+	{ "oldconfig", no_argument, &input_mode_opt, oldconfig },
+	{ "syncconfig", no_argument, &input_mode_opt, syncconfig },
+	{ "defconfig", required_argument, &input_mode_opt, defconfig },
+	{ "savedefconfig", required_argument, &input_mode_opt, savedefconfig },
+	{ "allnoconfig", no_argument, &input_mode_opt, allnoconfig },
+	{ "allyesconfig", no_argument, &input_mode_opt, allyesconfig },
+	{ "allmodconfig", no_argument, &input_mode_opt, allmodconfig },
+	{ "alldefconfig", no_argument, &input_mode_opt, alldefconfig },
+	{ "randconfig", no_argument, &input_mode_opt, randconfig },
+	{ "listnewconfig", no_argument, &input_mode_opt, listnewconfig },
+	{ "helpnewconfig", no_argument, &input_mode_opt, helpnewconfig },
+	{ "olddefconfig", no_argument, &input_mode_opt, olddefconfig },
+	{ "yes2modconfig", no_argument, &input_mode_opt, yes2modconfig },
+	{ "mod2yesconfig", no_argument, &input_mode_opt, mod2yesconfig },
+	{ NULL, 0, NULL, 0 }
 };
 
 static void conf_usage(const char *progname)
@@ -784,8 +787,8 @@ int main(int ac, char **av)
 		if (conf_read(defconfig_file)) {
 			fprintf(stderr,
 				"***\n"
-				  "*** Can't find default configuration \"%s\"!\n"
-				  "***\n",
+				"*** Can't find default configuration \"%s\"!\n"
+				"***\n",
 				defconfig_file);
 			exit(1);
 		}
@@ -819,12 +822,23 @@ int main(int ac, char **av)
 			break;
 		}
 		switch (input_mode) {
-		case allnoconfig:	name = "allno.config"; break;
-		case allyesconfig:	name = "allyes.config"; break;
-		case allmodconfig:	name = "allmod.config"; break;
-		case alldefconfig:	name = "alldef.config"; break;
-		case randconfig:	name = "allrandom.config"; break;
-		default: break;
+		case allnoconfig:
+			name = "allno.config";
+			break;
+		case allyesconfig:
+			name = "allyes.config";
+			break;
+		case allmodconfig:
+			name = "allmod.config";
+			break;
+		case alldefconfig:
+			name = "alldef.config";
+			break;
+		case randconfig:
+			name = "allrandom.config";
+			break;
+		default:
+			break;
 		}
 		if (conf_read_simple(name, S_DEF_USER) &&
 		    conf_read_simple("all.config", S_DEF_USER)) {
@@ -865,7 +879,8 @@ int main(int ac, char **av)
 		break;
 	case randconfig:
 		/* Really nothing to do in this loop */
-		while (conf_set_all_new_symbols(def_random)) ;
+		while (conf_set_all_new_symbols(def_random))
+			;
 		break;
 	case defconfig:
 		conf_set_all_new_symbols(def_default);
@@ -900,13 +915,15 @@ int main(int ac, char **av)
 
 	if (input_mode == savedefconfig) {
 		if (conf_write_defconfig(defconfig_file)) {
-			fprintf(stderr, "n*** Error while saving defconfig to: %s\n\n",
+			fprintf(stderr,
+				"n*** Error while saving defconfig to: %s\n\n",
 				defconfig_file);
 			return 1;
 		}
 	} else if (input_mode != listnewconfig && input_mode != helpnewconfig) {
 		if (!no_conf_write && conf_write(NULL)) {
-			fprintf(stderr, "\n*** Error during writing of the configuration.\n\n");
+			fprintf(stderr,
+				"\n*** Error during writing of the configuration.\n\n");
 			exit(1);
 		}
 
