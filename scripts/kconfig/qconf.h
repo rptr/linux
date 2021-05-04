@@ -11,6 +11,7 @@
 #include <QPushButton>
 #include <QSettings>
 #include <QSplitter>
+#include <QStyledItemDelegate>
 #include <QTextBrowser>
 #include <QTreeWidget>
 #include <QListWidget>
@@ -29,7 +30,6 @@
 class ConfigView;
 class ConfigList;
 class ConfigItem;
-class ConfigLineEdit;
 class ConfigMainWindow;
 
 class ConfigSettings : public QSettings {
@@ -40,7 +40,7 @@ public:
 };
 
 enum colIdx {
-	promptColIdx, nameColIdx, noColIdx, modColIdx, yesColIdx, dataColIdx
+	promptColIdx, nameColIdx, dataColIdx
 };
 enum listMode {
 	singleMode, menuMode, symbolMode, fullMode, listMode
@@ -53,13 +53,10 @@ class ConfigList : public QTreeWidget {
 	Q_OBJECT
 	typedef class QTreeWidget Parent;
 public:
-	ConfigList(ConfigView* p, const char *name = 0);
+	ConfigList(QWidget *parent, const char *name = 0);
+	~ConfigList();
 	void reinit(void);
 	ConfigItem* findConfigItem(struct menu *);
-	ConfigView* parent(void) const
-	{
-		return (ConfigView*)Parent::parent();
-	}
 	void setSelected(QTreeWidgetItem *item, bool enable) {
 		for (int i = 0; i < selectedItems().size(); i++)
 			selectedItems().at(i)->setSelected(false);
@@ -85,6 +82,7 @@ public slots:
 	void updateSelection(void);
 	void saveSettings(void);
 	void setOptionMode(QAction *action);
+	void setShowName(bool on);
 
 signals:
 	void menuChanged(struct menu *menu);
@@ -94,6 +92,7 @@ signals:
 	void gotFocus(struct menu *);
 	void selectionChanged(QList<QTreeWidgetItem*> selection);
 	void UpdateConflictsViewColorization();
+	void showNameChanged(bool on);
 
 public:
 	void updateListAll(void)
@@ -120,6 +119,10 @@ public:
 	QPalette inactivedColorGroup;
 	QMenu* headerPopup;
 
+	static QList<ConfigList *> allLists;
+	static void updateListForAll();
+	static void updateListAllForAll();
+
 	static QAction *showNormalAction, *showAllAction, *showPromptAction, *addSymbolsFromContextMenu;
 };
 
@@ -143,7 +146,6 @@ public:
 	}
 	~ConfigItem(void);
 	void init(void);
-	void okRename(int col);
 	void updateMenu(void);
 	void testUpdateMenu(bool v);
 	ConfigList* listView() const
@@ -304,8 +306,20 @@ public:
 
 	//colorize the symbols
 	// void ColorizeSolutionTable();
+};
 
-
+class ConfigItemDelegate : public QStyledItemDelegate
+{
+private:
+	struct menu *menu;
+public:
+	ConfigItemDelegate(QObject *parent = nullptr)
+		: QStyledItemDelegate(parent) {}
+	QWidget *createEditor(QWidget *parent,
+			      const QStyleOptionViewItem &option,
+			      const QModelIndex &index) const override;
+	void setModelData(QWidget *editor, QAbstractItemModel *model,
+			  const QModelIndex &index) const override;
 };
 
 class ConfigInfoView : public QTextBrowser {
@@ -356,7 +370,7 @@ protected:
 	QLineEdit* editField;
 	QPushButton* searchButton;
 	QSplitter* split;
-	ConfigView* list;
+	ConfigList *list;
 	ConfigInfoView* info;
 
 	struct symbol **result;
@@ -394,9 +408,7 @@ protected:
 	void closeEvent(QCloseEvent *e);
 
 	ConfigSearchWindow *searchWindow;
-	ConfigView *menuView;
 	ConfigList *menuList;
-	ConfigView *configView;
 	ConfigList *configList;
 	ConfigInfoView *helpText;
     ConflictsView *conflictsView;

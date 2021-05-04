@@ -21,6 +21,7 @@
 #include <linux/memblock.h>
 #include <linux/slab.h>
 #include <linux/vmalloc.h>
+#include <asm/setup.h>
 #include <asm/drmem.h>
 #include <asm/kexec_ranges.h>
 #include <asm/crashdump-ppc64.h>
@@ -138,15 +139,13 @@ out:
  */
 static int get_crash_memory_ranges(struct crash_mem **mem_ranges)
 {
-	struct memblock_region *reg;
+	phys_addr_t base, end;
 	struct crash_mem *tmem;
+	u64 i;
 	int ret;
 
-	for_each_memblock(memory, reg) {
-		u64 base, size;
-
-		base = (u64)reg->base;
-		size = (u64)reg->size;
+	for_each_mem_range(i, &base, &end) {
+		u64 size = end - base;
 
 		/* Skip backup memory region, which needs a separate entry */
 		if (base == BACKUP_SRC_START) {
@@ -250,8 +249,7 @@ static int __locate_mem_hole_top_down(struct kexec_buf *kbuf,
 	phys_addr_t start, end;
 	u64 i;
 
-	for_each_mem_range_rev(i, &memblock.memory, NULL, NUMA_NO_NODE,
-			       MEMBLOCK_NONE, &start, &end, NULL) {
+	for_each_mem_range_rev(i, &start, &end) {
 		/*
 		 * memblock uses [start, end) convention while it is
 		 * [start, end] here. Fix the off-by-one to have the
@@ -350,8 +348,7 @@ static int __locate_mem_hole_bottom_up(struct kexec_buf *kbuf,
 	phys_addr_t start, end;
 	u64 i;
 
-	for_each_mem_range(i, &memblock.memory, NULL, NUMA_NO_NODE,
-			   MEMBLOCK_NONE, &start, &end, NULL) {
+	for_each_mem_range(i, &start, &end) {
 		/*
 		 * memblock uses [start, end) convention while it is
 		 * [start, end] here. Fix the off-by-one to have the
@@ -819,9 +816,9 @@ static int load_elfcorehdr_segment(struct kimage *image, struct kexec_buf *kbuf)
 		goto out;
 	}
 
-	image->arch.elfcorehdr_addr = kbuf->mem;
-	image->arch.elf_headers_sz = headers_sz;
-	image->arch.elf_headers = headers;
+	image->elf_load_addr = kbuf->mem;
+	image->elf_headers_sz = headers_sz;
+	image->elf_headers = headers;
 out:
 	kfree(cmem);
 	return ret;
@@ -855,7 +852,7 @@ int load_crashdump_segments_ppc64(struct kimage *image,
 		return ret;
 	}
 	pr_debug("Loaded elf core header at 0x%lx, bufsz=0x%lx memsz=0x%lx\n",
-		 image->arch.elfcorehdr_addr, kbuf->bufsz, kbuf->memsz);
+		 image->elf_load_addr, kbuf->bufsz, kbuf->memsz);
 
 	return 0;
 }
@@ -930,6 +927,30 @@ out:
 }
 
 /**
+ * kexec_extra_fdt_size_ppc64 - Return the estimated additional size needed to
+ *                              setup FDT for kexec/kdump kernel.
+ * @image:                      kexec image being loaded.
+ *
+ * Returns the estimated extra size needed for kexec/kdump kernel FDT.
+ */
+unsigned int kexec_extra_fdt_size_ppc64(struct kimage *image)
+{
+	u64 usm_entries;
+
+	if (image->type != KEXEC_TYPE_CRASH)
+		return 0;
+
+	/*
+	 * For kdump kernel, account for linux,usable-memory and
+	 * linux,drconf-usable-memory properties. Get an approximate on the
+	 * number of usable memory entries and use for FDT size estimation.
+	 */
+	usm_entries = ((memblock_end_of_DRAM() / drmem_lmb_size()) +
+		       (2 * (resource_size(&crashk_res) / drmem_lmb_size())));
+	return (unsigned int)(usm_entries * sizeof(u64));
+}
+
+/**
  * setup_new_fdt_ppc64 - Update the flattend device-tree of the kernel
  *                       being loaded.
  * @image:               kexec image being loaded.
@@ -947,10 +968,6 @@ int setup_new_fdt_ppc64(const struct kimage *image, void *fdt,
 {
 	struct crash_mem *umem = NULL, *rmem = NULL;
 	int i, nr_ranges, ret;
-
-	ret = setup_new_fdt(image, fdt, initrd_load_addr, initrd_len, cmdline);
-	if (ret)
-		goto out;
 
 	/*
 	 * Restrict memory usage for kdump kernel by setting up
@@ -1111,9 +1128,12 @@ int arch_kimage_file_post_load_cleanup(struct kimage *image)
 	vfree(image->arch.backup_buf);
 	image->arch.backup_buf = NULL;
 
-	vfree(image->arch.elf_headers);
-	image->arch.elf_headers = NULL;
-	image->arch.elf_headers_sz = 0;
+	vfree(image->elf_headers);
+	image->elf_headers = NULL;
+	image->elf_headers_sz = 0;
+
+	kvfree(image->arch.fdt);
+	image->arch.fdt = NULL;
 
 	return kexec_image_post_load_cleanup_default(image);
 }

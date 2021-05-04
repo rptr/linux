@@ -36,6 +36,8 @@
 #include <asm/hypervisor.h>
 #include <asm/tlb.h>
 #include <asm/cpuidle_haltpoll.h>
+#include <asm/ptrace.h>
+#include <asm/svm.h>
 
 DEFINE_STATIC_KEY_FALSE(kvm_async_pf_enabled);
 
@@ -449,16 +451,16 @@ static void __init sev_map_percpu_data(void)
 	}
 }
 
+#ifdef CONFIG_SMP
+
+static DEFINE_PER_CPU(cpumask_var_t, __pv_cpu_mask);
+
 static bool pv_tlb_flush_supported(void)
 {
 	return (kvm_para_has_feature(KVM_FEATURE_PV_TLB_FLUSH) &&
 		!kvm_para_has_hint(KVM_HINTS_REALTIME) &&
 		kvm_para_has_feature(KVM_FEATURE_STEAL_TIME));
 }
-
-static DEFINE_PER_CPU(cpumask_var_t, __pv_cpu_mask);
-
-#ifdef CONFIG_SMP
 
 static bool pv_ipi_supported(void)
 {
@@ -572,6 +574,54 @@ static void kvm_smp_send_call_func_ipi(const struct cpumask *mask)
 	}
 }
 
+static void kvm_flush_tlb_multi(const struct cpumask *cpumask,
+			const struct flush_tlb_info *info)
+{
+	u8 state;
+	int cpu;
+	struct kvm_steal_time *src;
+	struct cpumask *flushmask = this_cpu_cpumask_var_ptr(__pv_cpu_mask);
+
+	cpumask_copy(flushmask, cpumask);
+	/*
+	 * We have to call flush only on online vCPUs. And
+	 * queue flush_on_enter for pre-empted vCPUs
+	 */
+	for_each_cpu(cpu, flushmask) {
+		/*
+		 * The local vCPU is never preempted, so we do not explicitly
+		 * skip check for local vCPU - it will never be cleared from
+		 * flushmask.
+		 */
+		src = &per_cpu(steal_time, cpu);
+		state = READ_ONCE(src->preempted);
+		if ((state & KVM_VCPU_PREEMPTED)) {
+			if (try_cmpxchg(&src->preempted, &state,
+					state | KVM_VCPU_FLUSH_TLB))
+				__cpumask_clear_cpu(cpu, flushmask);
+		}
+	}
+
+	native_flush_tlb_multi(flushmask, info);
+}
+
+static __init int kvm_alloc_cpumask(void)
+{
+	int cpu;
+
+	if (!kvm_para_available() || nopv)
+		return 0;
+
+	if (pv_tlb_flush_supported() || pv_ipi_supported())
+		for_each_possible_cpu(cpu) {
+			zalloc_cpumask_var_node(per_cpu_ptr(&__pv_cpu_mask, cpu),
+				GFP_KERNEL, cpu_to_node(cpu));
+		}
+
+	return 0;
+}
+arch_initcall(kvm_alloc_cpumask);
+
 static void __init kvm_smp_prepare_boot_cpu(void)
 {
 	/*
@@ -609,33 +659,8 @@ static int kvm_cpu_down_prepare(unsigned int cpu)
 	local_irq_enable();
 	return 0;
 }
+
 #endif
-
-static void kvm_flush_tlb_others(const struct cpumask *cpumask,
-			const struct flush_tlb_info *info)
-{
-	u8 state;
-	int cpu;
-	struct kvm_steal_time *src;
-	struct cpumask *flushmask = this_cpu_cpumask_var_ptr(__pv_cpu_mask);
-
-	cpumask_copy(flushmask, cpumask);
-	/*
-	 * We have to call flush only on online vCPUs. And
-	 * queue flush_on_enter for pre-empted vCPUs
-	 */
-	for_each_cpu(cpu, flushmask) {
-		src = &per_cpu(steal_time, cpu);
-		state = READ_ONCE(src->preempted);
-		if ((state & KVM_VCPU_PREEMPTED)) {
-			if (try_cmpxchg(&src->preempted, &state,
-					state | KVM_VCPU_FLUSH_TLB))
-				__cpumask_clear_cpu(cpu, flushmask);
-		}
-	}
-
-	native_flush_tlb_others(flushmask, info);
-}
 
 static void __init kvm_guest_init(void)
 {
@@ -648,13 +673,7 @@ static void __init kvm_guest_init(void)
 
 	if (kvm_para_has_feature(KVM_FEATURE_STEAL_TIME)) {
 		has_steal_clock = 1;
-		pv_ops.time.steal_clock = kvm_steal_clock;
-	}
-
-	if (pv_tlb_flush_supported()) {
-		pv_ops.mmu.flush_tlb_others = kvm_flush_tlb_others;
-		pv_ops.mmu.tlb_remove_table = tlb_remove_table;
-		pr_info("KVM setup pv remote TLB flush\n");
+		static_call_update(pv_steal_clock, kvm_steal_clock);
 	}
 
 	if (kvm_para_has_feature(KVM_FEATURE_PV_EOI))
@@ -666,6 +685,12 @@ static void __init kvm_guest_init(void)
 	}
 
 #ifdef CONFIG_SMP
+	if (pv_tlb_flush_supported()) {
+		pv_ops.mmu.flush_tlb_multi = kvm_flush_tlb_multi;
+		pv_ops.mmu.tlb_remove_table = tlb_remove_table;
+		pr_info("KVM setup pv remote TLB flush\n");
+	}
+
 	smp_ops.smp_prepare_boot_cpu = kvm_smp_prepare_boot_cpu;
 	if (pv_sched_yield_supported()) {
 		smp_ops.send_call_func_ipi = kvm_smp_send_call_func_ipi;
@@ -732,10 +757,15 @@ static uint32_t __init kvm_detect(void)
 
 static void __init kvm_apic_init(void)
 {
-#if defined(CONFIG_SMP)
+#ifdef CONFIG_SMP
 	if (pv_ipi_supported())
 		kvm_setup_pv_ipi();
 #endif
+}
+
+static bool __init kvm_msi_ext_dest_id(void)
+{
+	return kvm_para_has_feature(KVM_FEATURE_MSI_EXT_DEST_ID);
 }
 
 static void __init kvm_init_platform(void)
@@ -744,13 +774,35 @@ static void __init kvm_init_platform(void)
 	x86_platform.apic_post_init = kvm_apic_init;
 }
 
+#if defined(CONFIG_AMD_MEM_ENCRYPT)
+static void kvm_sev_es_hcall_prepare(struct ghcb *ghcb, struct pt_regs *regs)
+{
+	/* RAX and CPL are already in the GHCB */
+	ghcb_set_rbx(ghcb, regs->bx);
+	ghcb_set_rcx(ghcb, regs->cx);
+	ghcb_set_rdx(ghcb, regs->dx);
+	ghcb_set_rsi(ghcb, regs->si);
+}
+
+static bool kvm_sev_es_hcall_finish(struct ghcb *ghcb, struct pt_regs *regs)
+{
+	/* No checking of the return state needed */
+	return true;
+}
+#endif
+
 const __initconst struct hypervisor_x86 x86_hyper_kvm = {
-	.name			= "KVM",
-	.detect			= kvm_detect,
-	.type			= X86_HYPER_KVM,
-	.init.guest_late_init	= kvm_guest_init,
-	.init.x2apic_available	= kvm_para_available,
-	.init.init_platform	= kvm_init_platform,
+	.name				= "KVM",
+	.detect				= kvm_detect,
+	.type				= X86_HYPER_KVM,
+	.init.guest_late_init		= kvm_guest_init,
+	.init.x2apic_available		= kvm_para_available,
+	.init.msi_ext_dest_id		= kvm_msi_ext_dest_id,
+	.init.init_platform		= kvm_init_platform,
+#if defined(CONFIG_AMD_MEM_ENCRYPT)
+	.runtime.sev_es_hcall_prepare	= kvm_sev_es_hcall_prepare,
+	.runtime.sev_es_hcall_finish	= kvm_sev_es_hcall_finish,
+#endif
 };
 
 static __init int activate_jump_labels(void)
@@ -764,32 +816,6 @@ static __init int activate_jump_labels(void)
 	return 0;
 }
 arch_initcall(activate_jump_labels);
-
-static __init int kvm_alloc_cpumask(void)
-{
-	int cpu;
-	bool alloc = false;
-
-	if (!kvm_para_available() || nopv)
-		return 0;
-
-	if (pv_tlb_flush_supported())
-		alloc = true;
-
-#if defined(CONFIG_SMP)
-	if (pv_ipi_supported())
-		alloc = true;
-#endif
-
-	if (alloc)
-		for_each_possible_cpu(cpu) {
-			zalloc_cpumask_var_node(per_cpu_ptr(&__pv_cpu_mask, cpu),
-				GFP_KERNEL, cpu_to_node(cpu));
-		}
-
-	return 0;
-}
-arch_initcall(kvm_alloc_cpumask);
 
 #ifdef CONFIG_PARAVIRT_SPINLOCKS
 
@@ -807,28 +833,25 @@ static void kvm_kick_cpu(int cpu)
 
 static void kvm_wait(u8 *ptr, u8 val)
 {
-	unsigned long flags;
-
 	if (in_nmi())
 		return;
-
-	local_irq_save(flags);
-
-	if (READ_ONCE(*ptr) != val)
-		goto out;
 
 	/*
 	 * halt until it's our turn and kicked. Note that we do safe halt
 	 * for irq enabled case to avoid hang when lock info is overwritten
 	 * in irq spinlock slowpath and no spurious interrupt occur to save us.
 	 */
-	if (arch_irqs_disabled_flags(flags))
-		halt();
-	else
-		safe_halt();
+	if (irqs_disabled()) {
+		if (READ_ONCE(*ptr) == val)
+			halt();
+	} else {
+		local_irq_disable();
 
-out:
-	local_irq_restore(flags);
+		if (READ_ONCE(*ptr) == val)
+			safe_halt();
+
+		local_irq_enable();
+	}
 }
 
 #ifdef CONFIG_X86_32
@@ -952,7 +975,7 @@ void arch_haltpoll_disable(unsigned int cpu)
 	if (!kvm_para_has_feature(KVM_FEATURE_POLL_CONTROL))
 		return;
 
-	/* Enable guest halt poll disables host halt poll */
+	/* Disable guest halt poll enables host halt poll */
 	smp_call_function_single(cpu, kvm_enable_host_haltpoll, NULL, 1);
 }
 EXPORT_SYMBOL_GPL(arch_haltpoll_disable);

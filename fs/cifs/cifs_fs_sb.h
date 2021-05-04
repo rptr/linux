@@ -61,19 +61,9 @@ struct cifs_sb_info {
 	spinlock_t tlink_tree_lock;
 	struct tcon_link *master_tlink;
 	struct nls_table *local_nls;
-	unsigned int bsize;
-	unsigned int rsize;
-	unsigned int wsize;
-	unsigned long actimeo; /* attribute cache timeout (jiffies) */
+	struct smb3_fs_context *ctx;
 	atomic_t active;
-	kuid_t	mnt_uid;
-	kgid_t	mnt_gid;
-	kuid_t	mnt_backupuid;
-	kgid_t	mnt_backupgid;
-	umode_t	mnt_file_mode;
-	umode_t	mnt_dir_mode;
 	unsigned int mnt_cifs_flags;
-	char   *mountdata; /* options received at mount time or via DFS refs */
 	struct delayed_work prune_tlinks;
 	struct rcu_head rcu;
 
@@ -91,5 +81,9 @@ struct cifs_sb_info {
 	 * (cifs_autodisable_serverino) in order to match new mounts.
 	 */
 	bool mnt_cifs_serverino_autodisabled;
+	/*
+	 * Available once the mount has completed.
+	 */
+	struct dentry *root;
 };
 #endif				/* _CIFS_FS_SB_H */

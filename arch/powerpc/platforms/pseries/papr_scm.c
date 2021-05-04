@@ -93,6 +93,7 @@ struct papr_scm_priv {
 	uint64_t block_size;
 	int metadata_size;
 	bool is_volatile;
+	bool hcall_flush_required;
 
 	uint64_t bound_addr;
 
@@ -116,6 +117,38 @@ struct papr_scm_priv {
 	/* length of the stat buffer as expected by phyp */
 	size_t stat_buffer_len;
 };
+
+static int papr_scm_pmem_flush(struct nd_region *nd_region,
+			       struct bio *bio __maybe_unused)
+{
+	struct papr_scm_priv *p = nd_region_provider_data(nd_region);
+	unsigned long ret_buf[PLPAR_HCALL_BUFSIZE], token = 0;
+	long rc;
+
+	dev_dbg(&p->pdev->dev, "flush drc 0x%x", p->drc_index);
+
+	do {
+		rc = plpar_hcall(H_SCM_FLUSH, ret_buf, p->drc_index, token);
+		token = ret_buf[0];
+
+		/* Check if we are stalled for some time */
+		if (H_IS_LONG_BUSY(rc)) {
+			msleep(get_longbusy_msecs(rc));
+			rc = H_BUSY;
+		} else if (rc == H_BUSY) {
+			cond_resched();
+		}
+	} while (rc == H_BUSY);
+
+	if (rc) {
+		dev_err(&p->pdev->dev, "flush error: %ld", rc);
+		rc = -EIO;
+	} else {
+		dev_dbg(&p->pdev->dev, "flush drc 0x%x complete", p->drc_index);
+	}
+
+	return rc;
+}
 
 static LIST_HEAD(papr_nd_regions);
 static DEFINE_MUTEX(papr_ndr_lock);
@@ -785,7 +818,8 @@ static int papr_scm_ndctl(struct nvdimm_bus_descriptor *nd_desc,
 static ssize_t perf_stats_show(struct device *dev,
 			       struct device_attribute *attr, char *buf)
 {
-	int index, rc;
+	int index;
+	ssize_t rc;
 	struct seq_buf s;
 	struct papr_scm_perf_stat *stat;
 	struct papr_scm_perf_stats *stats;
@@ -820,9 +854,9 @@ static ssize_t perf_stats_show(struct device *dev,
 
 free_stats:
 	kfree(stats);
-	return rc ? rc : seq_buf_used(&s);
+	return rc ? rc : (ssize_t)seq_buf_used(&s);
 }
-DEVICE_ATTR_ADMIN_RO(perf_stats);
+static DEVICE_ATTR_ADMIN_RO(perf_stats);
 
 static ssize_t flags_show(struct device *dev,
 			  struct device_attribute *attr, char *buf)
@@ -897,6 +931,9 @@ static int papr_scm_nvdimm_init(struct papr_scm_priv *p)
 	p->bus_desc.of_node = p->pdev->dev.of_node;
 	p->bus_desc.provider_name = kstrdup(p->pdev->name, GFP_KERNEL);
 
+	/* Set the dimm command family mask to accept PDSMs */
+	set_bit(NVDIMM_FAMILY_PAPR, &p->bus_desc.dimm_family_mask);
+
 	if (!p->bus_desc.provider_name)
 		return -ENOMEM;
 
@@ -938,6 +975,11 @@ static int papr_scm_nvdimm_init(struct papr_scm_priv *p)
 	ndr_desc.mapping = &mapping;
 	ndr_desc.num_mappings = 1;
 	ndr_desc.nd_set = &p->nd_set;
+
+	if (p->hcall_flush_required) {
+		set_bit(ND_REGION_ASYNC, &ndr_desc.flags);
+		ndr_desc.flush = papr_scm_pmem_flush;
+	}
 
 	if (p->is_volatile)
 		p->region = nvdimm_volatile_region_create(p->bus, &ndr_desc);
@@ -1084,6 +1126,7 @@ static int papr_scm_probe(struct platform_device *pdev)
 	p->block_size = block_size;
 	p->blocks = blocks;
 	p->is_volatile = !of_property_read_bool(dn, "ibm,cache-flush-required");
+	p->hcall_flush_required = of_property_read_bool(dn, "ibm,hcall-flush-required");
 
 	/* We just need to ensure that set cookies are unique across */
 	uuid_parse(uuid_str, (uuid_t *) uuid);

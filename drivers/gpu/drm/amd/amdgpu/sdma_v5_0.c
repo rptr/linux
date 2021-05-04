@@ -32,7 +32,6 @@
 
 #include "gc/gc_10_1_0_offset.h"
 #include "gc/gc_10_1_0_sh_mask.h"
-#include "hdp/hdp_5_0_0_offset.h"
 #include "ivsrcid/sdma0/irqsrcs_sdma0_5_0.h"
 #include "ivsrcid/sdma1/irqsrcs_sdma1_5_0.h"
 
@@ -202,6 +201,9 @@ static int sdma_v5_0_init_microcode(struct amdgpu_device *adev)
 	struct amdgpu_firmware_info *info = NULL;
 	const struct common_firmware_header *header = NULL;
 	const struct sdma_firmware_header_v1_0 *hdr;
+
+	if (amdgpu_sriov_vf(adev) && (adev->asic_type == CHIP_NAVI12))
+		return 0;
 
 	DRM_DEBUG("\n");
 
@@ -389,7 +391,9 @@ static void sdma_v5_0_ring_insert_nop(struct amdgpu_ring *ring, uint32_t count)
  * sdma_v5_0_ring_emit_ib - Schedule an IB on the DMA engine
  *
  * @ring: amdgpu ring pointer
+ * @job: job to retrieve vmid from
  * @ib: IB object to schedule
+ * @flags: unused
  *
  * Schedule an IB in the DMA ring (NAVI10).
  */
@@ -434,6 +438,33 @@ static void sdma_v5_0_ring_emit_ib(struct amdgpu_ring *ring,
 }
 
 /**
+ * sdma_v5_0_ring_emit_mem_sync - flush the IB by graphics cache rinse
+ *
+ * @ring: amdgpu ring pointer
+ * @job: job to retrieve vmid from
+ * @ib: IB object to schedule
+ *
+ * flush the IB by graphics cache rinse.
+ */
+static void sdma_v5_0_ring_emit_mem_sync(struct amdgpu_ring *ring)
+{
+    uint32_t gcr_cntl =
+		    SDMA_GCR_GL2_INV | SDMA_GCR_GL2_WB | SDMA_GCR_GLM_INV |
+			SDMA_GCR_GL1_INV | SDMA_GCR_GLV_INV | SDMA_GCR_GLK_INV |
+			SDMA_GCR_GLI_INV(1);
+
+	/* flush entire cache L0/L1/L2, this can be optimized by performance requirement */
+	amdgpu_ring_write(ring, SDMA_PKT_HEADER_OP(SDMA_OP_GCR_REQ));
+	amdgpu_ring_write(ring, SDMA_PKT_GCR_REQ_PAYLOAD1_BASE_VA_31_7(0));
+	amdgpu_ring_write(ring, SDMA_PKT_GCR_REQ_PAYLOAD2_GCR_CONTROL_15_0(gcr_cntl) |
+			SDMA_PKT_GCR_REQ_PAYLOAD2_BASE_VA_47_32(0));
+	amdgpu_ring_write(ring, SDMA_PKT_GCR_REQ_PAYLOAD3_LIMIT_VA_31_7(0) |
+			SDMA_PKT_GCR_REQ_PAYLOAD3_GCR_CONTROL_18_16(gcr_cntl >> 16));
+	amdgpu_ring_write(ring, SDMA_PKT_GCR_REQ_PAYLOAD4_LIMIT_VA_47_32(0) |
+			SDMA_PKT_GCR_REQ_PAYLOAD4_VMID(0));
+}
+
+/**
  * sdma_v5_0_ring_emit_hdp_flush - emit an hdp flush on the DMA ring
  *
  * @ring: amdgpu ring pointer
@@ -466,7 +497,9 @@ static void sdma_v5_0_ring_emit_hdp_flush(struct amdgpu_ring *ring)
  * sdma_v5_0_ring_emit_fence - emit a fence on the DMA ring
  *
  * @ring: amdgpu ring pointer
- * @fence: amdgpu fence object
+ * @addr: address
+ * @seq: sequence number
+ * @flags: fence related flags
  *
  * Add a DMA fence packet to the ring to write
  * the fence seq number and DMA trap packet to generate
@@ -616,7 +649,7 @@ static void sdma_v5_0_enable(struct amdgpu_device *adev, bool enable)
 	u32 f32_cntl;
 	int i;
 
-	if (enable == false) {
+	if (!enable) {
 		sdma_v5_0_gfx_stop(adev);
 		sdma_v5_0_rlc_stop(adev);
 	}
@@ -956,6 +989,7 @@ static int sdma_v5_0_ring_test_ring(struct amdgpu_ring *ring)
  * sdma_v5_0_ring_test_ib - test an IB on the DMA engine
  *
  * @ring: amdgpu_ring structure holding ring information
+ * @timeout: timeout value in jiffies, or MAX_SCHEDULE_TIMEOUT
  *
  * Test a simple IB in the DMA ring (NAVI10).
  * Returns 0 on success, error on failure.
@@ -1058,10 +1092,9 @@ static void sdma_v5_0_vm_copy_pte(struct amdgpu_ib *ib,
  *
  * @ib: indirect buffer to fill with commands
  * @pe: addr of the page entry
- * @addr: dst addr to write into pe
+ * @value: dst addr to write into pe
  * @count: number of page entries to update
  * @incr: increase next addr by incr bytes
- * @flags: access flags
  *
  * Update PTEs by writing them manually using sDMA (NAVI10).
  */
@@ -1115,6 +1148,7 @@ static void sdma_v5_0_vm_set_pte_pde(struct amdgpu_ib *ib,
 
 /**
  * sdma_v5_0_ring_pad_ib - pad the IB
+ * @ring: amdgpu_ring structure holding ring information
  * @ib: indirect buffer to fill with padding
  *
  * Pad the IB with NOPs to a boundary multiple of 8.
@@ -1167,7 +1201,8 @@ static void sdma_v5_0_ring_emit_pipeline_sync(struct amdgpu_ring *ring)
  * sdma_v5_0_ring_emit_vm_flush - vm flush using sDMA
  *
  * @ring: amdgpu_ring pointer
- * @vm: amdgpu_vm pointer
+ * @vmid: vmid number to use
+ * @pd_addr: address
  *
  * Update the page table base and flush the VM TLB
  * using sDMA (NAVI10).
@@ -1265,12 +1300,10 @@ static int sdma_v5_0_sw_init(void *handle)
 			: (adev->doorbell_index.sdma_engine[1] << 1); // get DWORD offset
 
 		sprintf(ring->name, "sdma%d", i);
-		r = amdgpu_ring_init(adev, ring, 1024,
-				     &adev->sdma.trap_irq,
-				     (i == 0) ?
-				     AMDGPU_SDMA_IRQ_INSTANCE0 :
+		r = amdgpu_ring_init(adev, ring, 1024, &adev->sdma.trap_irq,
+				     (i == 0) ? AMDGPU_SDMA_IRQ_INSTANCE0 :
 				     AMDGPU_SDMA_IRQ_INSTANCE1,
-				     AMDGPU_RING_PRIO_DEFAULT);
+				     AMDGPU_RING_PRIO_DEFAULT, NULL);
 		if (r)
 			return r;
 	}
@@ -1637,6 +1670,7 @@ static const struct amdgpu_ring_funcs sdma_v5_0_ring_funcs = {
 		10 + 10 + 10, /* sdma_v5_0_ring_emit_fence x3 for user fence, vm fence */
 	.emit_ib_size = 5 + 7 + 6, /* sdma_v5_0_ring_emit_ib */
 	.emit_ib = sdma_v5_0_ring_emit_ib,
+	.emit_mem_sync = sdma_v5_0_ring_emit_mem_sync,
 	.emit_fence = sdma_v5_0_ring_emit_fence,
 	.emit_pipeline_sync = sdma_v5_0_ring_emit_pipeline_sync,
 	.emit_vm_flush = sdma_v5_0_ring_emit_vm_flush,
@@ -1683,10 +1717,11 @@ static void sdma_v5_0_set_irq_funcs(struct amdgpu_device *adev)
 /**
  * sdma_v5_0_emit_copy_buffer - copy buffer using the sDMA engine
  *
- * @ring: amdgpu_ring structure holding ring information
+ * @ib: indirect buffer to copy to
  * @src_offset: src GPU address
  * @dst_offset: dst GPU address
  * @byte_count: number of bytes to xfer
+ * @tmz: if a secure copy should be used
  *
  * Copy GPU buffers using the DMA engine (NAVI10).
  * Used by the amdgpu ttm implementation to move pages if
@@ -1712,7 +1747,7 @@ static void sdma_v5_0_emit_copy_buffer(struct amdgpu_ib *ib,
 /**
  * sdma_v5_0_emit_fill_buffer - fill buffer using the sDMA engine
  *
- * @ring: amdgpu_ring structure holding ring information
+ * @ib: indirect buffer to fill
  * @src_data: value to write to buffer
  * @dst_offset: dst GPU address
  * @byte_count: number of bytes to xfer

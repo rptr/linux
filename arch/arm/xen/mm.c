@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 #include <linux/cpu.h>
 #include <linux/dma-direct.h>
-#include <linux/dma-noncoherent.h>
+#include <linux/dma-map-ops.h>
 #include <linux/gfp.h>
 #include <linux/highmem.h>
 #include <linux/export.h>
@@ -25,11 +25,12 @@
 
 unsigned long xen_get_swiotlb_free_pages(unsigned int order)
 {
-	struct memblock_region *reg;
+	phys_addr_t base;
 	gfp_t flags = __GFP_NOWARN|__GFP_KSWAPD_RECLAIM;
+	u64 i;
 
-	for_each_memblock(memory, reg) {
-		if (reg->base < (phys_addr_t)0xffffffff) {
+	for_each_mem_range(i, &base, NULL) {
+		if (base < (phys_addr_t)0xffffffff) {
 			if (IS_ENABLED(CONFIG_ZONE_DMA32))
 				flags |= __GFP_DMA32;
 			else
@@ -134,12 +135,24 @@ void xen_destroy_contiguous_region(phys_addr_t pstart, unsigned int order)
 	return;
 }
 
+int xen_swiotlb_detect(void)
+{
+	if (!xen_domain())
+		return 0;
+	if (xen_feature(XENFEAT_direct_mapped))
+		return 1;
+	/* legacy case */
+	if (!xen_feature(XENFEAT_not_direct_mapped) && xen_initial_domain())
+		return 1;
+	return 0;
+}
+
 static int __init xen_mm_init(void)
 {
 	struct gnttab_cache_flush cflush;
-	if (!xen_initial_domain())
+	if (!xen_swiotlb_detect())
 		return 0;
-	xen_swiotlb_init(1, false);
+	xen_swiotlb_init();
 
 	cflush.op = 0;
 	cflush.a.dev_bus_addr = 0;

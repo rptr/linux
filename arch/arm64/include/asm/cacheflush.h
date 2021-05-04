@@ -30,11 +30,6 @@
  *	the implementation assumes non-aliasing VIPT D-cache and (aliasing)
  *	VIPT I-cache.
  *
- *	flush_cache_mm(mm)
- *
- *		Clean and invalidate all user space cache entries
- *		before a change of page tables.
- *
  *	flush_icache_range(start, end)
  *
  *		Ensure coherency between the I-cache and the D-cache in the
@@ -135,11 +130,6 @@ static __always_inline void __flush_icache_all(void)
 	asm("ic	ialluis");
 	dsb(ish);
 }
-
-int set_memory_valid(unsigned long addr, int numpages, int enable);
-
-int set_direct_map_invalid_noflush(struct page *page);
-int set_direct_map_default_noflush(struct page *page);
 
 #include <asm-generic/cacheflush.h>
 

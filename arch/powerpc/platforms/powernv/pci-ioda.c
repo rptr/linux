@@ -894,7 +894,6 @@ int pnv_ioda_deconfigure_pe(struct pnv_phb *phb, struct pnv_ioda_pe *pe)
 
 int pnv_ioda_configure_pe(struct pnv_phb *phb, struct pnv_ioda_pe *pe)
 {
-	struct pci_dev *parent;
 	uint8_t bcomp, dcomp, fcomp;
 	long rc, rid_end, rid;
 
@@ -904,7 +903,6 @@ int pnv_ioda_configure_pe(struct pnv_phb *phb, struct pnv_ioda_pe *pe)
 
 		dcomp = OPAL_IGNORE_RID_DEVICE_NUMBER;
 		fcomp = OPAL_IGNORE_RID_FUNCTION_NUMBER;
-		parent = pe->pbus->self;
 		if (pe->flags & PNV_IODA_PE_BUS_ALL)
 			count = resource_size(&pe->pbus->busn_res);
 		else
@@ -925,12 +923,6 @@ int pnv_ioda_configure_pe(struct pnv_phb *phb, struct pnv_ioda_pe *pe)
 		}
 		rid_end = pe->rid + (count << 8);
 	} else {
-#ifdef CONFIG_PCI_IOV
-		if (pe->flags & PNV_IODA_PE_VF)
-			parent = pe->parent_dev;
-		else
-#endif /* CONFIG_PCI_IOV */
-			parent = pe->pdev->bus->self;
 		bcomp = OpalPciBusAll;
 		dcomp = OPAL_COMPARE_RID_DEVICE_NUMBER;
 		fcomp = OPAL_COMPARE_RID_FUNCTION_NUMBER;
@@ -1770,7 +1762,8 @@ found:
 	tbl->it_ops = &pnv_ioda1_iommu_ops;
 	pe->table_group.tce32_start = tbl->it_offset << tbl->it_page_shift;
 	pe->table_group.tce32_size = tbl->it_size << tbl->it_page_shift;
-	iommu_init_table(tbl, phb->hose->node, 0, 0);
+	if (!iommu_init_table(tbl, phb->hose->node, 0, 0))
+		panic("Failed to initialize iommu table");
 
 	pe->dma_setup_done = true;
 	return;
@@ -1938,16 +1931,16 @@ static long pnv_pci_ioda2_setup_default_config(struct pnv_ioda_pe *pe)
 		res_start = pe->phb->ioda.m32_pci_base >> tbl->it_page_shift;
 		res_end = min(window_size, SZ_4G) >> tbl->it_page_shift;
 	}
-	iommu_init_table(tbl, pe->phb->hose->node, res_start, res_end);
 
-	rc = pnv_pci_ioda2_set_window(&pe->table_group, 0, tbl);
+	if (iommu_init_table(tbl, pe->phb->hose->node, res_start, res_end))
+		rc = pnv_pci_ioda2_set_window(&pe->table_group, 0, tbl);
+	else
+		rc = -ENOMEM;
 	if (rc) {
-		pe_err(pe, "Failed to configure 32-bit TCE table, err %ld\n",
-				rc);
+		pe_err(pe, "Failed to configure 32-bit TCE table, err %ld\n", rc);
 		iommu_tce_table_put(tbl);
-		return rc;
+		tbl = NULL; /* This clears iommu_table_base below */
 	}
-
 	if (!pnv_iommu_bypass_disabled)
 		pnv_pci_ioda2_set_bypass(pe, true);
 
@@ -2410,9 +2403,6 @@ static void pnv_pci_ioda_create_dbgfs(void)
 	list_for_each_entry_safe(hose, tmp, &hose_list, list_node) {
 		phb = hose->private_data;
 
-		/* Notify initialization of PHB done */
-		phb->initialized = 1;
-
 		sprintf(name, "PCI%04x", hose->global_number);
 		phb->dbgfs = debugfs_create_dir(name, powerpc_debugfs_root);
 
@@ -2609,33 +2599,21 @@ static resource_size_t pnv_pci_default_alignment(void)
  */
 static bool pnv_pci_enable_device_hook(struct pci_dev *dev)
 {
-	struct pnv_phb *phb = pci_bus_to_pnvhb(dev->bus);
 	struct pci_dn *pdn;
 
-	/* The function is probably called while the PEs have
-	 * not be created yet. For example, resource reassignment
-	 * during PCI probe period. We just skip the check if
-	 * PEs isn't ready.
-	 */
-	if (!phb->initialized)
-		return true;
-
 	pdn = pci_get_pdn(dev);
-	if (!pdn || pdn->pe_number == IODA_INVALID_PE)
+	if (!pdn || pdn->pe_number == IODA_INVALID_PE) {
+		pci_err(dev, "pci_enable_device() blocked, no PE assigned.\n");
 		return false;
+	}
 
 	return true;
 }
 
 static bool pnv_ocapi_enable_device_hook(struct pci_dev *dev)
 {
-	struct pci_controller *hose = pci_bus_to_host(dev->bus);
-	struct pnv_phb *phb = hose->private_data;
 	struct pci_dn *pdn;
 	struct pnv_ioda_pe *pe;
-
-	if (!phb->initialized)
-		return true;
 
 	pdn = pci_get_pdn(dev);
 	if (!pdn)
@@ -2944,7 +2922,7 @@ static void __init pnv_pci_init_ioda_phb(struct device_node *np,
 	phb_id = be64_to_cpup(prop64);
 	pr_debug("  PHB-ID  : 0x%016llx\n", phb_id);
 
-	phb = memblock_alloc(sizeof(*phb), SMP_CACHE_BYTES);
+	phb = kzalloc(sizeof(*phb), GFP_KERNEL);
 	if (!phb)
 		panic("%s: Failed to allocate %zu bytes\n", __func__,
 		      sizeof(*phb));
@@ -2993,7 +2971,7 @@ static void __init pnv_pci_init_ioda_phb(struct device_node *np,
 	else
 		phb->diag_data_size = PNV_PCI_DIAG_BUF_SIZE;
 
-	phb->diag_data = memblock_alloc(phb->diag_data_size, SMP_CACHE_BYTES);
+	phb->diag_data = kzalloc(phb->diag_data_size, GFP_KERNEL);
 	if (!phb->diag_data)
 		panic("%s: Failed to allocate %u bytes\n", __func__,
 		      phb->diag_data_size);
@@ -3055,9 +3033,10 @@ static void __init pnv_pci_init_ioda_phb(struct device_node *np,
 	}
 	pemap_off = size;
 	size += phb->ioda.total_pe_num * sizeof(struct pnv_ioda_pe);
-	aux = memblock_alloc(size, SMP_CACHE_BYTES);
+	aux = kzalloc(size, GFP_KERNEL);
 	if (!aux)
 		panic("%s: Failed to allocate %lu bytes\n", __func__, size);
+
 	phb->ioda.pe_alloc = aux;
 	phb->ioda.m64_segmap = aux + m64map_off;
 	phb->ioda.m32_segmap = aux + m32map_off;
@@ -3184,6 +3163,9 @@ static void __init pnv_pci_init_ioda_phb(struct device_node *np,
 	/* Remove M64 resource if we can't configure it successfully */
 	if (!phb->init_m64 || phb->init_m64(phb))
 		hose->mem_resources[1].flags = 0;
+
+	/* create pci_dn's for DT nodes under this PHB */
+	pci_devs_phb_init_dynamic(hose);
 }
 
 void __init pnv_pci_init_ioda2_phb(struct device_node *np)

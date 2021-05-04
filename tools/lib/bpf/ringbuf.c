@@ -16,14 +16,10 @@
 #include <asm/barrier.h>
 #include <sys/mman.h>
 #include <sys/epoll.h>
-#include <tools/libc_compat.h>
 
 #include "libbpf.h"
 #include "libbpf_internal.h"
 #include "bpf.h"
-
-/* make sure libbpf doesn't use kernel-only integer typedefs */
-#pragma GCC poison u8 u16 u32 u64 s8 s16 s32 s64
 
 struct ring {
 	ring_buffer_sample_fn sample_cb;
@@ -82,12 +78,12 @@ int ring_buffer__add(struct ring_buffer *rb, int map_fd,
 		return -EINVAL;
 	}
 
-	tmp = reallocarray(rb->rings, rb->ring_cnt + 1, sizeof(*rb->rings));
+	tmp = libbpf_reallocarray(rb->rings, rb->ring_cnt + 1, sizeof(*rb->rings));
 	if (!tmp)
 		return -ENOMEM;
 	rb->rings = tmp;
 
-	tmp = reallocarray(rb->events, rb->ring_cnt + 1, sizeof(*rb->events));
+	tmp = libbpf_reallocarray(rb->events, rb->ring_cnt + 1, sizeof(*rb->events));
 	if (!tmp)
 		return -ENOMEM;
 	rb->events = tmp;
@@ -231,7 +227,7 @@ static int ringbuf_process_ring(struct ring* r)
 			if ((len & BPF_RINGBUF_DISCARD_BIT) == 0) {
 				sample = (void *)len_ptr + BPF_RINGBUF_HDR_SZ;
 				err = r->sample_cb(r->ctx, sample, len);
-				if (err) {
+				if (err < 0) {
 					/* update consumer pos and bail out */
 					smp_store_release(r->consumer_pos,
 							  cons_pos);
@@ -282,7 +278,13 @@ int ring_buffer__poll(struct ring_buffer *rb, int timeout_ms)
 		err = ringbuf_process_ring(ring);
 		if (err < 0)
 			return err;
-		res += cnt;
+		res += err;
 	}
 	return cnt < 0 ? -errno : res;
+}
+
+/* Get an fd that can be used to sleep until data is available in the ring(s) */
+int ring_buffer__epoll_fd(const struct ring_buffer *rb)
+{
+	return rb->epoll_fd;
 }

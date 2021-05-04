@@ -321,7 +321,7 @@ static void kfd_init_apertures_vi(struct kfd_process_device *pdd, uint8_t id)
 	pdd->lds_base = MAKE_LDS_APP_BASE_VI();
 	pdd->lds_limit = MAKE_LDS_APP_LIMIT(pdd->lds_base);
 
-	if (!pdd->dev->device_info->needs_iommu_device) {
+	if (!pdd->dev->use_iommu_v2) {
 		/* dGPUs: SVM aperture starting at 0
 		 * with small reserved space for kernel.
 		 * Set them to CANONICAL addresses.
@@ -405,6 +405,10 @@ int kfd_init_apertures(struct kfd_process *process)
 			case CHIP_POLARIS12:
 			case CHIP_VEGAM:
 				kfd_init_apertures_vi(pdd, id);
+				/* VI GPUs cannot support SVM with only
+				 * 40 bits of virtual address space.
+				 */
+				process->svm_disabled = true;
 				break;
 			case CHIP_VEGA10:
 			case CHIP_VEGA12:
@@ -412,11 +416,14 @@ int kfd_init_apertures(struct kfd_process *process)
 			case CHIP_RAVEN:
 			case CHIP_RENOIR:
 			case CHIP_ARCTURUS:
+			case CHIP_ALDEBARAN:
 			case CHIP_NAVI10:
 			case CHIP_NAVI12:
 			case CHIP_NAVI14:
 			case CHIP_SIENNA_CICHLID:
 			case CHIP_NAVY_FLOUNDER:
+			case CHIP_VANGOGH:
+			case CHIP_DIMGREY_CAVEFISH:
 				kfd_init_apertures_v9(pdd, id);
 				break;
 			default:
@@ -425,7 +432,7 @@ int kfd_init_apertures(struct kfd_process *process)
 				return -EINVAL;
 			}
 
-			if (!dev->device_info->needs_iommu_device) {
+			if (!dev->use_iommu_v2) {
 				/* dGPUs: the reserved space for kernel
 				 * before SVM
 				 */

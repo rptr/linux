@@ -244,7 +244,7 @@ enum slim_ch_data_fmt {
 };
 
 /**
- * enum slim_ch_aux_fmt: SLIMbus channel Aux Field format IDs according to
+ * enum slim_ch_aux_bit_fmt: SLIMbus channel Aux Field format IDs according to
  *	Table 63 of SLIMbus Spec 2.0
  * @SLIM_CH_AUX_FMT_NOT_APPLICABLE: Undefined
  * @SLIM_CH_AUX_FMT_ZCUV_TUNNEL_IEC60958: ZCUV for tunneling IEC60958
@@ -368,7 +368,7 @@ struct slim_stream_runtime {
  * @get_laddr: It is possible that controller needs to set fixed logical
  *	address table and get_laddr can be used in that case so that controller
  *	can do this assignment. Use case is when the master is on the remote
- *	processor side, who is resposible for allocating laddr.
+ *	processor side, who is responsible for allocating laddr.
  * @wakeup: This function pointer implements controller-specific procedure
  *	to wake it up from clock-pause. Framework will call this to bring
  *	the controller out of clock pause.

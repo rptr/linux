@@ -3,9 +3,18 @@
 #define ARCH_X86_KVM_X86_H
 
 #include <linux/kvm_host.h>
+#include <asm/mce.h>
 #include <asm/pvclock.h>
 #include "kvm_cache_regs.h"
 #include "kvm_emulate.h"
+
+#define KVM_NESTED_VMENTER_CONSISTENCY_CHECK(consistency_check)		\
+({									\
+	bool failed = (consistency_check);				\
+	if (failed)							\
+		trace_kvm_nested_vmenter_failed(#consistency_check, 0);	\
+	failed;								\
+})
 
 #define KVM_DEFAULT_PLE_GAP		128
 #define KVM_VMX_DEFAULT_PLE_WINDOW	4096
@@ -46,6 +55,8 @@ static inline unsigned int __shrink_ple_window(unsigned int val,
 }
 
 #define MSR_IA32_CR_PAT_DEFAULT  0x0007040600070406ULL
+
+int kvm_check_nested_events(struct kvm_vcpu *vcpu);
 
 static inline void kvm_clear_exception_queue(struct kvm_vcpu *vcpu)
 {
@@ -97,7 +108,7 @@ static inline bool is_64_bit_mode(struct kvm_vcpu *vcpu)
 
 	if (!is_long_mode(vcpu))
 		return false;
-	kvm_x86_ops.get_cs_db_l_bits(vcpu, &cs_db, &cs_l);
+	static_call(kvm_x86_get_cs_db_l_bits)(vcpu, &cs_db, &cs_l);
 	return cs_l;
 }
 
@@ -128,7 +139,7 @@ static inline bool mmu_is_nested(struct kvm_vcpu *vcpu)
 static inline void kvm_vcpu_flush_tlb_current(struct kvm_vcpu *vcpu)
 {
 	++vcpu->stat.tlb_flush;
-	kvm_x86_ops.tlb_flush_current(vcpu);
+	static_call(kvm_x86_tlb_flush_current)(vcpu);
 }
 
 static inline int is_pae(struct kvm_vcpu *vcpu)
@@ -221,19 +232,19 @@ static inline bool vcpu_match_mmio_gpa(struct kvm_vcpu *vcpu, gpa_t gpa)
 	return false;
 }
 
-static inline unsigned long kvm_register_readl(struct kvm_vcpu *vcpu, int reg)
+static inline unsigned long kvm_register_read(struct kvm_vcpu *vcpu, int reg)
 {
-	unsigned long val = kvm_register_read(vcpu, reg);
+	unsigned long val = kvm_register_read_raw(vcpu, reg);
 
 	return is_64_bit_mode(vcpu) ? val : (u32)val;
 }
 
-static inline void kvm_register_writel(struct kvm_vcpu *vcpu,
+static inline void kvm_register_write(struct kvm_vcpu *vcpu,
 				       int reg, unsigned long val)
 {
 	if (!is_64_bit_mode(vcpu))
 		val = (u32)val;
-	return kvm_register_write(vcpu, reg, val);
+	return kvm_register_write_raw(vcpu, reg, val);
 }
 
 static inline bool kvm_check_has_quirk(struct kvm *kvm, u64 quirk)
@@ -243,13 +254,12 @@ static inline bool kvm_check_has_quirk(struct kvm *kvm, u64 quirk)
 
 static inline bool kvm_vcpu_latch_init(struct kvm_vcpu *vcpu)
 {
-	return is_smm(vcpu) || kvm_x86_ops.apic_init_signal_blocked(vcpu);
+	return is_smm(vcpu) || static_call(kvm_x86_apic_init_signal_blocked)(vcpu);
 }
 
-void kvm_set_pending_timer(struct kvm_vcpu *vcpu);
+void kvm_write_wall_clock(struct kvm *kvm, gpa_t wall_clock, int sec_hi_ofs);
 void kvm_inject_realmode_interrupt(struct kvm_vcpu *vcpu, int irq, int inc_eip);
 
-void kvm_write_tsc(struct kvm_vcpu *vcpu, struct msr_data *msr);
 u64 get_kvmclock_ns(struct kvm *kvm);
 
 int kvm_read_guest_virt(struct kvm_vcpu *vcpu,
@@ -273,12 +283,15 @@ bool kvm_mtrr_check_gfn_range_consistency(struct kvm_vcpu *vcpu, gfn_t gfn,
 					  int page_num);
 bool kvm_vector_hashing_enabled(void);
 void kvm_fixup_and_inject_pf_error(struct kvm_vcpu *vcpu, gva_t gva, u16 error_code);
+int x86_decode_emulated_instruction(struct kvm_vcpu *vcpu, int emulation_type,
+				    void *insn, int insn_len);
 int x86_emulate_instruction(struct kvm_vcpu *vcpu, gpa_t cr2_or_gpa,
 			    int emulation_type, void *insn, int insn_len);
 fastpath_t handle_fastpath_set_msr_irqoff(struct kvm_vcpu *vcpu);
 
 extern u64 host_xcr0;
 extern u64 supported_xcr0;
+extern u64 host_xss;
 extern u64 supported_xss;
 
 static inline bool kvm_mpx_supported(void)
@@ -294,6 +307,8 @@ extern bool enable_vmware_backdoor;
 extern int pi_inject_timer;
 
 extern struct static_key kvm_no_apic_vcpu;
+
+extern bool report_ignored_msrs;
 
 static inline u64 nsec_to_cycles(struct kvm_vcpu *vcpu, u64 nsec)
 {
@@ -367,13 +382,41 @@ static inline bool kvm_dr6_valid(u64 data)
 	return !(data >> 32);
 }
 
+/*
+ * Trigger machine check on the host. We assume all the MSRs are already set up
+ * by the CPU and that we still run on the same CPU as the MCE occurred on.
+ * We pass a fake environment to the machine check handler because we want
+ * the guest to be always treated like user space, no matter what context
+ * it used internally.
+ */
+static inline void kvm_machine_check(void)
+{
+#if defined(CONFIG_X86_MCE)
+	struct pt_regs regs = {
+		.cs = 3, /* Fake ring 3 no matter what the guest ran on */
+		.flags = X86_EFLAGS_IF,
+	};
+
+	do_machine_check(&regs);
+#endif
+}
+
 void kvm_load_guest_xsave_state(struct kvm_vcpu *vcpu);
 void kvm_load_host_xsave_state(struct kvm_vcpu *vcpu);
 int kvm_spec_ctrl_test_value(u64 value);
-int kvm_valid_cr4(struct kvm_vcpu *vcpu, unsigned long cr4);
-bool kvm_vcpu_exit_request(struct kvm_vcpu *vcpu);
+bool kvm_is_valid_cr4(struct kvm_vcpu *vcpu, unsigned long cr4);
+int kvm_handle_memory_failure(struct kvm_vcpu *vcpu, int r,
+			      struct x86_exception *e);
+int kvm_handle_invpcid(struct kvm_vcpu *vcpu, unsigned long type, gva_t gva);
+bool kvm_msr_allowed(struct kvm_vcpu *vcpu, u32 index, u32 type);
 
-#define  KVM_MSR_RET_INVALID  2
+/*
+ * Internal error codes that are used to indicate that MSR emulation encountered
+ * an error that should result in #GP in the guest, unless userspace
+ * handles it.
+ */
+#define  KVM_MSR_RET_INVALID	2	/* in-kernel MSR emulation #GP condition */
+#define  KVM_MSR_RET_FILTERED	3	/* #GP due to userspace MSR filter */
 
 #define __cr4_reserved_bits(__cpu_has, __c)             \
 ({                                                      \
@@ -395,7 +438,17 @@ bool kvm_vcpu_exit_request(struct kvm_vcpu *vcpu);
 		__reserved_bits |= X86_CR4_UMIP;        \
 	if (!__cpu_has(__c, X86_FEATURE_VMX))           \
 		__reserved_bits |= X86_CR4_VMXE;        \
+	if (!__cpu_has(__c, X86_FEATURE_PCID))          \
+		__reserved_bits |= X86_CR4_PCIDE;       \
 	__reserved_bits;                                \
 })
+
+int kvm_sev_es_mmio_write(struct kvm_vcpu *vcpu, gpa_t src, unsigned int bytes,
+			  void *dst);
+int kvm_sev_es_mmio_read(struct kvm_vcpu *vcpu, gpa_t src, unsigned int bytes,
+			 void *dst);
+int kvm_sev_es_string_io(struct kvm_vcpu *vcpu, unsigned int size,
+			 unsigned int port, void *data,  unsigned int count,
+			 int in);
 
 #endif

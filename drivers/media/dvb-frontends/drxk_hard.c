@@ -1011,8 +1011,7 @@ static int hi_command(struct drxk_state *state, u16 cmd, u16 *p_result)
 			retry_count += 1;
 			status = read16(state, SIO_HI_RA_RAM_CMD__A,
 					  &wait_cmd);
-		} while ((status < 0) && (retry_count < DRXK_MAX_RETRIES)
-			 && (wait_cmd != 0));
+		} while ((status < 0 || wait_cmd) && (retry_count < DRXK_MAX_RETRIES));
 		if (status < 0)
 			goto error;
 		status = read16(state, SIO_HI_RA_RAM_RES__A, p_result);
@@ -3295,6 +3294,7 @@ static int dvbt_sc_command(struct drxk_state *state,
 	case OFDM_SC_RA_RAM_CMD_USER_IO:
 	case OFDM_SC_RA_RAM_CMD_GET_OP_PARAM:
 		status = read16(state, OFDM_SC_RA_RAM_PARAM0__A, &(param0));
+		break;
 		/* All commands yielding 0 results */
 	case OFDM_SC_RA_RAM_CMD_SET_ECHO_TIMING:
 	case OFDM_SC_RA_RAM_CMD_SET_TIMER:

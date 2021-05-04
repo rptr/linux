@@ -10,10 +10,6 @@
 #include <inttypes.h>
 #include <libgen.h>
 #include <stdlib.h>
-#include <bpf/bpf.h>
-#include <bpf/btf.h>
-#include <bpf/libbpf.h>
-#include <linux/btf.h>
 #include "util.h" // hex_width()
 #include "ui/ui.h"
 #include "sort.h"
@@ -152,6 +148,7 @@ static int arch__associate_ins_ops(struct arch* arch, const char *name, struct i
 #include "arch/arm/annotate/instructions.c"
 #include "arch/arm64/annotate/instructions.c"
 #include "arch/csky/annotate/instructions.c"
+#include "arch/mips/annotate/instructions.c"
 #include "arch/x86/annotate/instructions.c"
 #include "arch/powerpc/annotate/instructions.c"
 #include "arch/s390/annotate/instructions.c"
@@ -173,6 +170,13 @@ static struct arch architectures[] = {
 	{
 		.name = "csky",
 		.init = csky__annotate_init,
+	},
+	{
+		.name = "mips",
+		.init = mips__annotate_init,
+		.objdump = {
+			.comment_char = '#',
+		},
 	},
 	{
 		.name = "x86",
@@ -317,10 +321,16 @@ bool ins__is_call(const struct ins *ins)
 /*
  * Prevents from matching commas in the comment section, e.g.:
  * ffff200008446e70:       b.cs    ffff2000084470f4 <generic_exec_single+0x314>  // b.hs, b.nlast
+ *
+ * and skip comma as part of function arguments, e.g.:
+ * 1d8b4ac <linemap_lookup(line_maps const*, unsigned int)+0xcc>
  */
 static inline const char *validate_comma(const char *c, struct ins_operands *ops)
 {
 	if (ops->raw_comment && c > ops->raw_comment)
+		return NULL;
+
+	if (ops->raw_func_start && c > ops->raw_func_start)
 		return NULL;
 
 	return c;
@@ -337,6 +347,8 @@ static int jump__parse(struct arch *arch, struct ins_operands *ops, struct map_s
 	u64 start, end;
 
 	ops->raw_comment = strchr(ops->raw, arch->objdump.comment_char);
+	ops->raw_func_start = strchr(ops->raw, '<');
+
 	c = validate_comma(c, ops);
 
 	/*
@@ -1578,8 +1590,7 @@ int symbol__strerror_disassemble(struct map_symbol *ms, int errnum, char *buf, s
 		char *build_id_msg = NULL;
 
 		if (dso->has_build_id) {
-			build_id__sprintf(dso->build_id,
-					  sizeof(dso->build_id), bf + 15);
+			build_id__sprintf(&dso->bid, bf + 15);
 			build_id_msg = bf;
 		}
 		scnprintf(buf, buflen,
@@ -1677,6 +1688,10 @@ fallback:
 #define PACKAGE "perf"
 #include <bfd.h>
 #include <dis-asm.h>
+#include <bpf/bpf.h>
+#include <bpf/btf.h>
+#include <bpf/libbpf.h>
+#include <linux/btf.h>
 
 static int symbol__disassemble_bpf(struct symbol *sym,
 				   struct annotate_args *args)
@@ -3127,6 +3142,8 @@ static int annotation__config(const char *var, const char *value, void *data)
 								value);
 	} else if (!strcmp(var, "annotate.use_offset")) {
 		opt->use_offset = perf_config_bool("use_offset", value);
+	} else if (!strcmp(var, "annotate.disassembler_style")) {
+		opt->disassembler_style = value;
 	} else {
 		pr_debug("%s variable unknown, ignoring...", var);
 	}

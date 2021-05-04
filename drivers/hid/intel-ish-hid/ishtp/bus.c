@@ -164,6 +164,7 @@ EXPORT_SYMBOL(ishtp_fw_cl_get_client);
 
 /**
  * ishtp_get_fw_client_id() - Get fw client id
+ * @fw_client:	firmware client used to fetch the ID
  *
  * This interface is used to reset HW get FW client id.
  *
@@ -257,24 +258,17 @@ static int ishtp_cl_bus_match(struct device *dev, struct device_driver *drv)
 static int ishtp_cl_device_remove(struct device *dev)
 {
 	struct ishtp_cl_device *device = to_ishtp_cl_device(dev);
-	struct ishtp_cl_driver *driver;
-
-	if (!device || !dev->driver)
-		return 0;
+	struct ishtp_cl_driver *driver = to_ishtp_cl_driver(dev->driver);
 
 	if (device->event_cb) {
 		device->event_cb = NULL;
 		cancel_work_sync(&device->event_work);
 	}
 
-	driver = to_ishtp_cl_driver(dev->driver);
-	if (!driver->remove) {
-		dev->driver = NULL;
+	if (driver->remove)
+		driver->remove(device);
 
-		return 0;
-	}
-
-	return driver->remove(device);
+	return 0;
 }
 
 /**
@@ -502,8 +496,6 @@ static void ishtp_bus_remove_device(struct ishtp_cl_device *device)
 int ishtp_cl_driver_register(struct ishtp_cl_driver *driver,
 			     struct module *owner)
 {
-	int err;
-
 	if (!ishtp_device_ready)
 		return -ENODEV;
 
@@ -511,11 +503,7 @@ int ishtp_cl_driver_register(struct ishtp_cl_driver *driver,
 	driver->driver.owner = owner;
 	driver->driver.bus = &ishtp_cl_bus_type;
 
-	err = driver_register(&driver->driver);
-	if (err)
-		return err;
-
-	return 0;
+	return driver_register(&driver->driver);
 }
 EXPORT_SYMBOL(ishtp_cl_driver_register);
 
@@ -848,6 +836,7 @@ int ishtp_use_dma_transfer(void)
 
 /**
  * ishtp_device() - Return device pointer
+ * @device: ISH-TP client device instance
  *
  * This interface is used to return device pointer from ishtp_cl_device
  * instance.
@@ -864,6 +853,7 @@ EXPORT_SYMBOL(ishtp_device);
  * ishtp_get_pci_device() - Return PCI device dev pointer
  * This interface is used to return PCI device pointer
  * from ishtp_cl_device instance.
+ * @device: ISH-TP client device instance
  *
  * Return: device *.
  */
@@ -875,12 +865,13 @@ EXPORT_SYMBOL(ishtp_get_pci_device);
 
 /**
  * ishtp_trace_callback() - Return trace callback
+ * @cl_device: ISH-TP client device instance
  *
  * This interface is used to return trace callback function pointer.
  *
- * Return: void *.
+ * Return: *ishtp_print_log()
  */
-void *ishtp_trace_callback(struct ishtp_cl_device *cl_device)
+ishtp_print_log ishtp_trace_callback(struct ishtp_cl_device *cl_device)
 {
 	return cl_device->ishtp_dev->print_log;
 }
@@ -888,6 +879,7 @@ EXPORT_SYMBOL(ishtp_trace_callback);
 
 /**
  * ish_hw_reset() - Call HW reset IPC callback
+ * @dev:	ISHTP device instance
  *
  * This interface is used to reset HW in case of error.
  *

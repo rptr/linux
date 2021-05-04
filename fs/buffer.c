@@ -523,7 +523,7 @@ repeat:
 
 void emergency_thaw_bdev(struct super_block *sb)
 {
-	while (sb->s_bdev && !thaw_bdev(sb->s_bdev, sb))
+	while (sb->s_bdev && !thaw_bdev(sb->s_bdev))
 		printk(KERN_WARNING "Emergency Thaw on %pg\n", sb->s_bdev);
 }
 
@@ -657,7 +657,7 @@ int __set_page_dirty_buffers(struct page *page)
 		} while (bh != head);
 	}
 	/*
-	 * Lock out page->mem_cgroup migration to keep PageDirty
+	 * Lock out page's memcg migration to keep PageDirty
 	 * synchronized with per-memcg dirty page counters.
 	 */
 	lock_page_memcg(page);
@@ -842,13 +842,14 @@ struct buffer_head *alloc_page_buffers(struct page *page, unsigned long size,
 	struct buffer_head *bh, *head;
 	gfp_t gfp = GFP_NOFS | __GFP_ACCOUNT;
 	long offset;
-	struct mem_cgroup *memcg;
+	struct mem_cgroup *memcg, *old_memcg;
 
 	if (retry)
 		gfp |= __GFP_NOFAIL;
 
-	memcg = get_mem_cgroup_from_page(page);
-	memalloc_use_memcg(memcg);
+	/* The page lock pins the memcg */
+	memcg = page_memcg(page);
+	old_memcg = set_active_memcg(memcg);
 
 	head = NULL;
 	offset = PAGE_SIZE;
@@ -867,8 +868,7 @@ struct buffer_head *alloc_page_buffers(struct page *page, unsigned long size,
 		set_bh_page(bh, page, offset);
 	}
 out:
-	memalloc_unuse_memcg();
-	mem_cgroup_put(memcg);
+	set_active_memcg(old_memcg);
 	return head;
 /*
  * In case anything failed, we just free everything we got.
@@ -981,10 +981,20 @@ grow_dev_page(struct block_device *bdev, sector_t block,
 			end_block = init_page_buffers(page, bdev,
 						(sector_t)index << sizebits,
 						size);
+#ifdef CONFIG_DEBUG_AID_FOR_SYZBOT
+			current->getblk_executed |= 0x01;
+#endif
 			goto done;
 		}
-		if (!try_to_free_buffers(page))
+		if (!try_to_free_buffers(page)) {
+#ifdef CONFIG_DEBUG_AID_FOR_SYZBOT
+			current->getblk_executed |= 0x02;
+#endif
 			goto failed;
+		}
+#ifdef CONFIG_DEBUG_AID_FOR_SYZBOT
+		current->getblk_executed |= 0x04;
+#endif
 	}
 
 	/*
@@ -1004,6 +1014,9 @@ grow_dev_page(struct block_device *bdev, sector_t block,
 	spin_unlock(&inode->i_mapping->private_lock);
 done:
 	ret = (block < end_block) ? 1 : -ENXIO;
+#ifdef CONFIG_DEBUG_AID_FOR_SYZBOT
+	current->getblk_executed |= 0x08;
+#endif
 failed:
 	unlock_page(page);
 	put_page(page);
@@ -1020,11 +1033,7 @@ grow_buffers(struct block_device *bdev, sector_t block, int size, gfp_t gfp)
 	pgoff_t index;
 	int sizebits;
 
-	sizebits = -1;
-	do {
-		sizebits++;
-	} while ((size << sizebits) < PAGE_SIZE);
-
+	sizebits = PAGE_SHIFT - __ffs(size);
 	index = block >> sizebits;
 
 	/*
@@ -1059,6 +1068,12 @@ __getblk_slow(struct block_device *bdev, sector_t block,
 		return NULL;
 	}
 
+#ifdef CONFIG_DEBUG_AID_FOR_SYZBOT
+	current->getblk_stamp = jiffies;
+	current->getblk_executed = 0;
+	current->getblk_bh_count = 0;
+	current->getblk_bh_state = 0;
+#endif
 	for (;;) {
 		struct buffer_head *bh;
 		int ret;
@@ -1070,6 +1085,24 @@ __getblk_slow(struct block_device *bdev, sector_t block,
 		ret = grow_buffers(bdev, block, size, gfp);
 		if (ret < 0)
 			return NULL;
+
+#ifdef CONFIG_DEBUG_AID_FOR_SYZBOT
+		if (!time_after(jiffies, current->getblk_stamp + 3 * HZ))
+			continue;
+		printk(KERN_ERR "%s(%u): getblk(): executed=%x bh_count=%d bh_state=%lx bdev_super_blocksize=%ld size=%u bdev_super_blocksize_bits=%d bdev_inode_blkbits=%d\n",
+		       current->comm, current->pid, current->getblk_executed,
+		       current->getblk_bh_count, current->getblk_bh_state,
+		       IS_ERR_OR_NULL(bdev->bd_super) ? -1L :
+		       bdev->bd_super->s_blocksize, size,
+		       IS_ERR_OR_NULL(bdev->bd_super) ? -1 :
+		       bdev->bd_super->s_blocksize_bits,
+		       IS_ERR_OR_NULL(bdev->bd_inode) ? -1 :
+		       bdev->bd_inode->i_blkbits);
+		current->getblk_executed = 0;
+		current->getblk_bh_count = 0;
+		current->getblk_bh_state = 0;
+		current->getblk_stamp = jiffies;
+#endif
 	}
 }
 
@@ -1264,6 +1297,15 @@ static void bh_lru_install(struct buffer_head *bh)
 	int i;
 
 	check_irqs_on();
+	/*
+	 * the refcount of buffer_head in bh_lru prevents dropping the
+	 * attached page(i.e., try_to_free_buffers) so it could cause
+	 * failing page migration.
+	 * Skip putting upcoming bh into bh_lru until migration is done.
+	 */
+	if (lru_cache_disabled())
+		return;
+
 	bh_lru_lock();
 
 	b = this_cpu_ptr(&bh_lrus);
@@ -1404,6 +1446,15 @@ __bread_gfp(struct block_device *bdev, sector_t block,
 }
 EXPORT_SYMBOL(__bread_gfp);
 
+static void __invalidate_bh_lrus(struct bh_lru *b)
+{
+	int i;
+
+	for (i = 0; i < BH_LRU_SIZE; i++) {
+		brelse(b->bhs[i]);
+		b->bhs[i] = NULL;
+	}
+}
 /*
  * invalidate_bh_lrus() is called rarely - but not only at unmount.
  * This doesn't race because it runs in each cpu either in irq
@@ -1412,16 +1463,12 @@ EXPORT_SYMBOL(__bread_gfp);
 static void invalidate_bh_lru(void *arg)
 {
 	struct bh_lru *b = &get_cpu_var(bh_lrus);
-	int i;
 
-	for (i = 0; i < BH_LRU_SIZE; i++) {
-		brelse(b->bhs[i]);
-		b->bhs[i] = NULL;
-	}
+	__invalidate_bh_lrus(b);
 	put_cpu_var(bh_lrus);
 }
 
-static bool has_bh_in_lru(int cpu, void *dummy)
+bool has_bh_in_lru(int cpu, void *dummy)
 {
 	struct bh_lru *b = per_cpu_ptr(&bh_lrus, cpu);
 	int i;
@@ -1439,6 +1486,16 @@ void invalidate_bh_lrus(void)
 	on_each_cpu_cond(has_bh_in_lru, invalidate_bh_lru, NULL, 1);
 }
 EXPORT_SYMBOL_GPL(invalidate_bh_lrus);
+
+void invalidate_bh_lrus_cpu(int cpu)
+{
+	struct bh_lru *b;
+
+	bh_lru_lock();
+	b = per_cpu_ptr(&bh_lrus, cpu);
+	__invalidate_bh_lrus(b);
+	bh_lru_unlock();
+}
 
 void set_bh_page(struct buffer_head *bh,
 		struct page *page, unsigned long offset)
@@ -2083,7 +2140,8 @@ static int __block_commit_write(struct inode *inode, struct page *page,
 			set_buffer_uptodate(bh);
 			mark_buffer_dirty(bh);
 		}
-		clear_buffer_new(bh);
+		if (buffer_new(bh))
+			clear_buffer_new(bh);
 
 		block_start = block_end;
 		bh = bh->b_this_page;
@@ -2771,16 +2829,6 @@ int nobh_writepage(struct page *page, get_block_t *get_block,
 	/* Is the page fully outside i_size? (truncate in progress) */
 	offset = i_size & (PAGE_SIZE-1);
 	if (page->index >= end_index+1 || !offset) {
-		/*
-		 * The page may have dirty, unmapped buffers.  For example,
-		 * they may have been added in ext3_writepage().  Make them
-		 * freeable here, so the page does not leak.
-		 */
-#if 0
-		/* Not really sure about this  - do we need this ? */
-		if (page->mapping->a_ops->invalidatepage)
-			page->mapping->a_ops->invalidatepage(page, offset);
-#endif
 		unlock_page(page);
 		return 0; /* don't care */
 	}
@@ -2975,12 +3023,6 @@ int block_write_full_page(struct page *page, get_block_t *get_block,
 	/* Is the page fully outside i_size? (truncate in progress) */
 	offset = i_size & (PAGE_SIZE-1);
 	if (page->index >= end_index+1 || !offset) {
-		/*
-		 * The page may have dirty, unmapped buffers.  For example,
-		 * they may have been added in ext3_writepage().  Make them
-		 * freeable here, so the page does not leak.
-		 */
-		do_invalidatepage(page, 0, PAGE_SIZE);
 		unlock_page(page);
 		return 0; /* don't care */
 	}
@@ -3207,6 +3249,11 @@ EXPORT_SYMBOL(sync_dirty_buffer);
  */
 static inline int buffer_busy(struct buffer_head *bh)
 {
+#ifdef CONFIG_DEBUG_AID_FOR_SYZBOT
+	current->getblk_executed |= 0x80;
+	current->getblk_bh_count = atomic_read(&bh->b_count);
+	current->getblk_bh_state = bh->b_state;
+#endif
 	return atomic_read(&bh->b_count) |
 		(bh->b_state & ((1 << BH_Dirty) | (1 << BH_Lock)));
 }
@@ -3245,11 +3292,18 @@ int try_to_free_buffers(struct page *page)
 	int ret = 0;
 
 	BUG_ON(!PageLocked(page));
-	if (PageWriteback(page))
+	if (PageWriteback(page)) {
+#ifdef CONFIG_DEBUG_AID_FOR_SYZBOT
+		current->getblk_executed |= 0x10;
+#endif
 		return 0;
+	}
 
 	if (mapping == NULL) {		/* can this still happen? */
 		ret = drop_buffers(page, &buffers_to_free);
+#ifdef CONFIG_DEBUG_AID_FOR_SYZBOT
+		current->getblk_executed |= 0x20;
+#endif
 		goto out;
 	}
 
@@ -3273,6 +3327,9 @@ int try_to_free_buffers(struct page *page)
 	if (ret)
 		cancel_dirty_page(page);
 	spin_unlock(&mapping->private_lock);
+#ifdef CONFIG_DEBUG_AID_FOR_SYZBOT
+	current->getblk_executed |= 0x40;
+#endif
 out:
 	if (buffers_to_free) {
 		struct buffer_head *bh = buffers_to_free;
