@@ -826,7 +826,7 @@ bool fexpr_is_symbol(struct fexpr *e)
 	       e->type == FE_NPC;
 }
 
-/* 
+/*
  * check whether a pexpr is a symbol or a negated symbol 
  */
 bool pexpr_is_symbol(struct pexpr *e)
@@ -843,7 +843,7 @@ bool fexpr_is_constant(struct fexpr *e)
 	return e == const_true || e == const_false;
 }
 
-/* 
+/*
  * add a fexpr to the satmap
  */
 void fexpr_add_to_satmap(struct fexpr *e)
@@ -934,10 +934,10 @@ void pexpr_as_char_short(struct pexpr *e, struct gstr *s, int parent)
 	}
 }
 
-/* 
+/*
  * init list of fexpr
  */
-struct fexpr_list *fexpr_list_init()
+struct fexpr_list *fexpr_list_init(void)
 {
 	struct fexpr_list *list = xcalloc(1, sizeof(*list));
 	list->head = NULL;
@@ -947,10 +947,10 @@ struct fexpr_list *fexpr_list_init()
 	return list;
 }
 
-/* 
+/*
  * init list of fexpr_list
  */
-struct fexl_list *fexl_list_init()
+struct fexl_list *fexl_list_init(void)
 {
 	struct fexl_list *list = xcalloc(1, sizeof(*list));
 	list->head = NULL;
@@ -960,10 +960,10 @@ struct fexl_list *fexl_list_init()
 	return list;
 }
 
-/* 
+/*
  * init list of pexpr
  */
-struct pexpr_list *pexpr_list_init()
+struct pexpr_list *pexpr_list_init(void)
 {
 	struct pexpr_list *list = xcalloc(1, sizeof(*list));
 	list->head = NULL;
@@ -973,7 +973,7 @@ struct pexpr_list *pexpr_list_init()
 	return list;
 }
 
-/* 
+/*
  * init list of symbol_fix
  */
 struct sfix_list *sfix_list_init(void)
@@ -986,7 +986,7 @@ struct sfix_list *sfix_list_init(void)
 	return list;
 }
 
-/* 
+/*
  * init list of symbol_fix
  */
 struct sfl_list *sfl_list_init(void)
@@ -999,7 +999,7 @@ struct sfl_list *sfl_list_init(void)
 	return list;
 }
 
-/* 
+/*
  * init list of symbol_dvalue
  */
 struct sdv_list *sdv_list_init(void)
@@ -1012,7 +1012,7 @@ struct sdv_list *sdv_list_init(void)
 	return list;
 }
 
-/* 
+/*
  * init list of symbols
  */
 struct sym_list *sym_list_init(void)
@@ -1025,7 +1025,7 @@ struct sym_list *sym_list_init(void)
 	return list;
 }
 
-/* 
+/*
  * init list of default_maps
  */
 struct defm_list *defm_list_init(void)
@@ -1038,7 +1038,7 @@ struct defm_list *defm_list_init(void)
 	return list;
 }
 
-/* 
+/*
  * add element to tail of a fexpr_list
  */
 void fexpr_list_add(struct fexpr_list *list, struct fexpr *fe)
@@ -1058,7 +1058,7 @@ void fexpr_list_add(struct fexpr_list *list, struct fexpr *fe)
 	list->size++;
 }
 
-/* 
+/*
  * add element to tail of a fexl_list
  */
 void fexl_list_add(struct fexl_list *list, struct fexpr_list *elem)
@@ -1078,7 +1078,7 @@ void fexl_list_add(struct fexl_list *list, struct fexpr_list *elem)
 	list->size++;
 }
 
-/* 
+/*
  * add element to tail of a pexpr_list
  */
 void pexpr_list_add(struct pexpr_list *list, struct pexpr *e)
@@ -1098,7 +1098,7 @@ void pexpr_list_add(struct pexpr_list *list, struct pexpr *e)
 	list->size++;
 }
 
-/* 
+/*
  * add element to tail of a sfix_list
  */
 void sfix_list_add(struct sfix_list *list, struct symbol_fix *fix)
@@ -1118,7 +1118,7 @@ void sfix_list_add(struct sfix_list *list, struct symbol_fix *fix)
 	list->size++;
 }
 
-/* 
+/*
  * add element to tail of a sfl_list
  */
 void sfl_list_add(struct sfl_list *list, struct sfix_list *elem)
@@ -1138,7 +1138,7 @@ void sfl_list_add(struct sfl_list *list, struct sfix_list *elem)
 	list->size++;
 }
 
-/* 
+/*
  * add element to tail of a sdv_list
  */
 void sdv_list_add(struct sdv_list *list, struct symbol_dvalue *sdv)
@@ -1158,7 +1158,7 @@ void sdv_list_add(struct sdv_list *list, struct symbol_dvalue *sdv)
 	list->size++;
 }
 
-/* 
+/*
  * add element to tail of a sym_list
  */
 void sym_list_add(struct sym_list *list, struct symbol *sym)
@@ -1178,7 +1178,7 @@ void sym_list_add(struct sym_list *list, struct symbol *sym)
 	list->size++;
 }
 
-/* 
+/*
  * add element to tail of a defm_list 
  */
 void defm_list_add(struct defm_list *list, struct default_map *map)
@@ -1198,7 +1198,7 @@ void defm_list_add(struct defm_list *list, struct default_map *map)
 	list->size++;
 }
 
-/* 
+/*
  * delete an element from a fexpr_list
  */
 void fexpr_list_delete(struct fexpr_list *list, struct fexpr_node *node)
@@ -1221,7 +1221,7 @@ void fexpr_list_delete(struct fexpr_list *list, struct fexpr_node *node)
 	free(node);
 }
 
-/* 
+/*
  * delete an element from a fexpr_list
  */
 void sfix_list_delete(struct sfix_list *list, struct sfix_node *node)
@@ -1244,7 +1244,7 @@ void sfix_list_delete(struct sfix_list *list, struct sfix_node *node)
 	free(node);
 }
 
-/* 
+/*
  * delete an element from a fexl_list
  */
 void fexl_list_delete(struct fexl_list *list, struct fexl_node *node)
@@ -1267,7 +1267,7 @@ void fexl_list_delete(struct fexl_list *list, struct fexl_node *node)
 	free(node);
 }
 
-/* 
+/*
  * delete the first occurence of elem in an fexl_list
  */
 void fexl_list_delete_elem(struct fexl_list *list, struct fexpr_list *elem)
@@ -1285,7 +1285,7 @@ void fexl_list_delete_elem(struct fexl_list *list, struct fexpr_list *elem)
 		fexl_list_delete(list, to_delete);
 }
 
-/* 
+/*
  * make a shallow copy of a fexpr_list 
  */
 struct fexpr_list *fexpr_list_copy(struct fexpr_list *list)
@@ -1297,7 +1297,7 @@ struct fexpr_list *fexpr_list_copy(struct fexpr_list *list)
 	return ret;
 }
 
-/* 
+/*
  * make a shallow copy of a fexl_list 
  */
 struct fexl_list *fexl_list_copy(struct fexl_list *list)
@@ -1309,7 +1309,7 @@ struct fexl_list *fexl_list_copy(struct fexl_list *list)
 	return ret;
 }
 
-/* 
+/*
  * make a shallow copy of a sdv_list
  */
 struct sdv_list *sdv_list_copy(struct sdv_list *list)
@@ -1321,7 +1321,7 @@ struct sdv_list *sdv_list_copy(struct sdv_list *list)
 	return ret;
 }
 
-/* 
+/*
  * make a shallow copy of a sfix_list
  */
 struct sfix_list *sfix_list_copy(struct sfix_list *list)
@@ -1333,7 +1333,7 @@ struct sfix_list *sfix_list_copy(struct sfix_list *list)
 	return ret;
 }
 
-/* 
+/*
  * print a fexpr_list
  */
 void fexpr_list_print(char *title, struct fexpr_list *list)
@@ -1362,7 +1362,7 @@ void fexl_list_print(char *title, struct fexl_list *list)
 	fexl_list_for_each(node, list) fexpr_list_print(":", node->elem);
 }
 
-/* 
+/*
  * free an fexpr_list
  */
 void fexpr_list_free(struct fexpr_list *list)
@@ -1378,7 +1378,7 @@ void fexpr_list_free(struct fexpr_list *list)
 	free(list);
 }
 
-/* 
+/*
  * free an fexl_list
  */
 void fexl_list_free(struct fexl_list *list)
@@ -1394,7 +1394,7 @@ void fexl_list_free(struct fexl_list *list)
 	free(list);
 }
 
-/* 
+/*
  * free a sdv_list
  */
 void sdv_list_free(struct sdv_list *list)
