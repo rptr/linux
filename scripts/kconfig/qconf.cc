@@ -43,20 +43,18 @@ static ConfigSettings *configSettings;
 
 QAction *ConfigMainWindow::saveAction;
 
-ConfigSettings::ConfigSettings()
-	: QSettings("kernel.org", "qconf")
+ConfigSettings::ConfigSettings() : QSettings("kernel.org", "qconf")
 {
 }
 
 /**
  * Reads a list of integer values from the application settings.
  */
-QList<int> ConfigSettings::readSizes(const QString& key, bool *ok)
+QList<int> ConfigSettings::readSizes(const QString &key, bool *ok)
 {
 	QList<int> result;
 
-	if (contains(key))
-	{
+	if (contains(key)) {
 		QStringList entryList = value(key).toStringList();
 		QStringList::Iterator it;
 
@@ -64,8 +62,7 @@ QList<int> ConfigSettings::readSizes(const QString& key, bool *ok)
 			result.push_back((*it).toInt());
 
 		*ok = true;
-	}
-	else
+	} else
 		*ok = false;
 
 	return result;
@@ -74,7 +71,7 @@ QList<int> ConfigSettings::readSizes(const QString& key, bool *ok)
 /**
  * Writes a list of integer values to the application settings.
  */
-bool ConfigSettings::writeSizes(const QString& key, const QList<int>& value)
+bool ConfigSettings::writeSizes(const QString &key, const QList<int> &value)
 {
 	QStringList stringList;
 	QList<int>::ConstIterator it;
@@ -99,8 +96,8 @@ QIcon ConfigItem::menubackIcon;
  */
 void ConfigItem::updateMenu(void)
 {
-	ConfigList* list;
-	struct symbol* sym;
+	ConfigList *list;
+	struct symbol *sym;
 	struct property *prop;
 	QString prompt;
 	int type;
@@ -117,28 +114,29 @@ void ConfigItem::updateMenu(void)
 	prop = menu->prompt;
 	prompt = menu_get_prompt(menu);
 
-	if (prop) switch (prop->type) {
-	case P_MENU:
-		if (list->mode == singleMode || list->mode == symbolMode) {
-			/* a menuconfig entry is displayed differently
+	if (prop)
+		switch (prop->type) {
+		case P_MENU:
+			if (list->mode == singleMode ||
+			    list->mode == symbolMode) {
+				/* a menuconfig entry is displayed differently
 			 * depending whether it's at the view root or a child.
 			 */
-			if (sym && list->rootEntry == menu)
-				break;
-			setIcon(promptColIdx, menuIcon);
-		} else {
-			if (sym)
-				break;
+				if (sym && list->rootEntry == menu)
+					break;
+				setIcon(promptColIdx, menuIcon);
+			} else {
+				if (sym)
+					break;
+				setIcon(promptColIdx, QIcon());
+			}
+			goto set_prompt;
+		case P_COMMENT:
 			setIcon(promptColIdx, QIcon());
+			prompt = "*** " + prompt + " ***";
+			goto set_prompt;
+		default:;
 		}
-		goto set_prompt;
-	case P_COMMENT:
-		setIcon(promptColIdx, QIcon());
-		prompt = "*** " + prompt + " ***";
-		goto set_prompt;
-	default:
-		;
-	}
 	if (!sym)
 		goto set_prompt;
 
@@ -192,7 +190,7 @@ set_prompt:
 
 void ConfigItem::testUpdateMenu(bool v)
 {
-	ConfigItem* i;
+	ConfigItem *i;
 
 	visible = v;
 	if (!menu)
@@ -202,12 +200,11 @@ void ConfigItem::testUpdateMenu(bool v)
 	if (menu->flags & MENU_CHANGED) {
 		/* the menu entry changed, so update all list items */
 		menu->flags &= ~MENU_CHANGED;
-		for (i = (ConfigItem*)menu->data; i; i = i->nextItem)
+		for (i = (ConfigItem *)menu->data; i; i = i->nextItem)
 			i->updateMenu();
 	} else if (listView()->updateAll)
 		updateMenu();
 }
-
 
 /*
  * construct a menu entry
@@ -215,8 +212,8 @@ void ConfigItem::testUpdateMenu(bool v)
 void ConfigItem::init(void)
 {
 	if (menu) {
-		ConfigList* list = listView();
-		nextItem = (ConfigItem*)menu->data;
+		ConfigList *list = listView();
+		nextItem = (ConfigItem *)menu->data;
 		menu->data = this;
 
 		if (list->mode != fullMode)
@@ -243,7 +240,7 @@ void ConfigItem::init(void)
 ConfigItem::~ConfigItem(void)
 {
 	if (menu) {
-		ConfigItem** ip = (ConfigItem**)&menu->data;
+		ConfigItem **ip = (ConfigItem **)&menu->data;
 		for (; *ip; ip = &(*ip)->nextItem) {
 			if (*ip == this) {
 				*ip = nextItem;
@@ -298,7 +295,8 @@ void ConfigItemDelegate::setModelData(QWidget *editor,
 	if (success) {
 		ConfigList::updateListForAll();
 	} else {
-		QMessageBox::information(editor, "qconf",
+		QMessageBox::information(
+			editor, "qconf",
 			"Cannot set the data (maybe due to out of range).\n"
 			"Setting the old value.");
 		lineEdit->setText(sym_get_string_value(sym));
@@ -309,10 +307,8 @@ parent:
 }
 
 ConfigList::ConfigList(QWidget *parent, const char *name)
-	: QTreeWidget(parent),
-	  updateAll(false),
-	  showName(false), mode(singleMode), optMode(normalOpt),
-	  rootEntry(0), headerPopup(0)
+	: QTreeWidget(parent), updateAll(false), showName(false),
+	  mode(singleMode), optMode(normalOpt), rootEntry(0), headerPopup(0)
 {
 	setObjectName(name);
 	setSortingEnabled(false);
@@ -321,18 +317,22 @@ ConfigList::ConfigList(QWidget *parent, const char *name)
 	setVerticalScrollMode(ScrollPerPixel);
 	setHorizontalScrollMode(ScrollPerPixel);
 
-	setHeaderLabels(QStringList() << "Option" << "Name" << "Value");
+	setHeaderLabels(QStringList() << "Option"
+				      << "Name"
+				      << "Value");
 
-	connect(this, &ConfigList::itemSelectionChanged,
-		this, &ConfigList::updateSelection);
+	connect(this, &ConfigList::itemSelectionChanged, this,
+		&ConfigList::updateSelection);
 
 	if (name) {
 		configSettings->beginGroup(name);
 		showName = configSettings->value("/showName", false).toBool();
-		optMode = (enum optionMode)configSettings->value("/optionMode", 0).toInt();
+		optMode =
+			(enum optionMode)configSettings->value("/optionMode", 0)
+				.toInt();
 		configSettings->endGroup();
-		connect(configApp, &QApplication::aboutToQuit,
-			this, &ConfigList::saveSettings);
+		connect(configApp, &QApplication::aboutToQuit, this,
+			&ConfigList::saveSettings);
 	}
 
 	showColumn(promptColIdx);
@@ -392,9 +392,9 @@ void ConfigList::saveSettings(void)
 	}
 }
 
-ConfigItem* ConfigList::findConfigItem(struct menu *menu)
+ConfigItem *ConfigList::findConfigItem(struct menu *menu)
 {
-	ConfigItem* item = (ConfigItem*)menu->data;
+	ConfigItem *item = (ConfigItem *)menu->data;
 
 	for (; item; item = item->nextItem) {
 		if (this == item->listView())
@@ -414,7 +414,7 @@ void ConfigList::updateSelection(void)
 
 	//update current selected item list
 	emit selectionChanged(selectedItems());
-	ConfigItem* item = (ConfigItem*)selectedItems().first();
+	ConfigItem *item = (ConfigItem *)selectedItems().first();
 	if (!item)
 		return;
 
@@ -429,7 +429,7 @@ void ConfigList::updateSelection(void)
 
 void ConfigList::updateList()
 {
-	ConfigItem* last = 0;
+	ConfigItem *last = 0;
 	ConfigItem *item;
 
 	if (!rootEntry) {
@@ -438,7 +438,7 @@ void ConfigList::updateList()
 		QTreeWidgetItemIterator it(this);
 
 		while (*it) {
-			item = (ConfigItem*)(*it);
+			item = (ConfigItem *)(*it);
 			if (!item->menu)
 				continue;
 			item->testUpdateMenu(menu_is_visible(item->menu));
@@ -448,14 +448,16 @@ void ConfigList::updateList()
 		return;
 	}
 
-	if (rootEntry != &rootmenu && (mode == singleMode ||
-	    (mode == symbolMode && rootEntry->parent != &rootmenu))) {
+	if (rootEntry != &rootmenu &&
+	    (mode == singleMode ||
+	     (mode == symbolMode && rootEntry->parent != &rootmenu))) {
 		item = (ConfigItem *)topLevelItem(0);
 		if (!item)
 			item = new ConfigItem(this, 0, true);
 		last = item;
 	}
-	if ((mode == singleMode || (mode == symbolMode && !(rootEntry->flags & MENU_ROOT))) &&
+	if ((mode == singleMode ||
+	     (mode == symbolMode && !(rootEntry->flags & MENU_ROOT))) &&
 	    rootEntry->sym && rootEntry->prompt) {
 		item = last ? last->nextSibling() : nullptr;
 		if (!item)
@@ -496,9 +498,9 @@ void ConfigList::updateListAllForAll()
 	}
 }
 
-void ConfigList::setValue(ConfigItem* item, tristate val)
+void ConfigList::setValue(ConfigItem *item, tristate val)
 {
-	struct symbol* sym;
+	struct symbol *sym;
 	int type;
 	tristate oldval;
 
@@ -521,10 +523,10 @@ void ConfigList::setValue(ConfigItem* item, tristate val)
 	}
 }
 
-void ConfigList::changeValue(ConfigItem* item)
+void ConfigList::changeValue(ConfigItem *item)
 {
-	struct symbol* sym;
-	struct menu* menu;
+	struct symbol *sym;
+	struct menu *menu;
 	int type, oldexpr, newexpr;
 
 	menu = item->menu;
@@ -551,7 +553,7 @@ void ConfigList::changeValue(ConfigItem* item)
 		}
 		if (oldexpr != newexpr)
 			ConfigList::updateListForAll();
-			emit UpdateConflictsViewColorization();
+		emit UpdateConflictsViewColorization();
 		break;
 	default:
 		break;
@@ -578,7 +580,7 @@ void ConfigList::setRootMenu(struct menu *menu)
 
 void ConfigList::setParentMenu(void)
 {
-	ConfigItem* item;
+	ConfigItem *item;
 	struct menu *oldroot;
 
 	oldroot = rootEntry;
@@ -606,17 +608,16 @@ void ConfigList::setParentMenu(void)
  * parent: either the menu list widget or a menu entry widget
  * menu: entry to be updated
  */
-void ConfigList::updateMenuList(ConfigItem *parent, struct menu* menu)
+void ConfigList::updateMenuList(ConfigItem *parent, struct menu *menu)
 {
-	struct menu* child;
-	ConfigItem* item;
-	ConfigItem* last;
+	struct menu *child;
+	ConfigItem *item;
+	ConfigItem *last;
 	bool visible;
 	enum prop_type type;
 
 	if (!menu) {
-		while (parent->childCount() > 0)
-		{
+		while (parent->childCount() > 0) {
 			delete parent->takeChild(0);
 		}
 
@@ -648,24 +649,27 @@ void ConfigList::updateMenuList(ConfigItem *parent, struct menu* menu)
 			if (!child->sym && !child->list && !child->prompt)
 				continue;
 			if (!item || item->menu != child)
-				item = new ConfigItem(parent, last, child, visible);
+				item = new ConfigItem(parent, last, child,
+						      visible);
 			else
 				item->testUpdateMenu(visible);
 
-			if (mode == fullMode || mode == menuMode || type != P_MENU)
+			if (mode == fullMode || mode == menuMode ||
+			    type != P_MENU)
 				updateMenuList(item, child);
 			else
 				updateMenuList(item, 0);
 			last = item;
 			continue;
 		}
-hide:
+	hide:
 		if (item && item->menu == child) {
 			last = parent->firstChild();
 			if (last == item)
 				last = 0;
-			else while (last->nextSibling() != item)
-				last = last->nextSibling();
+			else
+				while (last->nextSibling() != item)
+					last = last->nextSibling();
 			delete item;
 		}
 	}
@@ -673,15 +677,14 @@ hide:
 
 void ConfigList::updateMenuList(struct menu *menu)
 {
-	struct menu* child;
-	ConfigItem* item;
-	ConfigItem* last;
+	struct menu *child;
+	ConfigItem *item;
+	ConfigItem *last;
 	bool visible;
 	enum prop_type type;
 
 	if (!menu) {
-		while (topLevelItemCount() > 0)
-		{
+		while (topLevelItemCount() > 0) {
 			delete takeTopLevelItem(0);
 		}
 
@@ -692,7 +695,8 @@ void ConfigList::updateMenuList(struct menu *menu)
 	if (last && !last->goParent)
 		last = 0;
 	for (child = menu->list; child; child = child->next) {
-		item = last ? last->nextSibling() : (ConfigItem *)topLevelItem(0);
+		item = last ? last->nextSibling() :
+				    (ConfigItem *)topLevelItem(0);
 		type = child->prompt ? child->prompt->type : P_UNKNOWN;
 
 		switch (mode) {
@@ -713,37 +717,41 @@ void ConfigList::updateMenuList(struct menu *menu)
 			if (!child->sym && !child->list && !child->prompt)
 				continue;
 			if (!item || item->menu != child)
-				item = new ConfigItem(this, last, child, visible);
+				item = new ConfigItem(this, last, child,
+						      visible);
 			else
 				item->testUpdateMenu(visible);
 
-			if (mode == fullMode || mode == menuMode || type != P_MENU)
+			if (mode == fullMode || mode == menuMode ||
+			    type != P_MENU)
 				updateMenuList(item, child);
 			else
 				updateMenuList(item, 0);
 			last = item;
 			continue;
 		}
-hide:
+	hide:
 		if (item && item->menu == child) {
 			last = (ConfigItem *)topLevelItem(0);
 			if (last == item)
 				last = 0;
-			else while (last->nextSibling() != item)
-				last = last->nextSibling();
+			else
+				while (last->nextSibling() != item)
+					last = last->nextSibling();
 			delete item;
 		}
 	}
 }
 
-void ConfigList::keyPressEvent(QKeyEvent* ev)
+void ConfigList::keyPressEvent(QKeyEvent *ev)
 {
-	QTreeWidgetItem* i = currentItem();
-	ConfigItem* item;
+	QTreeWidgetItem *i = currentItem();
+	ConfigItem *item;
 	struct menu *menu;
 	enum prop_type type;
 
-	if (ev->key() == Qt::Key_Escape && mode != fullMode && mode != listMode) {
+	if (ev->key() == Qt::Key_Escape && mode != fullMode &&
+	    mode != listMode) {
 		emit parentSelected();
 		ev->accept();
 		return;
@@ -753,7 +761,7 @@ void ConfigList::keyPressEvent(QKeyEvent* ev)
 		Parent::keyPressEvent(ev);
 		return;
 	}
-	item = (ConfigItem*)i;
+	item = (ConfigItem *)i;
 
 	switch (ev->key()) {
 	case Qt::Key_Return:
@@ -766,8 +774,8 @@ void ConfigList::keyPressEvent(QKeyEvent* ev)
 		if (!menu)
 			break;
 		type = menu->prompt ? menu->prompt->type : P_UNKNOWN;
-		if (type == P_MENU && rootEntry != menu &&
-		    mode != fullMode && mode != menuMode) {
+		if (type == P_MENU && rootEntry != menu && mode != fullMode &&
+		    mode != menuMode) {
 			if (mode == menuMode)
 				emit menuSelected(menu);
 			else
@@ -793,17 +801,17 @@ void ConfigList::keyPressEvent(QKeyEvent* ev)
 	ev->accept();
 }
 
-void ConfigList::mousePressEvent(QMouseEvent* e)
+void ConfigList::mousePressEvent(QMouseEvent *e)
 {
 	//QPoint p(contentsToViewport(e->pos()));
 	//printf("contentsMousePressEvent: %d,%d\n", p.x(), p.y());
 	Parent::mousePressEvent(e);
 }
 
-void ConfigList::mouseReleaseEvent(QMouseEvent* e)
+void ConfigList::mouseReleaseEvent(QMouseEvent *e)
 {
 	QPoint p = e->pos();
-	ConfigItem* item = (ConfigItem*)itemAt(p);
+	ConfigItem *item = (ConfigItem *)itemAt(p);
 	struct menu *menu;
 	enum prop_type ptype;
 	QIcon icon;
@@ -819,17 +827,22 @@ void ConfigList::mouseReleaseEvent(QMouseEvent* e)
 	case promptColIdx:
 		icon = item->icon(promptColIdx);
 		if (!icon.isNull()) {
-			int off = header()->sectionPosition(0) + visualRect(indexAt(p)).x() + 4; // 4 is Hardcoded image offset. There might be a way to do it properly.
-			if (x >= off && x < off + icon.availableSizes().first().width()) {
+			int off =
+				header()->sectionPosition(0) +
+				visualRect(indexAt(p)).x() +
+				4; // 4 is Hardcoded image offset. There might be a way to do it properly.
+			if (x >= off &&
+			    x < off + icon.availableSizes().first().width()) {
 				if (item->goParent) {
 					emit parentSelected();
 					break;
 				} else if (!menu)
 					break;
-				ptype = menu->prompt ? menu->prompt->type : P_UNKNOWN;
+				ptype = menu->prompt ? menu->prompt->type :
+							     P_UNKNOWN;
 				if (ptype == P_MENU && rootEntry != menu &&
 				    mode != fullMode && mode != menuMode &&
-                                    mode != listMode)
+				    mode != listMode)
 					emit menuSelected(menu);
 				else
 					changeValue(item);
@@ -846,17 +859,17 @@ skip:
 	Parent::mouseReleaseEvent(e);
 }
 
-void ConfigList::mouseMoveEvent(QMouseEvent* e)
+void ConfigList::mouseMoveEvent(QMouseEvent *e)
 {
 	//QPoint p(contentsToViewport(e->pos()));
 	//printf("contentsMouseMoveEvent: %d,%d\n", p.x(), p.y());
 	Parent::mouseMoveEvent(e);
 }
 
-void ConfigList::mouseDoubleClickEvent(QMouseEvent* e)
+void ConfigList::mouseDoubleClickEvent(QMouseEvent *e)
 {
 	QPoint p = e->pos();
-	ConfigItem* item = (ConfigItem*)itemAt(p);
+	ConfigItem *item = (ConfigItem *)itemAt(p);
 	struct menu *menu;
 	enum prop_type ptype;
 
@@ -889,7 +902,7 @@ void ConfigList::focusInEvent(QFocusEvent *e)
 
 	Parent::focusInEvent(e);
 
-	ConfigItem* item = (ConfigItem *)currentItem();
+	ConfigItem *item = (ConfigItem *)currentItem();
 	if (item) {
 		setSelected(item, true);
 		menu = item->menu;
@@ -907,8 +920,8 @@ void ConfigList::contextMenuEvent(QContextMenuEvent *e)
 		action->setCheckable(true);
 		/* connect(action, &QAction::toggled, */
 		/* 	this, &ConfigView::setShowName); */
-		connect(this, &ConfigList::showNameChanged,
-			action, &QAction::setChecked);
+		connect(this, &ConfigList::showNameChanged, action,
+			&QAction::setChecked);
 		action->setChecked(showName);
 		headerPopup->addAction(action);
 	}
@@ -917,13 +930,12 @@ void ConfigList::contextMenuEvent(QContextMenuEvent *e)
 	e->accept();
 }
 
-ConfigLineEdit::ConfigLineEdit(ConfigView* parent)
-	: Parent(parent)
+ConfigLineEdit::ConfigLineEdit(ConfigView *parent) : Parent(parent)
 {
 	connect(this, SIGNAL(editingFinished()), SLOT(hide()));
 }
 
-void ConfigLineEdit::show(ConfigItem* i)
+void ConfigLineEdit::show(ConfigItem *i)
 {
 	item = i;
 	if (sym_get_string_value(item->menu->sym))
@@ -934,7 +946,7 @@ void ConfigLineEdit::show(ConfigItem* i)
 	setFocus();
 }
 
-void ConfigLineEdit::keyPressEvent(QKeyEvent* e)
+void ConfigLineEdit::keyPressEvent(QKeyEvent *e)
 {
 	switch (e->key()) {
 	case Qt::Key_Escape:
@@ -953,15 +965,14 @@ void ConfigLineEdit::keyPressEvent(QKeyEvent* e)
 	hide();
 }
 
-ConfigView*ConfigView::viewList;
+ConfigView *ConfigView::viewList;
 QList<ConfigList *> ConfigList::allLists;
 QAction *ConfigList::showNormalAction;
 QAction *ConfigList::showAllAction;
 QAction *ConfigList::showPromptAction;
 QAction *ConfigList::addSymbolsFromContextMenu;
 
-ConfigView::ConfigView(QWidget* parent, const char *name)
-	: Parent(parent)
+ConfigView::ConfigView(QWidget *parent, const char *name) : Parent(parent)
 {
 	setObjectName(name);
 	QVBoxLayout *verticalLayout = new QVBoxLayout(this);
@@ -971,8 +982,8 @@ ConfigView::ConfigView(QWidget* parent, const char *name)
 	//add right click context menu on config  tree which can add multiple symbols in one click
 	list->setSelectionMode(QAbstractItemView::ExtendedSelection);
 	list->setContextMenuPolicy(Qt::CustomContextMenu);
-	connect(list, SIGNAL(customContextMenuRequested(const QPoint &)),
-        this, SLOT(ShowContextMenu(const QPoint &)));
+	connect(list, SIGNAL(customContextMenuRequested(const QPoint &)), this,
+		SLOT(ShowContextMenu(const QPoint &)));
 	verticalLayout->addWidget(list);
 	lineEdit = new ConfigLineEdit(this);
 	lineEdit->hide();
@@ -981,16 +992,17 @@ ConfigView::ConfigView(QWidget* parent, const char *name)
 	this->nextView = viewList;
 	viewList = this;
 }
-void ConfigView::ShowContextMenu(const QPoint& pos){
-   QMenu contextMenu(tr("Context menu"), this);
+void ConfigView::ShowContextMenu(const QPoint &pos)
+{
+	QMenu contextMenu(tr("Context menu"), this);
 
-   contextMenu.addAction(ConfigList::addSymbolsFromContextMenu);
-   contextMenu.exec(mapToGlobal(pos));
+	contextMenu.addAction(ConfigList::addSymbolsFromContextMenu);
+	contextMenu.exec(mapToGlobal(pos));
 }
 
 ConfigView::~ConfigView(void)
 {
-	ConfigView** vp;
+	ConfigView **vp;
 
 	for (vp = &viewList; *vp; vp = &(*vp)->nextView) {
 		if (*vp == this) {
@@ -1049,7 +1061,7 @@ void ConfigList::setAllOpen(bool open)
 
 void ConfigView::updateList()
 {
-	ConfigView* v;
+	ConfigView *v;
 
 	for (v = viewList; v; v = v->nextView)
 		v->list->updateList();
@@ -1057,14 +1069,13 @@ void ConfigView::updateList()
 
 void ConfigView::updateListAll(void)
 {
-	ConfigView* v;
+	ConfigView *v;
 
 	for (v = viewList; v; v = v->nextView)
 		v->list->updateListAll();
 }
 
-ConflictsView::ConflictsView(QWidget* parent, const char *name)
-	: Parent(parent)
+ConflictsView::ConflictsView(QWidget *parent, const char *name) : Parent(parent)
 {
 	currentSelectedMenu = nullptr;
 	setObjectName(name);
@@ -1094,43 +1105,54 @@ ConflictsView::ConflictsView(QWidget* parent, const char *name)
 	verticalLayout->addWidget(conflictsToolBar);
 
 	connect(addSymbol, SIGNAL(triggered(bool)), SLOT(addSymbol()));
-	connect(setConfigSymbolAsNo, SIGNAL(triggered(bool)), SLOT(changeToNo()));
-	connect(setConfigSymbolAsModule, SIGNAL(triggered(bool)), SLOT(changeToModule()));
-	connect(setConfigSymbolAsYes, SIGNAL(triggered(bool)), SLOT(changeToYes()));
+	connect(setConfigSymbolAsNo, SIGNAL(triggered(bool)),
+		SLOT(changeToNo()));
+	connect(setConfigSymbolAsModule, SIGNAL(triggered(bool)),
+		SLOT(changeToModule()));
+	connect(setConfigSymbolAsYes, SIGNAL(triggered(bool)),
+		SLOT(changeToYes()));
 	connect(removeSymbol, SIGNAL(triggered(bool)), SLOT(removeSymbol()));
 	connect(this, SIGNAL(resultsReady()), SLOT(updateResults()));
 	//connect clicking 'calculate fixes' to 'change all symbol values to fix all conflicts'
 	// no longer used anymore for now.
-	connect(fixConflictsAction_, SIGNAL(triggered(bool)), SLOT(calculateFixes()));
+	connect(fixConflictsAction_, SIGNAL(triggered(bool)),
+		SLOT(calculateFixes()));
 
-	conflictsTable = (QTableWidget*) new dropAbleView(this);
+	conflictsTable = (QTableWidget *)new dropAbleView(this);
 	conflictsTable->setRowCount(0);
 	conflictsTable->setColumnCount(3);
 	conflictsTable->setSelectionBehavior(QAbstractItemView::SelectRows);
 
-	conflictsTable->setHorizontalHeaderLabels(QStringList()  << "Option" << "Wanted value" << "Current value" );
+	conflictsTable->setHorizontalHeaderLabels(QStringList()
+						  << "Option"
+						  << "Wanted value"
+						  << "Current value");
 	verticalLayout->addWidget(conflictsTable);
 
 	conflictsTable->setDragDropMode(QAbstractItemView::DropOnly);
 	setAcceptDrops(true);
 	//conflictsTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
 
-	connect(conflictsTable, SIGNAL(cellClicked(int, int)), SLOT(cellClicked(int,int)));
+	connect(conflictsTable, SIGNAL(cellClicked(int, int)),
+		SLOT(cellClicked(int, int)));
 	horizontalLayout->addLayout(verticalLayout);
 
 	// populate the solution view on the right hand side:
 	QVBoxLayout *solutionLayout = new QVBoxLayout();
 	solutionLayout->setContentsMargins(0, 0, 0, 0);
 	solutionSelector = new QComboBox();
-	connect(solutionSelector, QOverload<int>::of(&QComboBox::currentIndexChanged),
-		[=](int index){ changeSolutionTable(index); });
+	connect(solutionSelector,
+		QOverload<int>::of(&QComboBox::currentIndexChanged),
+		[=](int index) { changeSolutionTable(index); });
 	solutionTable = new QTableWidget();
 	solutionTable->setRowCount(0);
 	solutionTable->setColumnCount(2);
-	solutionTable->setHorizontalHeaderLabels(QStringList()  << "Symbol" << "New Value" );
+	solutionTable->setHorizontalHeaderLabels(QStringList() << "Symbol"
+							       << "New Value");
 
 	applyFixButton = new QPushButton("Apply Selected solution");
-	connect(applyFixButton, SIGNAL(clicked(bool)), SLOT(applyFixButtonClick()));
+	connect(applyFixButton, SIGNAL(clicked(bool)),
+		SLOT(applyFixButtonClick()));
 
 	numSolutionLabel = new QLabel("Solutions:");
 	solutionLayout->addWidget(numSolutionLabel);
@@ -1139,57 +1161,57 @@ ConflictsView::ConflictsView(QWidget* parent, const char *name)
 	solutionLayout->addWidget(applyFixButton);
 
 	horizontalLayout->addLayout(solutionLayout);
-
 }
 void QTableWidget::dropEvent(QDropEvent *event)
 {
 }
-void ConflictsView::changeToNo(){
+void ConflictsView::changeToNo()
+{
 	QItemSelectionModel *select = conflictsTable->selectionModel();
-	if (select->hasSelection()){
+	if (select->hasSelection()) {
 		QModelIndexList rows = select->selectedRows();
-		for (int i = 0;i < rows.count(); i++)
-		{
-			conflictsTable->item(rows[i].row(),1)->setText("NO");
+		for (int i = 0; i < rows.count(); i++) {
+			conflictsTable->item(rows[i].row(), 1)->setText("NO");
 		}
 	}
 }
-void ConflictsView::applyFixButtonClick(){
+void ConflictsView::applyFixButtonClick()
+{
 	signed int solution_number = solutionSelector->currentIndex();
 
 	if (solution_number == -1 || solution_output == NULL) {
 		return;
 	}
 
-	GArray* selected_solution = g_array_index(solution_output,GArray * , solution_number);
+	GArray *selected_solution =
+		g_array_index(solution_output, GArray *, solution_number);
 	// TODO glib
 	apply_fix(NULL);
 
 	ConfigView::updateListAll();
 }
-void ConflictsView::changeToYes(){
+void ConflictsView::changeToYes()
+{
 	QItemSelectionModel *select = conflictsTable->selectionModel();
-	if (select->hasSelection()){
+	if (select->hasSelection()) {
 		QModelIndexList rows = select->selectedRows();
-		for (int i = 0;i < rows.count(); i++)
-		{
-			conflictsTable->item(rows[i].row(),1)->setText("YES");
+		for (int i = 0; i < rows.count(); i++) {
+			conflictsTable->item(rows[i].row(), 1)->setText("YES");
 		}
 	}
-
 }
-void ConflictsView::changeToModule() {
+void ConflictsView::changeToModule()
+{
 	QItemSelectionModel *select = conflictsTable->selectionModel();
-	if (select->hasSelection()){
+	if (select->hasSelection()) {
 		QModelIndexList rows = select->selectedRows();
-		for (int i = 0;i < rows.count(); i++)
-		{
-			conflictsTable->item(rows[i].row(),1)->setText("MODULE");
+		for (int i = 0; i < rows.count(); i++) {
+			conflictsTable->item(rows[i].row(), 1)
+				->setText("MODULE");
 		}
 	}
-
 }
-void ConflictsView::menuChanged1(struct menu * m)
+void ConflictsView::menuChanged1(struct menu *m)
 {
 	currentSelectedMenu = m;
 }
@@ -1197,47 +1219,61 @@ void ConflictsView::addSymbol()
 {
 	addSymbol(currentSelectedMenu);
 }
-void ConflictsView::selectionChanged(QList<QTreeWidgetItem*> selection)
+void ConflictsView::selectionChanged(QList<QTreeWidgetItem *> selection)
 {
 	currentSelection = selection;
-
 }
 void ConflictsView::addSymbol(struct menu *m)
 {
 	// adds a symbol to the conflict resolver list
-	if (m != nullptr){
-		if (m->sym != nullptr){
-			struct symbol* sym = m->sym;
+	if (m != nullptr) {
+		if (m->sym != nullptr) {
+			struct symbol *sym = m->sym;
 			tristate currentval = sym_get_tristate_value(sym);
 			//if symbol is not added yet:
-			QAbstractItemModel* tableModel = conflictsTable->model();
-			QModelIndexList matches = tableModel->match(tableModel->index(0,0), Qt::DisplayRole, sym->name );
-			if (matches.isEmpty()){
+			QAbstractItemModel *tableModel =
+				conflictsTable->model();
+			QModelIndexList matches =
+				tableModel->match(tableModel->index(0, 0),
+						  Qt::DisplayRole, sym->name);
+			if (matches.isEmpty()) {
+				conflictsTable->insertRow(
+					conflictsTable->rowCount());
+				conflictsTable->setItem(
+					conflictsTable->rowCount() - 1, 0,
+					new QTableWidgetItem(sym->name));
+				conflictsTable->setItem(
+					conflictsTable->rowCount() - 1, 1,
+					new QTableWidgetItem(
+						tristate_value_to_string(
+							currentval)));
+				conflictsTable->setItem(
+					conflictsTable->rowCount() - 1, 2,
+					new QTableWidgetItem(
+						tristate_value_to_string(
+							currentval)));
 
-				conflictsTable->insertRow(conflictsTable->rowCount());
-				conflictsTable->setItem(conflictsTable->rowCount()-1,0,new QTableWidgetItem(sym->name));
-				conflictsTable->setItem(conflictsTable->rowCount()-1,1,new QTableWidgetItem(tristate_value_to_string(currentval)));
-				conflictsTable->setItem(conflictsTable->rowCount()-1,2,new QTableWidgetItem(tristate_value_to_string(currentval)));
+				// 				std::cerr << "Adding " << sym->name << " to list " << std::endl;
 
-// 				std::cerr << "Adding " << sym->name << " to list " << std::endl;
-
-			}else{
+			} else {
 				// std::cerr << "we have the symbol already at index " << unsigned(addedSymbolList[sym->name]-1 )<< std::endl;
-				conflictsTable->item(matches[0].row(),2)->setText(tristate_value_to_string(currentval));
+				conflictsTable->item(matches[0].row(), 2)
+					->setText(tristate_value_to_string(
+						currentval));
 			}
 		}
 	}
 }
-void ConflictsView::addSymbolFromContextMenu() {
+void ConflictsView::addSymbolFromContextMenu()
+{
 	struct menu *menu;
 
 	if (currentSelection.count() == 0)
 		return;
 
-	for (auto el: currentSelection){
-		ConfigItem* item = (ConfigItem*)el;
-		if (!item)
-		{
+	for (auto el : currentSelection) {
+		ConfigItem *item = (ConfigItem *)el;
+		if (!item) {
 			std::cerr << "no item" << std::endl;
 			continue;
 		}
@@ -1250,111 +1286,124 @@ void ConflictsView::removeSymbol()
 {
 	QItemSelectionModel *select = conflictsTable->selectionModel();
 	QAbstractItemModel *itemModel = select->model();
-	if (select->hasSelection()){
+	if (select->hasSelection()) {
 		QModelIndexList rows = select->selectedRows();
-		itemModel->removeRows(rows[0].row(),rows.size());
+		itemModel->removeRows(rows[0].row(), rows.size());
 	}
 }
 void ConflictsView::cellClicked(int row, int column)
 {
+	auto itemText = conflictsTable->item(row, 0)->text().toUtf8().data();
 
-	auto itemText = conflictsTable->item(row,0)->text().toUtf8().data();
-
-
-	struct symbol* sym = sym_find(itemText);
-	if (sym == NULL)
-	{
+	struct symbol *sym = sym_find(itemText);
+	if (sym == NULL) {
 		std::cerr << "symbol is nullptr: " << std::endl;
 		return;
 	}
-	struct property* prop = sym->prop;
-	struct menu* men = prop->menu;
+	struct property *prop = sym->prop;
+	struct menu *men = prop->menu;
 	// uncommenting following like somehow disables click signal of 'apply selected solution'
 	// std::cerr << "help:::: " <<  men->help << std::endl;
-	if (sym->type == symbol_type::S_BOOLEAN){
+	if (sym->type == symbol_type::S_BOOLEAN) {
 		//disable module button
 		conflictsToolBar->actions()[2]->setDisabled(true);
 
-	}
-	else {
+	} else {
 		//enable module button
 		conflictsToolBar->actions()[2]->setDisabled(false);
 	}
 	emit(conflictSelected(men));
 }
-void ConflictsView::changeSolutionTable(int solution_number){
-	if(solution_output == nullptr || solution_number < 0){
+void ConflictsView::changeSolutionTable(int solution_number)
+{
+	if (solution_output == nullptr || solution_number < 0) {
 		return;
 	}
-	GArray* selected_solution = g_array_index(solution_output,GArray * , solution_number);
+	GArray *selected_solution =
+		g_array_index(solution_output, GArray *, solution_number);
 	current_solution_number = solution_number;
-// 	std::cout << "solution length =" << unsigned(selected_solution->len) << std::endl;
+	// 	std::cout << "solution length =" << unsigned(selected_solution->len) << std::endl;
 	// solutionTable->clearContents();
 	solutionTable->setRowCount(0);
-	for (unsigned int i = 0; i <selected_solution->len; i++)
-	{
+	for (unsigned int i = 0; i < selected_solution->len; i++) {
 		solutionTable->insertRow(solutionTable->rowCount());
-		struct symbol_fix* cur_symbol = g_array_index(selected_solution,struct symbol_fix*,i);
+		struct symbol_fix *cur_symbol = g_array_index(
+			selected_solution, struct symbol_fix *, i);
 
-		QTableWidgetItem* symbol_name = new QTableWidgetItem(cur_symbol->sym->name);
-		auto green = QColor(0,170,0);
-		auto red = QColor(255,0,0);
+		QTableWidgetItem *symbol_name =
+			new QTableWidgetItem(cur_symbol->sym->name);
+		auto green = QColor(0, 170, 0);
+		auto red = QColor(255, 0, 0);
 
 		// if(sym_string_within_range(cur_symbol->sym,cur_symbol->sym->name)){
 		// 	symbol_name->setForeground(QBrush(green));
 		// } else{
 		// 	symbol_name->setForeground(QBrush(red));
 		// }
-		solutionTable->setItem(solutionTable->rowCount()-1,0,symbol_name);
+		solutionTable->setItem(solutionTable->rowCount() - 1, 0,
+				       symbol_name);
 
-		if (cur_symbol->type == symbolfix_type::SF_BOOLEAN){
-// 			std::cout << "adding boolean symbol " << std::endl;
-			QTableWidgetItem* symbol_value = new QTableWidgetItem(tristate_value_to_string(cur_symbol->tri));
-			solutionTable->setItem(solutionTable->rowCount()-1,1,symbol_value);
-		} else if(cur_symbol->type == symbolfix_type::SF_NONBOOLEAN){
-// 			std::cout << "adding non boolean symbol " << std::endl;
-			QTableWidgetItem* symbol_value = new QTableWidgetItem(cur_symbol->nb_val.s);
-			solutionTable->setItem(solutionTable->rowCount()-1,1,symbol_value);
+		if (cur_symbol->type == symbolfix_type::SF_BOOLEAN) {
+			// 			std::cout << "adding boolean symbol " << std::endl;
+			QTableWidgetItem *symbol_value = new QTableWidgetItem(
+				tristate_value_to_string(cur_symbol->tri));
+			solutionTable->setItem(solutionTable->rowCount() - 1, 1,
+					       symbol_value);
+		} else if (cur_symbol->type == symbolfix_type::SF_NONBOOLEAN) {
+			// 			std::cout << "adding non boolean symbol " << std::endl;
+			QTableWidgetItem *symbol_value =
+				new QTableWidgetItem(cur_symbol->nb_val.s);
+			solutionTable->setItem(solutionTable->rowCount() - 1, 1,
+					       symbol_value);
 		} else {
-			QTableWidgetItem* symbol_value = new QTableWidgetItem(cur_symbol->disallowed.s);
-// 			std::cout << "adding disalllowed symbol " << std::endl;
-			solutionTable->setItem(solutionTable->rowCount()-1,1,symbol_value);
+			QTableWidgetItem *symbol_value =
+				new QTableWidgetItem(cur_symbol->disallowed.s);
+			// 			std::cout << "adding disalllowed symbol " << std::endl;
+			solutionTable->setItem(solutionTable->rowCount() - 1, 1,
+					       symbol_value);
 		}
-// 		std::cout << "Adding " << cur_symbol->sym->name << " to list " << std::endl;
+		// 		std::cout << "Adding " << cur_symbol->sym->name << " to list " << std::endl;
 	}
 	UpdateConflictsViewColorization();
 }
 void ConflictsView::UpdateConflictsViewColorization(void)
 {
-	auto green = QColor(0,170,0);
-	auto red = QColor(255,0,0);
-	auto grey = QColor(180,180,180);
+	auto green = QColor(0, 170, 0);
+	auto red = QColor(255, 0, 0);
+	auto grey = QColor(180, 180, 180);
 
 	if (solutionTable->rowCount() == 0 || current_solution_number < 0)
 		return;
 
-	for (int i=0;i< solutionTable->rowCount();i++) {
+	for (int i = 0; i < solutionTable->rowCount(); i++) {
 		//text from gui
-		QTableWidgetItem *symbol =  solutionTable->item(i,0);
+		QTableWidgetItem *symbol = solutionTable->item(i, 0);
 
 		//symbol from solution list
-		GArray* selected_solution = g_array_index(solution_output,GArray * ,current_solution_number);
-		struct symbol_fix* cur_symbol = g_array_index(selected_solution,struct symbol_fix*,i);
+		GArray *selected_solution = g_array_index(
+			solution_output, GArray *, current_solution_number);
+		struct symbol_fix *cur_symbol = g_array_index(
+			selected_solution, struct symbol_fix *, i);
 
 		// if symbol is editable but the value is not the target value from solution we got, the color is red
 		// if symbol is editable but the value is the target value from solution we got, the color is green
 		// if symbol is not editable , the value is not the target value, the color is grey
 		// if symbol is not editable , the value is the target value, the color is green
 
-
-		auto editable = sym_string_within_range(cur_symbol->sym, tristate_value_to_string(cur_symbol->tri).toStdString().c_str());
-		auto _symbol = solutionTable->item(i,0)->text().toUtf8().data();
-		struct symbol* sym_ = sym_find(_symbol);
+		auto editable = sym_string_within_range(
+			cur_symbol->sym,
+			tristate_value_to_string(cur_symbol->tri)
+				.toStdString()
+				.c_str());
+		auto _symbol =
+			solutionTable->item(i, 0)->text().toUtf8().data();
+		struct symbol *sym_ = sym_find(_symbol);
 
 		tristate current_value_of_symbol = sym_get_tristate_value(sym_);
-		tristate target_value_of_symbol = string_value_to_tristate(solutionTable->item(i,1)->text());
-		bool symbol_value_same_as_target = current_value_of_symbol == target_value_of_symbol;
-
+		tristate target_value_of_symbol = string_value_to_tristate(
+			solutionTable->item(i, 1)->text());
+		bool symbol_value_same_as_target =
+			current_value_of_symbol == target_value_of_symbol;
 
 		// std::cerr << "symbol name: " << symbol->text().toStdString() <<std::endl;
 		// std::cerr << "symbol current value: " << tristate_value_to_string(current_value_of_symbol).toStdString() <<std::endl;
@@ -1362,118 +1411,122 @@ void ConflictsView::UpdateConflictsViewColorization(void)
 		// std::cerr << "editable :"  << (editable ? "true" : "false" ) << std::endl;
 		// std::cerr << "symbol value same as target? : "  << (symbol_value_same_as_target ? "true" : "false" ) << std::endl;
 
-		if (editable && !symbol_value_same_as_target){
-			std::cerr << "editable but symbol not on target value" << std::endl;
+		if (editable && !symbol_value_same_as_target) {
+			std::cerr << "editable but symbol not on target value"
+				  << std::endl;
 			symbol->setForeground(red);
-		} else if (editable && symbol_value_same_as_target){
-			std::cerr << "editable and symbol is target value" << std::endl;
+		} else if (editable && symbol_value_same_as_target) {
+			std::cerr << "editable and symbol is target value"
+				  << std::endl;
 			symbol->setForeground(green);
-		} else if (!editable && !symbol_value_same_as_target){
-			std::cerr << "not editable and symbol is not target value" << std::endl;
+		} else if (!editable && !symbol_value_same_as_target) {
+			std::cerr
+				<< "not editable and symbol is not target value"
+				<< std::endl;
 			symbol->setForeground(grey);
-		} else if (!editable && symbol_value_same_as_target){
-			std::cerr << "not editable and symbol same target value" << std::endl;
+		} else if (!editable && symbol_value_same_as_target) {
+			std::cerr << "not editable and symbol same target value"
+				  << std::endl;
 			symbol->setForeground(green);
 		}
-
-
-
-    }
-
+	}
 }
 void ConflictsView::runSatConfAsync()
 {
-	GArray* wanted_symbols = g_array_sized_new(FALSE,TRUE,sizeof(struct symbol_dvalue *),conflictsTable->rowCount());
+	GArray *wanted_symbols =
+		g_array_sized_new(FALSE, TRUE, sizeof(struct symbol_dvalue *),
+				  conflictsTable->rowCount());
 	//loop through the rows in conflicts table adding each row into the array:
-	struct symbol_dvalue* p = nullptr;
-	p = static_cast<struct symbol_dvalue*>(calloc(conflictsTable->rowCount(),sizeof(struct symbol_dvalue)));
+	struct symbol_dvalue *p = nullptr;
+	p = static_cast<struct symbol_dvalue *>(calloc(
+		conflictsTable->rowCount(), sizeof(struct symbol_dvalue)));
 	if (!p)
 		return;
-	for (int i = 0; i < conflictsTable->rowCount(); i++)
-	{
-		struct symbol_dvalue *tmp = (p+i);
-		auto _symbol = conflictsTable->item(i,0)->text().toUtf8().data();
-		struct symbol* sym = sym_find(_symbol);
+	for (int i = 0; i < conflictsTable->rowCount(); i++) {
+		struct symbol_dvalue *tmp = (p + i);
+		auto _symbol =
+			conflictsTable->item(i, 0)->text().toUtf8().data();
+		struct symbol *sym = sym_find(_symbol);
 
 		tmp->sym = sym;
-		tmp->type = static_cast<symboldv_type>(sym->type == symbol_type::S_BOOLEAN?0:1);
-		tmp->tri = string_value_to_tristate(conflictsTable->item(i,1)->text());
-		g_array_append_val(wanted_symbols,tmp);
+		tmp->type = static_cast<symboldv_type>(
+			sym->type == symbol_type::S_BOOLEAN ? 0 : 1);
+		tmp->tri = string_value_to_tristate(
+			conflictsTable->item(i, 1)->text());
+		g_array_append_val(wanted_symbols, tmp);
 	}
 	fixConflictsAction_->setText("Cancel");
 	// conflictsToolBar->repaint();
 	// TODO glib
 	struct sfl_list *ret = run_satconf(NULL);
-// 	solution_output = run_satconf(wanted_symbols);
+	// 	solution_output = run_satconf(wanted_symbols);
 	std::cerr << "run_satconf finished....." << std::endl;
 	free(p);
-	g_array_free (wanted_symbols,FALSE);
+	g_array_free(wanted_symbols, FALSE);
 	emit resultsReady();
-	std::cerr << "emmitted resultsready()" <<std::endl;;
+	std::cerr << "emmitted resultsready()" << std::endl;
+	;
 	{
-		std::lock_guard<std::mutex> lk{satconf_mutex};
+		std::lock_guard<std::mutex> lk{ satconf_mutex };
 		satconf_cancelled = true;
 	}
 	satconf_cancellation_cv.notify_one();
-	std::cerr << "notifyone done"<< std::endl;;
-
+	std::cerr << "notifyone done" << std::endl;
+	;
 }
 void ConflictsView::updateResults(void)
 {
-	std::cerr << "updating results.." <<std::endl;
+	std::cerr << "updating results.." << std::endl;
 	fixConflictsAction_->setText("Calculate Fixes");
 	// conflictsToolBar->repaint();
-	if (!(solution_output == nullptr || solution_output->len == 0))
-	{
+	if (!(solution_output == nullptr || solution_output->len == 0)) {
 		solutionSelector->clear();
-		for (unsigned int i = 0; i < solution_output->len; i++)
-		{
-			solutionSelector->addItem(QString::number(i+1));
+		for (unsigned int i = 0; i < solution_output->len; i++) {
+			solutionSelector->addItem(QString::number(i + 1));
 		}
 		// populate the solution table from the first solution gotten
-		numSolutionLabel->setText(QString("Solutions: (%1) found").arg(solution_output->len));
+		numSolutionLabel->setText(QString("Solutions: (%1) found")
+						  .arg(solution_output->len));
 		changeSolutionTable(0);
 	}
-	if (runSatConfAsyncThread->joinable()){
-		std::cerr << "joining async thread" <<std::endl;
+	if (runSatConfAsyncThread->joinable()) {
+		std::cerr << "joining async thread" << std::endl;
 		runSatConfAsyncThread->join();
 		delete runSatConfAsyncThread;
-		runSatConfAsyncThread  = nullptr;
+		runSatConfAsyncThread = nullptr;
 	}
-	std::cerr << "update results finished" <<std::endl;
-
+	std::cerr << "update results finished" << std::endl;
 }
 void ConflictsView::calculateFixes(void)
 {
 	// call satconf to get a solution by looking at the grid and taking the symbol and their desired value.
-	if(conflictsTable->rowCount() == 0)
+	if (conflictsTable->rowCount() == 0)
 		return;
 
-	if (runSatConfAsyncThread == nullptr)
-	{
+	if (runSatConfAsyncThread == nullptr) {
 		std::cerr << "reating new asynchronous call" << std::endl;
 		// fire away asynchronous call
-		std::unique_lock<std::mutex> lk{satconf_mutex};
+		std::unique_lock<std::mutex> lk{ satconf_mutex };
 
 		numSolutionLabel->setText(QString("Solutions: "));
 		solutionSelector->clear();
 		solutionTable->setRowCount(0);
 		satconf_cancelled = false;
-		runSatConfAsyncThread = new std::thread(&ConflictsView::runSatConfAsync,this);
-	}else{
+		runSatConfAsyncThread =
+			new std::thread(&ConflictsView::runSatConfAsync, this);
+	} else {
 		std::cerr << "interrupting.." << std::endl;
 		interrupt_rangefix();
-		std::unique_lock<std::mutex> lk{satconf_mutex};
-		satconf_cancellation_cv.wait(lk,[this] {return satconf_cancelled == true;});
+		std::unique_lock<std::mutex> lk{ satconf_mutex };
+		satconf_cancellation_cv.wait(lk, [this] {
+			return satconf_cancelled == true;
+		});
 
 		// if (runSatConfAsyncThread->joinable()){
 		// 	runSatConfAsyncThread->join();
 		// 	runSatConfAsyncThread = new std::thread(&ConflictsView::runSatConfAsync,this);
 		// }
-
 	}
-
-
 }
 void ConflictsView::changeAll(void)
 {
@@ -1506,10 +1559,9 @@ void ConflictsView::changeAll(void)
 
 ConflictsView::~ConflictsView(void)
 {
-
 }
 
-ConfigInfoView::ConfigInfoView(QWidget* parent, const char *name)
+ConfigInfoView::ConfigInfoView(QWidget *parent, const char *name)
 	: Parent(parent), sym(0), _menu(0)
 {
 	setObjectName(name);
@@ -1517,20 +1569,20 @@ ConfigInfoView::ConfigInfoView(QWidget* parent, const char *name)
 
 	if (!objectName().isEmpty()) {
 		configSettings->beginGroup(objectName());
-		setShowDebug(configSettings->value("/showDebug", false).toBool());
+		setShowDebug(
+			configSettings->value("/showDebug", false).toBool());
 		configSettings->endGroup();
-		connect(configApp, &QApplication::aboutToQuit,
-			this, &ConfigInfoView::saveSettings);
+		connect(configApp, &QApplication::aboutToQuit, this,
+			&ConfigInfoView::saveSettings);
 	}
 
 	contextMenu = createStandardContextMenu();
 	QAction *action = new QAction("Show Debug Info", contextMenu);
 
 	action->setCheckable(true);
-	connect(action, &QAction::toggled,
-		this, &ConfigInfoView::setShowDebug);
-	connect(this, &ConfigInfoView::showDebugChanged,
-		action, &QAction::setChecked);
+	connect(action, &QAction::toggled, this, &ConfigInfoView::setShowDebug);
+	connect(this, &ConfigInfoView::showDebugChanged, action,
+		&QAction::setChecked);
 	action->setChecked(showDebug());
 	contextMenu->addSeparator();
 	contextMenu->addAction(action);
@@ -1587,7 +1639,7 @@ void ConfigInfoView::symbolInfo(void)
 
 void ConfigInfoView::menuInfo(void)
 {
-	struct symbol* sym;
+	struct symbol *sym;
 	QString info;
 	QTextStream stream(&info);
 
@@ -1600,7 +1652,8 @@ void ConfigInfoView::menuInfo(void)
 			if (sym->name) {
 				stream << " (";
 				if (showDebug())
-					stream << "<a href=\"s" << sym->name << "\">";
+					stream << "<a href=\"s" << sym->name
+					       << "\">";
 				stream << print_filter(sym->name);
 				if (showDebug())
 					stream << "</a>";
@@ -1676,15 +1729,15 @@ QString ConfigInfoView::debug_info(struct symbol *sym)
 		case P_SYMBOL:
 			stream << prop_get_type_name(prop->type);
 			stream << ": ";
-			expr_print(prop->expr, expr_print_help,
-				   &stream, E_NONE);
+			expr_print(prop->expr, expr_print_help, &stream,
+				   E_NONE);
 			stream << "<br>";
 			break;
 		case P_CHOICE:
 			if (sym_is_choice(sym)) {
 				stream << "choice: ";
-				expr_print(prop->expr, expr_print_help,
-					   &stream, E_NONE);
+				expr_print(prop->expr, expr_print_help, &stream,
+					   E_NONE);
 				stream << "<br>";
 			}
 			break;
@@ -1695,8 +1748,8 @@ QString ConfigInfoView::debug_info(struct symbol *sym)
 		}
 		if (prop->visible.expr) {
 			stream << "&nbsp;&nbsp;&nbsp;&nbsp;dep: ";
-			expr_print(prop->visible.expr, expr_print_help,
-				   &stream, E_NONE);
+			expr_print(prop->visible.expr, expr_print_help, &stream,
+				   E_NONE);
 			stream << "<br>";
 		}
 	}
@@ -1736,7 +1789,8 @@ QString ConfigInfoView::print_filter(const QString &str)
 	return res;
 }
 
-void ConfigInfoView::expr_print_help(void *data, struct symbol *sym, const char *str)
+void ConfigInfoView::expr_print_help(void *data, struct symbol *sym,
+				     const char *str)
 {
 	QTextStream *stream = reinterpret_cast<QTextStream *>(data);
 
@@ -1778,10 +1832,10 @@ void ConfigInfoView::clicked(const QUrl &url)
 
 	/* Seek for the menu which holds the symbol */
 	for (struct property *prop = sym->prop; prop; prop = prop->next) {
-		    if (prop->type != P_PROMPT && prop->type != P_MENU)
-			    continue;
-		    m = prop->menu;
-		    break;
+		if (prop->type != P_PROMPT && prop->type != P_MENU)
+			continue;
+		m = prop->menu;
+		break;
 	}
 
 	if (!m) {
@@ -1808,22 +1862,22 @@ ConfigSearchWindow::ConfigSearchWindow(ConfigMainWindow *parent)
 	setObjectName("search");
 	setWindowTitle("Search Config");
 
-	QVBoxLayout* layout1 = new QVBoxLayout(this);
+	QVBoxLayout *layout1 = new QVBoxLayout(this);
 	layout1->setContentsMargins(11, 11, 11, 11);
 	layout1->setSpacing(6);
 
-	QHBoxLayout* layout2 = new QHBoxLayout();
+	QHBoxLayout *layout2 = new QHBoxLayout();
 	layout2->setContentsMargins(0, 0, 0, 0);
 	layout2->setSpacing(6);
 	layout2->addWidget(new QLabel("Find:", this));
 	editField = new QLineEdit(this);
-	connect(editField, &QLineEdit::returnPressed,
-		this, &ConfigSearchWindow::search);
+	connect(editField, &QLineEdit::returnPressed, this,
+		&ConfigSearchWindow::search);
 	layout2->addWidget(editField);
 	searchButton = new QPushButton("Search", this);
 	searchButton->setAutoDefault(false);
-	connect(searchButton, &QPushButton::clicked,
-		this, &ConfigSearchWindow::search);
+	connect(searchButton, &QPushButton::clicked, this,
+		&ConfigSearchWindow::search);
 	layout2->addWidget(searchButton);
 	layout1->addLayout(layout2);
 
@@ -1832,14 +1886,14 @@ ConfigSearchWindow::ConfigSearchWindow(ConfigMainWindow *parent)
 	list = new ConfigList(split, "search");
 	list->mode = listMode;
 	info = new ConfigInfoView(split, "search");
-	connect(list, &ConfigList::menuChanged,
-		info, &ConfigInfoView::setInfo);
-	connect(list, &ConfigList::menuChanged,
-		parent, &ConfigMainWindow::setMenuLink);
-	connect(list, SIGNAL(menuChanged(struct menu *)),
-		parent, SLOT(conflictSelected(struct menu *)));
+	connect(list, &ConfigList::menuChanged, info, &ConfigInfoView::setInfo);
+	connect(list, &ConfigList::menuChanged, parent,
+		&ConfigMainWindow::setMenuLink);
+	connect(list, SIGNAL(menuChanged(struct menu *)), parent,
+		SLOT(conflictSelected(struct menu *)));
 
-	connect(list,SIGNAL(UpdateConflictsViewColorization()),SLOT(UpdateConflictsViewColorizationFowarder()));
+	connect(list, SIGNAL(UpdateConflictsViewColorization()),
+		SLOT(UpdateConflictsViewColorizationFowarder()));
 	layout1->addWidget(split);
 
 	QVariant x, y;
@@ -1847,8 +1901,10 @@ ConfigSearchWindow::ConfigSearchWindow(ConfigMainWindow *parent)
 	bool ok;
 
 	configSettings->beginGroup("search");
-	width = configSettings->value("/window width", parent->width() / 2).toInt();
-	height = configSettings->value("/window height", parent->height() / 2).toInt();
+	width = configSettings->value("/window width", parent->width() / 2)
+			.toInt();
+	height = configSettings->value("/window height", parent->height() / 2)
+			 .toInt();
 	resize(width, height);
 	x = configSettings->value("/window x");
 	y = configSettings->value("/window y");
@@ -1858,11 +1914,12 @@ ConfigSearchWindow::ConfigSearchWindow(ConfigMainWindow *parent)
 	if (ok)
 		split->setSizes(sizes);
 	configSettings->endGroup();
-	connect(configApp, &QApplication::aboutToQuit,
-		this, &ConfigSearchWindow::saveSettings);
+	connect(configApp, &QApplication::aboutToQuit, this,
+		&ConfigSearchWindow::saveSettings);
 }
 
-void ConfigSearchWindow::UpdateConflictsViewColorizationFowarder(void){
+void ConfigSearchWindow::UpdateConflictsViewColorizationFowarder(void)
+{
 	emit UpdateConflictsViewColorization();
 }
 void ConfigSearchWindow::saveSettings(void)
@@ -1892,17 +1949,16 @@ void ConfigSearchWindow::search(void)
 	if (!result)
 		return;
 	for (p = result; *p; p++) {
-		for_all_prompts((*p), prop)
-			lastItem = new ConfigItem(list, lastItem, prop->menu,
-						  menu_is_visible(prop->menu));
+		for_all_prompts((*p), prop) lastItem =
+			new ConfigItem(list, lastItem, prop->menu,
+				       menu_is_visible(prop->menu));
 	}
 }
 
 /*
  * Construct the complete config widget
  */
-ConfigMainWindow::ConfigMainWindow(void)
-	: searchWindow(0)
+ConfigMainWindow::ConfigMainWindow(void) : searchWindow(0)
 {
 	bool ok = true;
 	QVariant x, y;
@@ -1910,18 +1966,16 @@ ConfigMainWindow::ConfigMainWindow(void)
 	char title[256];
 
 	QDesktopWidget *d = configApp->desktop();
-	snprintf(title, sizeof(title), "%s%s",
-		rootmenu.prompt->text,
-		""
-		);
+	snprintf(title, sizeof(title), "%s%s", rootmenu.prompt->text, "");
 	setWindowTitle(title);
 
 	width = configSettings->value("/window width", d->width() - 64).toInt();
-	height = configSettings->value("/window height", d->height() - 64).toInt();
+	height = configSettings->value("/window height", d->height() - 64)
+			 .toInt();
 	resize(width, height);
 	x = configSettings->value("/window x");
 	y = configSettings->value("/window y");
-	if ((x.isValid())&&(y.isValid()))
+	if ((x.isValid()) && (y.isValid()))
 		move(x.toInt(), y.toInt());
 
 	// set up icons
@@ -1965,10 +2019,13 @@ ConfigMainWindow::ConfigMainWindow(void)
 		 in the view. this line connects that event to conflictselected event in mainwindow
 		 which updates the selection to match (in the configlist) the symbol that was selected.
 	*/
-	connect(conflictsView,SIGNAL(conflictSelected(struct menu *)),SLOT(conflictSelected(struct menu *)));
-	connect(conflictsView,SIGNAL(refreshMenu()),SLOT(refreshMenu()));
-	connect(menuList,SIGNAL(UpdateConflictsViewColorization()),conflictsView,SLOT(UpdateConflictsViewColorization()));
-	connect(configList,SIGNAL(UpdateConflictsViewColorization()),conflictsView,SLOT(UpdateConflictsViewColorization()));
+	connect(conflictsView, SIGNAL(conflictSelected(struct menu *)),
+		SLOT(conflictSelected(struct menu *)));
+	connect(conflictsView, SIGNAL(refreshMenu()), SLOT(refreshMenu()));
+	connect(menuList, SIGNAL(UpdateConflictsViewColorization()),
+		conflictsView, SLOT(UpdateConflictsViewColorization()));
+	connect(configList, SIGNAL(UpdateConflictsViewColorization()),
+		conflictsView, SLOT(UpdateConflictsViewColorization()));
 	setTabOrder(configList, helpText);
 
 	configList->setFocus();
@@ -1977,25 +2034,24 @@ ConfigMainWindow::ConfigMainWindow(void)
 	toolBar = new QToolBar("Tools", this);
 	addToolBar(toolBar);
 
-
 	backAction = new QAction(QPixmap(xpm_back), "Back", this);
-	connect(backAction, &QAction::triggered,
-		this, &ConfigMainWindow::goBack);
+	connect(backAction, &QAction::triggered, this,
+		&ConfigMainWindow::goBack);
 
 	QAction *quitAction = new QAction("&Quit", this);
 	quitAction->setShortcut(Qt::CTRL + Qt::Key_Q);
-	connect(quitAction, &QAction::triggered,
-		this, &ConfigMainWindow::close);
+	connect(quitAction, &QAction::triggered, this,
+		&ConfigMainWindow::close);
 
 	QAction *loadAction = new QAction(QPixmap(xpm_load), "&Load", this);
 	loadAction->setShortcut(Qt::CTRL + Qt::Key_L);
-	connect(loadAction, &QAction::triggered,
-		this, &ConfigMainWindow::loadConfig);
+	connect(loadAction, &QAction::triggered, this,
+		&ConfigMainWindow::loadConfig);
 
 	saveAction = new QAction(QPixmap(xpm_save), "&Save", this);
 	saveAction->setShortcut(Qt::CTRL + Qt::Key_S);
-	connect(saveAction, &QAction::triggered,
-		this, &ConfigMainWindow::saveConfig);
+	connect(saveAction, &QAction::triggered, this,
+		&ConfigMainWindow::saveConfig);
 
 	conf_set_changed_callback(conf_changed);
 
@@ -2004,61 +2060,65 @@ ConfigMainWindow::ConfigMainWindow(void)
 	configname = xstrdup(conf_get_configname());
 
 	QAction *saveAsAction = new QAction("Save &As...", this);
-	connect(saveAsAction, &QAction::triggered,
-		this, &ConfigMainWindow::saveConfigAs);
+	connect(saveAsAction, &QAction::triggered, this,
+		&ConfigMainWindow::saveConfigAs);
 	QAction *searchAction = new QAction("&Find", this);
 	searchAction->setShortcut(Qt::CTRL + Qt::Key_F);
-	connect(searchAction, &QAction::triggered,
-		this, &ConfigMainWindow::searchConfig);
-	singleViewAction = new QAction(QPixmap(xpm_single_view), "Single View", this);
+	connect(searchAction, &QAction::triggered, this,
+		&ConfigMainWindow::searchConfig);
+	singleViewAction =
+		new QAction(QPixmap(xpm_single_view), "Single View", this);
 	singleViewAction->setCheckable(true);
-	connect(singleViewAction, &QAction::triggered,
-		this, &ConfigMainWindow::showSingleView);
-	splitViewAction = new QAction(QPixmap(xpm_split_view), "Split View", this);
+	connect(singleViewAction, &QAction::triggered, this,
+		&ConfigMainWindow::showSingleView);
+	splitViewAction =
+		new QAction(QPixmap(xpm_split_view), "Split View", this);
 	splitViewAction->setCheckable(true);
-	connect(splitViewAction, &QAction::triggered,
-		this, &ConfigMainWindow::showSplitView);
+	connect(splitViewAction, &QAction::triggered, this,
+		&ConfigMainWindow::showSplitView);
 	fullViewAction = new QAction(QPixmap(xpm_tree_view), "Full View", this);
 	fullViewAction->setCheckable(true);
-	connect(fullViewAction, &QAction::triggered,
-		this, &ConfigMainWindow::showFullView);
-
-
+	connect(fullViewAction, &QAction::triggered, this,
+		&ConfigMainWindow::showFullView);
 
 	QAction *showNameAction = new QAction("Show Name", this);
-	  showNameAction->setCheckable(true);
+	showNameAction->setCheckable(true);
 	/* connect(showNameAction, &QAction::toggled, */
 	/* 	configList, &ConfigList::setShowName); */
 	showNameAction->setChecked(configList->showName);
 
 	QActionGroup *optGroup = new QActionGroup(this);
 	optGroup->setExclusive(true);
-	connect(optGroup, &QActionGroup::triggered,
-		configList, &ConfigList::setOptionMode);
-	connect(optGroup, &QActionGroup::triggered,
-		menuList, &ConfigList::setOptionMode);
+	connect(optGroup, &QActionGroup::triggered, configList,
+		&ConfigList::setOptionMode);
+	connect(optGroup, &QActionGroup::triggered, menuList,
+		&ConfigList::setOptionMode);
 
-	ConfigList::showNormalAction = new QAction("Show Normal Options", optGroup);
+	ConfigList::showNormalAction =
+		new QAction("Show Normal Options", optGroup);
 	ConfigList::showNormalAction->setCheckable(true);
 	ConfigList::showAllAction = new QAction("Show All Options", optGroup);
 	ConfigList::showAllAction->setCheckable(true);
-	ConfigList::showPromptAction = new QAction("Show Prompt Options", optGroup);
+	ConfigList::showPromptAction =
+		new QAction("Show Prompt Options", optGroup);
 	ConfigList::showPromptAction->setCheckable(true);
-	ConfigList::addSymbolsFromContextMenu = new QAction("Add symbol from context menu");
-	connect(ConfigList::addSymbolsFromContextMenu, SIGNAL(triggered()),conflictsView, SLOT(addSymbolFromContextMenu()));
+	ConfigList::addSymbolsFromContextMenu =
+		new QAction("Add symbol from context menu");
+	connect(ConfigList::addSymbolsFromContextMenu, SIGNAL(triggered()),
+		conflictsView, SLOT(addSymbolFromContextMenu()));
 
 	QAction *showDebugAction = new QAction("Show Debug Info", this);
-	  showDebugAction->setCheckable(true);
-	connect(showDebugAction, &QAction::toggled,
-		helpText, &ConfigInfoView::setShowDebug);
-	  showDebugAction->setChecked(helpText->showDebug());
+	showDebugAction->setCheckable(true);
+	connect(showDebugAction, &QAction::toggled, helpText,
+		&ConfigInfoView::setShowDebug);
+	showDebugAction->setChecked(helpText->showDebug());
 
 	QAction *showIntroAction = new QAction("Introduction", this);
-	connect(showIntroAction, &QAction::triggered,
-		this, &ConfigMainWindow::showIntro);
+	connect(showIntroAction, &QAction::triggered, this,
+		&ConfigMainWindow::showIntro);
 	QAction *showAboutAction = new QAction("About", this);
-	connect(showAboutAction, &QAction::triggered,
-		this, &ConfigMainWindow::showAbout);
+	connect(showAboutAction, &QAction::triggered, this,
+		&ConfigMainWindow::showAbout);
 
 	// init tool bar
 	QToolBar *toolBar = addToolBar("Tools");
@@ -2097,39 +2157,41 @@ ConfigMainWindow::ConfigMainWindow(void)
 	menu->addAction(showIntroAction);
 	menu->addAction(showAboutAction);
 
-	connect(helpText, &ConfigInfoView::anchorClicked,
-		helpText, &ConfigInfoView::clicked);
+	connect(helpText, &ConfigInfoView::anchorClicked, helpText,
+		&ConfigInfoView::clicked);
 
-	connect(configList, &ConfigList::menuChanged,
-		helpText, &ConfigInfoView::setInfo);
-	connect(configList, &ConfigList::menuSelected,
-		this, &ConfigMainWindow::changeMenu);
-	connect(configList, &ConfigList::itemSelected,
-		this, &ConfigMainWindow::changeItens);
-	connect(configList, &ConfigList::parentSelected,
-		this, &ConfigMainWindow::goBack);
-	connect(menuList, &ConfigList::menuChanged,
-		helpText, &ConfigInfoView::setInfo);
-	connect(menuList, &ConfigList::menuSelected,
-		this, &ConfigMainWindow::changeMenu);
+	connect(configList, &ConfigList::menuChanged, helpText,
+		&ConfigInfoView::setInfo);
+	connect(configList, &ConfigList::menuSelected, this,
+		&ConfigMainWindow::changeMenu);
+	connect(configList, &ConfigList::itemSelected, this,
+		&ConfigMainWindow::changeItens);
+	connect(configList, &ConfigList::parentSelected, this,
+		&ConfigMainWindow::goBack);
+	connect(menuList, &ConfigList::menuChanged, helpText,
+		&ConfigInfoView::setInfo);
+	connect(menuList, &ConfigList::menuSelected, this,
+		&ConfigMainWindow::changeMenu);
 
 	//pass the list of selected items in configList to conflictsView so that
 	//when right click 'add symbols to conflict' is clicked it will be added
 	//to the list
-	connect(configList, SIGNAL(selectionChanged(QList<QTreeWidgetItem*>)),
-		conflictsView, SLOT(selectionChanged(QList<QTreeWidgetItem*>)));
-	connect(configList, SIGNAL(menuChanged(struct menu *)),
-		conflictsView, SLOT(menuChanged1(struct menu *)));
-	connect(configList, &ConfigList::gotFocus,
-		helpText, &ConfigInfoView::setInfo);
-	connect(menuList, &ConfigList::gotFocus,
-		helpText, &ConfigInfoView::setInfo);
-	connect(menuList, &ConfigList::gotFocus,
-		this, &ConfigMainWindow::listFocusChanged);
-	connect(helpText, &ConfigInfoView::menuSelected,
-		this, &ConfigMainWindow::setMenuLink);
+	connect(configList, SIGNAL(selectionChanged(QList<QTreeWidgetItem *>)),
+		conflictsView,
+		SLOT(selectionChanged(QList<QTreeWidgetItem *>)));
+	connect(configList, SIGNAL(menuChanged(struct menu *)), conflictsView,
+		SLOT(menuChanged1(struct menu *)));
+	connect(configList, &ConfigList::gotFocus, helpText,
+		&ConfigInfoView::setInfo);
+	connect(menuList, &ConfigList::gotFocus, helpText,
+		&ConfigInfoView::setInfo);
+	connect(menuList, &ConfigList::gotFocus, this,
+		&ConfigMainWindow::listFocusChanged);
+	connect(helpText, &ConfigInfoView::menuSelected, this,
+		&ConfigMainWindow::setMenuLink);
 
-	QString listMode = configSettings->value("/listMode", "symbol").toString();
+	QString listMode =
+		configSettings->value("/listMode", "symbol").toString();
 	if (listMode == "single")
 		showSingleView();
 	else if (listMode == "full")
@@ -2161,7 +2223,8 @@ void ConfigMainWindow::loadConfig(void)
 	name = ba.data();
 
 	if (conf_read(name))
-		QMessageBox::information(this, "qconf", "Unable to load configuration!");
+		QMessageBox::information(this, "qconf",
+					 "Unable to load configuration!");
 
 	free(configname);
 	configname = xstrdup(name);
@@ -2172,7 +2235,8 @@ void ConfigMainWindow::loadConfig(void)
 bool ConfigMainWindow::saveConfig(void)
 {
 	if (conf_write(configname)) {
-		QMessageBox::information(this, "qconf", "Unable to save configuration!");
+		QMessageBox::information(this, "qconf",
+					 "Unable to save configuration!");
 		return false;
 	}
 	conf_write_autoconf(0);
@@ -2194,7 +2258,8 @@ void ConfigMainWindow::saveConfigAs(void)
 	name = ba.data();
 
 	if (conf_write(name)) {
-		QMessageBox::information(this, "qconf", "Unable to save configuration!");
+		QMessageBox::information(this, "qconf",
+					 "Unable to save configuration!");
 	}
 	conf_write_autoconf(0);
 
@@ -2204,9 +2269,10 @@ void ConfigMainWindow::saveConfigAs(void)
 
 void ConfigMainWindow::searchConfig(void)
 {
-	if (!searchWindow){
+	if (!searchWindow) {
 		searchWindow = new ConfigSearchWindow(this);
-		connect(searchWindow,SIGNAL(UpdateConflictsViewColorization()),conflictsView,SLOT(UpdateConflictsViewColorization()));
+		connect(searchWindow, SIGNAL(UpdateConflictsViewColorization()),
+			conflictsView, SLOT(UpdateConflictsViewColorization()));
 	}
 	searchWindow->show();
 }
@@ -2224,8 +2290,8 @@ void ConfigMainWindow::changeMenu(struct menu *menu)
 void ConfigMainWindow::setMenuLink(struct menu *menu)
 {
 	struct menu *parent;
-	ConfigList* list = NULL;
-	ConfigItem* item;
+	ConfigList *list = NULL;
+	ConfigItem *item;
 
 	if (configList->menuSkip(menu))
 		return;
@@ -2338,7 +2404,7 @@ void ConfigMainWindow::showSplitView(void)
 	menuList->setFocus();
 }
 
-void ConfigMainWindow::conflictSelected(struct menu * men)
+void ConfigMainWindow::conflictSelected(struct menu *men)
 {
 	configList->clearSelection();
 	menuList->clearSelection();
@@ -2369,14 +2435,15 @@ void ConfigMainWindow::showFullView(void)
 /*
  * ask for saving configuration before quitting
  */
-void ConfigMainWindow::closeEvent(QCloseEvent* e)
+void ConfigMainWindow::closeEvent(QCloseEvent *e)
 {
 	if (!conf_get_changed()) {
 		e->accept();
 		return;
 	}
 	QMessageBox mb("qconf", "Save configuration?", QMessageBox::Warning,
-			QMessageBox::Yes | QMessageBox::Default, QMessageBox::No, QMessageBox::Cancel | QMessageBox::Escape);
+		       QMessageBox::Yes | QMessageBox::Default, QMessageBox::No,
+		       QMessageBox::Cancel | QMessageBox::Escape);
 	mb.setButtonText(QMessageBox::Yes, "&Save Changes");
 	mb.setButtonText(QMessageBox::No, "&Discard Changes");
 	mb.setButtonText(QMessageBox::Cancel, "Cancel Exit");
@@ -2424,7 +2491,8 @@ void ConfigMainWindow::showIntro(void)
 
 void ConfigMainWindow::showAbout(void)
 {
-	static const QString str = "qconf is Copyright (C) 2002 Roman Zippel <zippel@linux-m68k.org>.\n"
+	static const QString str =
+		"qconf is Copyright (C) 2002 Roman Zippel <zippel@linux-m68k.org>.\n"
 		"Copyright (C) 2015 Boris Barbulovski <bbarbulovski@gmail.com>.\n"
 		"\n"
 		"Bug reports and feature request can also be entered at http://bugzilla.kernel.org/\n"
@@ -2442,16 +2510,16 @@ void ConfigMainWindow::saveSettings(void)
 	configSettings->setValue("/window height", size().height());
 
 	QString entry;
-	switch(configList->mode) {
-	case singleMode :
+	switch (configList->mode) {
+	case singleMode:
 		entry = "single";
 		break;
 
-	case symbolMode :
+	case symbolMode:
 		entry = "split";
 		break;
 
-	case fullMode :
+	case fullMode:
 		entry = "full";
 		break;
 
@@ -2498,9 +2566,9 @@ static void usage(void)
 	exit(0);
 }
 
-int main(int ac, char** av)
+int main(int ac, char **av)
 {
-	ConfigMainWindow* v;
+	ConfigMainWindow *v;
 	const char *name;
 
 	progname = av[0];
@@ -2532,7 +2600,8 @@ int main(int ac, char** av)
 
 	//zconfdump(stdout);
 	configApp->connect(configApp, SIGNAL(lastWindowClosed()), SLOT(quit()));
-	configApp->connect(configApp, SIGNAL(aboutToQuit()), v, SLOT(saveSettings()));
+	configApp->connect(configApp, SIGNAL(aboutToQuit()), v,
+			   SLOT(saveSettings()));
 	v->show();
 	configApp->exec();
 
@@ -2544,25 +2613,21 @@ int main(int ac, char** av)
 	return 0;
 }
 
-dropAbleView::dropAbleView(QWidget *parent) :
-    QTableWidget(parent)
+dropAbleView::dropAbleView(QWidget *parent) : QTableWidget(parent)
 {
-
 }
 
 dropAbleView::~dropAbleView()
 {
-
 }
 void dropAbleView::dropEvent(QDropEvent *event)
 {
-	std::cerr <<"dropped something" <<std::endl;
-		const QMimeData *d = event->mimeData();
+	std::cerr << "dropped something" << std::endl;
+	const QMimeData *d = event->mimeData();
 
-    if (event->mimeData()->hasText()) {
-	std::cerr <<"has text" <<std::endl;
-		}
-		std::cerr << d->text().toUtf8().constData() << std::endl;
-    event->acceptProposedAction();
-
+	if (event->mimeData()->hasText()) {
+		std::cerr << "has text" << std::endl;
+	}
+	std::cerr << d->text().toUtf8().constData() << std::endl;
+	event->acceptProposedAction();
 }

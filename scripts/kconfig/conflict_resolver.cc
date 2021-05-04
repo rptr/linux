@@ -9,20 +9,19 @@
 
 QString tristate_value_to_string(tristate val)
 {
-	switch ( val ) {
-	
+	switch (val) {
 	case yes:
 		return QString::fromStdString("YES");
 	case mod:
 		return QString::fromStdString("MODULE");
 	case no:
-		return QString::fromStdString("NO");	
+		return QString::fromStdString("NO");
 	default:
 		return QString::fromStdString("");
 	}
-	
 }
-tristate string_value_to_tristate(QString s){
+tristate string_value_to_tristate(QString s)
+{
 	if (s == "YES")
 		return tristate::yes;
 	else if (s == "MODULE")
@@ -31,5 +30,4 @@ tristate string_value_to_tristate(QString s){
 		return tristate::no;
 	else
 		return tristate::no;
-	
 }
