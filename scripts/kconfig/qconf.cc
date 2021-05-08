@@ -1377,7 +1377,16 @@ void ConflictsView::runSatConfAsync()
 	// TODO glib
 	struct sfl_list *ret = run_satconf(wanted_symbols);
 // 	solution_output = run_satconf(wanted_symbols);
+	solution_output = ret;
 	std::cerr << "run_satconf finished....." << std::endl;
+	struct sfl_node *node1;
+	sfl_list_for_each(node1, ret) {
+		std::cerr << "Fix:" << std::endl;
+		struct sfix_node *node2;
+		sfix_list_for_each(node2, node1->elem) {
+			printf("%s - %d\n", node2->elem->sym->name, node2->elem->tri);
+		}
+	}
 	free(p);
 	// g_array_free (wanted_symbols,FALSE);
 	emit resultsReady();

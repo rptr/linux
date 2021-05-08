@@ -937,24 +937,6 @@ struct sfix_list * choose_fix(struct sfl_list *diag)
 
 	return node->elem;
 }
-struct sfix_list * select_solution(struct sfl_list* solutions,int index){
-	struct sfl_node *node = solutions->head;
-	unsigned int counter;
-	for (counter = 0; counter < index; counter++)
-		node = node->next;
-
-	return node->elem;
-
-}
-struct symbol_fix * select_symbol(struct sfix_list* solution,int index){
-	struct sfix_node *node = solution->head;
-	unsigned int counter;
-	for (counter = 0; counter < index; counter++)
-		node = node->next;
-
-	return node->elem;
-
-}
 
 
 /*
