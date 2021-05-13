@@ -16,10 +16,6 @@ extern "C" {
 #include "lkc.h"
 
 
-/* include glib */
-#include <glib.h>
-
-
 /* include own definitions */
 #include "cf_defs.h"
 
