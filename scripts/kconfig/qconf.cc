@@ -414,7 +414,6 @@ void ConfigList::updateSelection(void)
 	if (selectedItems().count() == 0)
 		return;
 
-	//update current selected item list
 	emit selectionChanged(selectedItems());
 	ConfigItem* item = (ConfigItem*)selectedItems().first();
 	if (!item)
@@ -941,7 +940,6 @@ ConfigView::ConfigView(QWidget* parent, const char *name)
 	verticalLayout->setContentsMargins(0, 0, 0, 0);
 
 	list = new ConfigList(this);
-	//add right click context menu on config  tree which can add multiple symbols in one click
 	list->setSelectionMode(QAbstractItemView::ExtendedSelection);
 	list->setContextMenuPolicy(Qt::CustomContextMenu);
 	connect(list, SIGNAL(customContextMenuRequested(const QPoint &)),
@@ -1077,7 +1075,6 @@ ConflictsView::ConflictsView(QWidget* parent, const char *name)
 
 	conflictsTable->setDragDropMode(QAbstractItemView::DropOnly);
 	setAcceptDrops(true);
-	//conflictsTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
 
 	connect(conflictsTable, SIGNAL(cellClicked(int, int)), SLOT(cellClicked(int,int)));
 	horizontalLayout->addLayout(verticalLayout);
@@ -1125,9 +1122,7 @@ void ConflictsView::applyFixButtonClick(){
 		return;
 	}
 
-	// GArray* selected_solution = g_array_index(solution_output,GArray * , solution_number);
 	struct sfix_list * selected_solution = select_solution(solution_output, solution_number);
-	// TODO glib
 	apply_fix(selected_solution);
 
 	ConfigView::updateListAll();
@@ -1178,16 +1173,11 @@ void ConflictsView::addSymbol(struct menu *m)
 			QAbstractItemModel* tableModel = conflictsTable->model();
 			QModelIndexList matches = tableModel->match(tableModel->index(0,0), Qt::DisplayRole, sym->name );
 			if (matches.isEmpty()){
-
 				conflictsTable->insertRow(conflictsTable->rowCount());
 				conflictsTable->setItem(conflictsTable->rowCount()-1,0,new QTableWidgetItem(sym->name));
 				conflictsTable->setItem(conflictsTable->rowCount()-1,1,new QTableWidgetItem(tristate_value_to_string(currentval)));
 				conflictsTable->setItem(conflictsTable->rowCount()-1,2,new QTableWidgetItem(tristate_value_to_string(currentval)));
-
-// 				std::cerr << "Adding " << sym->name << " to list " << std::endl;
-
 			}else{
-				// std::cerr << "we have the symbol already at index " << unsigned(addedSymbolList[sym->name]-1 )<< std::endl;
 				conflictsTable->item(matches[0].row(),2)->setText(tristate_value_to_string(currentval));
 			}
 		}
@@ -1203,7 +1193,6 @@ void ConflictsView::addSymbolFromContextMenu() {
 		ConfigItem* item = (ConfigItem*)el;
 		if (!item)
 		{
-			std::cerr << "no item" << std::endl;
 			continue;
 		}
 
@@ -1229,17 +1218,14 @@ void ConflictsView::cellClicked(int row, int column)
 	struct symbol* sym = sym_find(itemText);
 	if (sym == NULL)
 	{
-		std::cerr << "symbol is nullptr: " << std::endl;
 		return;
 	}
 	struct property* prop = sym->prop;
 	struct menu* men = prop->menu;
 	// uncommenting following like somehow disables click signal of 'apply selected solution'
-	// std::cerr << "help:::: " <<  men->help << std::endl;
 	if (sym->type == symbol_type::S_BOOLEAN){
 		//disable module button
 		conflictsToolBar->actions()[2]->setDisabled(true);
-
 	}
 	else {
 		//enable module button
@@ -1251,11 +1237,8 @@ void ConflictsView::changeSolutionTable(int solution_number){
 	if(solution_output == nullptr || solution_number < 0){
 		return;
 	}
-	// GArray* selected_solution = g_array_index(solution_output,GArray * , solution_number);
 	struct sfix_list* selected_solution = select_solution(solution_output, solution_number);
 	current_solution_number = solution_number;
-// 	std::cout << "solution length =" << unsigned(selected_solution->len) << std::endl;
-	// solutionTable->clearContents();
 	solutionTable->setRowCount(0);
 	for (unsigned int i = 0; i <selected_solution->size; i++)
 	{
@@ -1266,27 +1249,18 @@ void ConflictsView::changeSolutionTable(int solution_number){
 		auto green = QColor(0,170,0);
 		auto red = QColor(255,0,0);
 
-		// if(sym_string_within_range(cur_symbol->sym,cur_symbol->sym->name)){
-		// 	symbol_name->setForeground(QBrush(green));
-		// } else{
-		// 	symbol_name->setForeground(QBrush(red));
-		// }
 		solutionTable->setItem(solutionTable->rowCount()-1,0,symbol_name);
 
 		if (cur_symbol->type == symbolfix_type::SF_BOOLEAN){
-// 			std::cout << "adding boolean symbol " << std::endl;
 			QTableWidgetItem* symbol_value = new QTableWidgetItem(tristate_value_to_string(cur_symbol->tri));
 			solutionTable->setItem(solutionTable->rowCount()-1,1,symbol_value);
 		} else if(cur_symbol->type == symbolfix_type::SF_NONBOOLEAN){
-// 			std::cout << "adding non boolean symbol " << std::endl;
 			QTableWidgetItem* symbol_value = new QTableWidgetItem(cur_symbol->nb_val.s);
 			solutionTable->setItem(solutionTable->rowCount()-1,1,symbol_value);
 		} else {
 			QTableWidgetItem* symbol_value = new QTableWidgetItem(cur_symbol->disallowed.s);
-// 			std::cout << "adding disalllowed symbol " << std::endl;
 			solutionTable->setItem(solutionTable->rowCount()-1,1,symbol_value);
 		}
-// 		std::cout << "Adding " << cur_symbol->sym->name << " to list " << std::endl;
 	}
 	UpdateConflictsViewColorization();
 }
@@ -1300,20 +1274,15 @@ void ConflictsView::UpdateConflictsViewColorization(void)
 		return;
 
 	for (int i=0;i< solutionTable->rowCount();i++) {
-		//text from gui
 		QTableWidgetItem *symbol =  solutionTable->item(i,0);
-
 		//symbol from solution list
 		struct sfix_list * selected_solution = select_solution(solution_output, current_solution_number);
-		// GArray* selected_solution = g_array_index(solution_output,GArray * ,current_solution_number);
 		struct symbol_fix* cur_symbol = select_symbol(selected_solution,i);
 
 		// if symbol is editable but the value is not the target value from solution we got, the color is red
 		// if symbol is editable but the value is the target value from solution we got, the color is green
 		// if symbol is not editable , the value is not the target value, the color is grey
 		// if symbol is not editable , the value is the target value, the color is green
-
-
 		auto editable = sym_string_within_range(cur_symbol->sym, tristate_value_to_string(cur_symbol->tri).toStdString().c_str());
 		auto _symbol = solutionTable->item(i,0)->text().toUtf8().data();
 		struct symbol* sym_ = sym_find(_symbol);
@@ -1322,35 +1291,20 @@ void ConflictsView::UpdateConflictsViewColorization(void)
 		tristate target_value_of_symbol = string_value_to_tristate(solutionTable->item(i,1)->text());
 		bool symbol_value_same_as_target = current_value_of_symbol == target_value_of_symbol;
 
-
-		// std::cerr << "symbol name: " << symbol->text().toStdString() <<std::endl;
-		// std::cerr << "symbol current value: " << tristate_value_to_string(current_value_of_symbol).toStdString() <<std::endl;
-		// std::cerr << "symbol target: " << solutionTable->item(i,1)->text().toStdString() <<std::endl;
-		// std::cerr << "editable :"  << (editable ? "true" : "false" ) << std::endl;
-		// std::cerr << "symbol value same as target? : "  << (symbol_value_same_as_target ? "true" : "false" ) << std::endl;
-
 		if (editable && !symbol_value_same_as_target){
-			std::cerr << "editable but symbol not on target value" << std::endl;
 			symbol->setForeground(red);
 		} else if (editable && symbol_value_same_as_target){
-			std::cerr << "editable and symbol is target value" << std::endl;
 			symbol->setForeground(green);
 		} else if (!editable && !symbol_value_same_as_target){
-			std::cerr << "not editable and symbol is not target value" << std::endl;
 			symbol->setForeground(grey);
 		} else if (!editable && symbol_value_same_as_target){
-			std::cerr << "not editable and symbol same target value" << std::endl;
 			symbol->setForeground(green);
 		}
-
-
-
     }
 
 }
 void ConflictsView::runSatConfAsync()
 {
-	// GArray* wanted_symbols = g_array_sized_new(FALSE,TRUE,sizeof(struct symbol_dvalue *),conflictsTable->rowCount());
 	//loop through the rows in conflicts table adding each row into the array:
 	struct symbol_dvalue* p = nullptr;
 	p = static_cast<struct symbol_dvalue*>(calloc(conflictsTable->rowCount(),sizeof(struct symbol_dvalue)));
@@ -1370,38 +1324,28 @@ void ConflictsView::runSatConfAsync()
 		tmp->type = static_cast<symboldv_type>(sym->type == symbol_type::S_BOOLEAN?0:1);
 		tmp->tri = string_value_to_tristate(conflictsTable->item(i,1)->text());
 		sdv_list_add(wanted_symbols,tmp);
-		// g_array_append_val(wanted_symbols,tmp);
 	}
 	fixConflictsAction_->setText("Cancel");
-	// conflictsToolBar->repaint();
-	// TODO glib
 	struct sfl_list *ret = run_satconf(wanted_symbols);
-// 	solution_output = run_satconf(wanted_symbols);
 	solution_output = ret;
-	std::cerr << "run_satconf finished....." << std::endl;
 	struct sfl_node *node1;
 	sfl_list_for_each(node1, ret) {
-		std::cerr << "Fix:" << std::endl;
 		struct sfix_node *node2;
 		sfix_list_for_each(node2, node1->elem) {
 			printf("%s - %d\n", node2->elem->sym->name, node2->elem->tri);
 		}
 	}
 	free(p);
-	// g_array_free (wanted_symbols,FALSE);
 	emit resultsReady();
-	std::cerr << "emmitted resultsready()" <<std::endl;;
 	{
 		std::lock_guard<std::mutex> lk{satconf_mutex};
 		satconf_cancelled = true;
 	}
 	satconf_cancellation_cv.notify_one();
-	std::cerr << "notifyone done"<< std::endl;;
 
 }
 void ConflictsView::updateResults(void)
 {
-	std::cerr << "updating results.." <<std::endl;
 	fixConflictsAction_->setText("Calculate Fixes");
 	// conflictsToolBar->repaint();
 	if (!(solution_output == nullptr || solution_output->size == 0))
@@ -1416,23 +1360,19 @@ void ConflictsView::updateResults(void)
 		changeSolutionTable(0);
 	}
 	if (runSatConfAsyncThread->joinable()){
-		std::cerr << "joining async thread" <<std::endl;
 		runSatConfAsyncThread->join();
 		delete runSatConfAsyncThread;
 		runSatConfAsyncThread  = nullptr;
 	}
-	std::cerr << "update results finished" <<std::endl;
 
 }
 void ConflictsView::calculateFixes(void)
 {
-	// call satconf to get a solution by looking at the grid and taking the symbol and their desired value.
 	if(conflictsTable->rowCount() == 0)
 		return;
 
 	if (runSatConfAsyncThread == nullptr)
 	{
-		std::cerr << "reating new asynchronous call" << std::endl;
 		// fire away asynchronous call
 		std::unique_lock<std::mutex> lk{satconf_mutex};
 
@@ -1442,18 +1382,10 @@ void ConflictsView::calculateFixes(void)
 		satconf_cancelled = false;
 		runSatConfAsyncThread = new std::thread(&ConflictsView::runSatConfAsync,this);
 	}else{
-		std::cerr << "interrupting.." << std::endl;
 		interrupt_rangefix();
 		std::unique_lock<std::mutex> lk{satconf_mutex};
 		satconf_cancellation_cv.wait(lk,[this] {return satconf_cancelled == true;});
-
-		// if (runSatConfAsyncThread->joinable()){
-		// 	runSatConfAsyncThread->join();
-		// 	runSatConfAsyncThread = new std::thread(&ConflictsView::runSatConfAsync,this);
-		// }
-
 	}
-
 
 }
 void ConflictsView::changeAll(void)
@@ -2504,24 +2436,10 @@ int main(int ac, char** av)
 }
 
 dropAbleView::dropAbleView(QWidget *parent) :
-    QTableWidget(parent)
-{
+    QTableWidget(parent) {}
 
-}
-
-dropAbleView::~dropAbleView()
-{
-
-}
+dropAbleView::~dropAbleView() {}
 void dropAbleView::dropEvent(QDropEvent *event)
 {
-	std::cerr <<"dropped something" <<std::endl;
-		const QMimeData *d = event->mimeData();
-
-    if (event->mimeData()->hasText()) {
-	std::cerr <<"has text" <<std::endl;
-		}
-		std::cerr << d->text().toUtf8().constData() << std::endl;
-    event->acceptProposedAction();
-
+   event->acceptProposedAction();
 }
