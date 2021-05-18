@@ -183,13 +183,24 @@ $(foreach f, mconf.o $(lxdialog), \
 
 $(addprefix $(obj)/, mconf.o $(lxdialog)): $(obj)/mconf-cfg
 
+# configfix: TODO explanation
+hostprogs        += cfconfig cfcliconfig cfoutconfig
+cfconf-objs      := configfix.o cf_constraints.o cf_expr.o cf_rangefix.o cf_satutils.o cf_utils.o picosat.o
+cfconfig-objs    := cfconfig.o $(cfconf-objs) $(common-objs)
+cfcliconfig-objs := cfcliconfig.o $(cfconf-objs) $(common-objs)
+cfoutconfig-objs := cfoutconfig.o $(cfconf-objs) $(common-objs)
+
+HOSTCFLAGS_picosat.o = -DTRACE -Wno-missing-prototypes -Wno-pointer-compare
+
 # qconf: Used for the xconfig target based on Qt
 hostprogs	+= qconf
-qconf-cxxobjs	:= qconf.o qconf-moc.o
-qconf-objs	:= images.o $(common-objs)
+qconf-cxxobjs	:= qconf.o qconf-moc.o conflict_resolver.o
+qconf-objs	:= images.o $(common-objs) $(cfconf-objs)
 
-HOSTLDLIBS_qconf	= $(shell . $(obj)/qconf-cfg && echo $$libs)
+HOSTLDLIBS_qconf	= $(shell . $(obj)/qconf-cfg && echo $$libs && echo -lpthread)
+HOSTLDLIBS_conflict_resolver    = $(shell . $(obj)/qconf-cfg && echo $$libs)
 HOSTCXXFLAGS_qconf.o	= $(shell . $(obj)/qconf-cfg && echo $$cflags)
+HOSTCXXFLAGS_conflict_resolver.o       = $(shell . $(obj)/qconf-cfg && echo $$cflags)
 HOSTCXXFLAGS_qconf-moc.o = $(shell . $(obj)/qconf-cfg && echo $$cflags)
 
 $(obj)/qconf.o: $(obj)/qconf-cfg
@@ -210,15 +221,6 @@ HOSTLDLIBS_gconf    = $(shell . $(obj)/gconf-cfg && echo $$libs)
 HOSTCFLAGS_gconf.o  = $(shell . $(obj)/gconf-cfg && echo $$cflags)
 
 $(obj)/gconf.o: $(obj)/gconf-cfg
-
-# configfix: TODO explanation
-hostprogs        += cfconfig cfcliconfig cfoutconfig
-cfconf-objs      := configfix.o cf_constraints.o cf_expr.o cf_rangefix.o cf_satutils.o cf_utils.o picosat.o
-cfconfig-objs    := cfconfig.o $(cfconf-objs) $(common-objs)
-cfcliconfig-objs := cfcliconfig.o $(cfconf-objs) $(common-objs)
-cfoutconfig-objs := cfoutconfig.o $(cfconf-objs) $(common-objs)
-
-HOSTCFLAGS_picosat.o = -DTRACE -Wno-missing-prototypes -Wno-pointer-compare
 
 # check if necessary packages are available, and configure build flags
 filechk_conf_cfg = $(CONFIG_SHELL) $<
