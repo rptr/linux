@@ -35,6 +35,7 @@ menuconfig-prog	:= mconf
 nconfig-prog	:= nconf
 gconfig-prog	:= gconf
 xconfig-prog	:= qconf
+cfconfig-prog   := cfconfig
 
 define config_rule
 PHONY += $(1)
@@ -45,7 +46,7 @@ PHONY += build_$(1)
 build_$(1): $(obj)/$($(1)-prog)
 endef
 
-$(foreach c, config menuconfig nconfig gconfig xconfig, $(eval $(call config_rule,$(c))))
+$(foreach c, config menuconfig nconfig gconfig xconfig cfconfig, $(eval $(call config_rule,$(c))))
 
 PHONY += localmodconfig localyesconfig
 localyesconfig localmodconfig: $(obj)/conf
@@ -140,6 +141,7 @@ help:
 	@echo  '                    default value without prompting'
 	@echo  '  tinyconfig	  - Configure the tiniest possible kernel'
 	@echo  '  testconfig	  - Run Kconfig unit tests (requires python3 and pytest)'
+	@echo  '  cfconfig        - TODO Describe what it does
 
 # ===========================================================================
 # object files used by all kconfig flavours
@@ -203,6 +205,13 @@ HOSTLDLIBS_gconf    = $(shell . $(obj)/gconf-cfg && echo $$libs)
 HOSTCFLAGS_gconf.o  = $(shell . $(obj)/gconf-cfg && echo $$cflags)
 
 $(obj)/gconf.o: $(obj)/gconf-cfg
+
+# configfix: TODO explanation
+hostprogs        += cfconfig
+cfconf-objs      := configfix.o cf_constraints.o cf_expr.o cf_rangefix.o cf_satutils.o cf_utils.o picosat.o
+cfconfig-objs    := cfconfig.o $(cfconf-objs) $(common-objs)
+
+HOSTCFLAGS_picosat.o = -DTRACE -Wno-missing-prototypes -Wno-pointer-compare
 
 # check if necessary packages are available, and configure build flags
 filechk_conf_cfg = $(CONFIG_SHELL) $<
