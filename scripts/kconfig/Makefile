@@ -30,12 +30,14 @@ KCONFIG_DEFCONFIG_LIST += arch/$(SRCARCH)/configs/$(KBUILD_DEFCONFIG)
 # We need this, in case the user has it in its environment
 unexport CONFIG_
 
-config-prog	:= conf
-menuconfig-prog	:= mconf
-nconfig-prog	:= nconf
-gconfig-prog	:= gconf
-xconfig-prog	:= qconf
-cfconfig-prog   := cfconfig
+config-prog	 := conf
+menuconfig-prog	 := mconf
+nconfig-prog	 := nconf
+gconfig-prog	 := gconf
+xconfig-prog	 := qconf
+cfconfig-prog    := cfconfig
+cfcliconfig-prog := cfcliconfig
+cfoutconfig-prog := cfoutconfig
 
 define config_rule
 PHONY += $(1)
@@ -46,7 +48,8 @@ PHONY += build_$(1)
 build_$(1): $(obj)/$($(1)-prog)
 endef
 
-$(foreach c, config menuconfig nconfig gconfig xconfig cfconfig, $(eval $(call config_rule,$(c))))
+$(foreach c, config menuconfig nconfig gconfig xconfig cfconfig cfcliconfig \
+cfoutconfig, $(eval $(call config_rule,$(c))))
 
 PHONY += localmodconfig localyesconfig
 localyesconfig localmodconfig: $(obj)/conf
@@ -142,6 +145,8 @@ help:
 	@echo  '  tinyconfig	  - Configure the tiniest possible kernel'
 	@echo  '  testconfig	  - Run Kconfig unit tests (requires python3 and pytest)'
 	@echo  '  cfconfig        - TODO Describe what it does
+	@echo  '  cfcliconfig     - TODO Describe what it does
+	@echo  '  cfoutconfig     - TODO Describe what it does
 
 # ===========================================================================
 # object files used by all kconfig flavours
@@ -207,9 +212,11 @@ HOSTCFLAGS_gconf.o  = $(shell . $(obj)/gconf-cfg && echo $$cflags)
 $(obj)/gconf.o: $(obj)/gconf-cfg
 
 # configfix: TODO explanation
-hostprogs        += cfconfig
+hostprogs        += cfconfig cfcliconfig cfoutconfig
 cfconf-objs      := configfix.o cf_constraints.o cf_expr.o cf_rangefix.o cf_satutils.o cf_utils.o picosat.o
 cfconfig-objs    := cfconfig.o $(cfconf-objs) $(common-objs)
+cfcliconfig-objs := cfcliconfig.o $(cfconf-objs) $(common-objs)
+cfoutconfig-objs := cfoutconfig.o $(cfconf-objs) $(common-objs)
 
 HOSTCFLAGS_picosat.o = -DTRACE -Wno-missing-prototypes -Wno-pointer-compare
 
