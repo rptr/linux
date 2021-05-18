@@ -124,7 +124,7 @@ struct fexpr * create_tmpsatvar(void)
 char * get_tmp_var_as_char(int i)
 {
 	char *val = malloc(sizeof(char) * 18);
-	snprintf(val, 18,"T_%d", i);
+	snprintf(val, 18, "T_%d", i);
 	return val;
 }
 
@@ -150,7 +150,8 @@ char * tristate_get_char(tristate val)
  */
 bool expr_can_evaluate_to_mod(struct expr *e)
 {
-	if (!e) return false;
+	if (!e)
+		return false;
 	
 	switch (e->type) {
 	case E_SYMBOL:
@@ -170,7 +171,8 @@ bool expr_can_evaluate_to_mod(struct expr *e)
  */
 static void print_expr_util(struct expr *e, int prevtoken)
 {
-	if (!e) return;
+	if (!e)
+		return;
 
 	switch (e->type) {
 	case E_SYMBOL:
@@ -308,7 +310,8 @@ struct property * sym_get_prompt(struct symbol *sym)
  */
 struct pexpr * prop_get_condition(struct property *prop)
 {
-	assert(prop != NULL);
+	if (prop == NULL)
+		return NULL;
 	
 	/* if there is no condition, return True */
 	if (!prop->visible.expr)
@@ -324,7 +327,9 @@ char * sym_get_name(struct symbol *sym)
 {
 	if (sym_is_choice(sym)) {
 		struct property *prompt = sym_get_prompt(sym);
-		assert(prompt);
+		if (prompt == NULL)
+			return "";
+
 		return strdup(prompt->text);
 	} else {
 		return sym->name;

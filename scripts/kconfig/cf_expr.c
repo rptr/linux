@@ -67,7 +67,8 @@ static void create_fexpr_selected(struct symbol *sym)
 	sym->fexpr_sel_y = fexpr_sel_y;
 	
 	/* fexpr_sel_m */
-	if (sym->type == S_BOOLEAN) return;
+	if (sym->type == S_BOOLEAN)
+		return;
 	struct fexpr *fexpr_sel_m = fexpr_create(sat_variable_nr++, FE_SELECT, sym->name);
 	str_append(&fexpr_sel_m->name, "_sel_m");
 	fexpr_sel_m->sym = sym;
@@ -164,10 +165,14 @@ static void create_fexpr_unknown(struct symbol *sym)
  */
 static void create_fexpr_choice(struct symbol *sym)
 {
-	assert(sym_is_boolean(sym));
+	if (!sym_is_boolean(sym))
+		return;
 	
 	struct property *prompt = sym_get_prompt(sym);
-	assert(prompt);
+	if (prompt == NULL) {
+		perror("Choice symbol should have a prompt.");
+		return;
+	}
 	
 	char *name = strdup(prompt->text);
 	
@@ -205,7 +210,8 @@ static void create_fexpr_choice(struct symbol *sym)
  */
 static struct pexpr * gcc_version_eval(struct expr* e)
 {
-	if (!e) return pexf(const_false);
+	if (!e)
+		return pexf(const_false);
 	
 	long long actual_gcc_ver, sym_gcc_ver;
 	if (e->left.sym == sym_find("GCC_VERSION")) {
@@ -237,10 +243,13 @@ static struct pexpr * gcc_version_eval(struct expr* e)
  */
 static struct pexpr * expr_eval_unequal_bool(struct expr *e)
 {
-	if (!e) return pexf(const_false);
+	if (!e)
+		return pexf(const_false);
 	
-	assert(sym_is_boolean(e->left.sym));
-	assert(sym_is_boolean(e->right.sym));
+	if (!sym_is_boolean(e->left.sym) || !sym_is_boolean(e->right.sym)) {
+		perror("Comparing 2 symbols that should be boolean.");
+		return pexf(const_false);
+	}
 	
 	int val_left = sym_get_tristate_value(e->left.sym);
 	int val_right = sym_get_tristate_value(e->right.sym);
@@ -265,7 +274,8 @@ static struct pexpr * expr_eval_unequal_bool(struct expr *e)
  */
 struct pexpr * expr_calculate_pexpr_both(struct expr *e)
 {
-	if (!e) return pexf(const_false);
+	if (!e)
+		return pexf(const_false);
 	
 	if (!expr_can_evaluate_to_mod(e))
 		return expr_calculate_pexpr_y(e);
@@ -290,8 +300,8 @@ struct pexpr * expr_calculate_pexpr_both(struct expr *e)
 		return expr_calculate_pexpr_y_comp(e);
 	default:
 		// TODO
-// 		perror("Unhandled type - expr_calculate_pexpr_both");
-		return pexf(const_false);
+		perror("Unhandled type - expr_calculate_pexpr_both");
+		return NULL;
 	}
 }
 
@@ -299,7 +309,8 @@ struct pexpr * expr_calculate_pexpr_both(struct expr *e)
  * calculate, when expr will evaluate to yes
  */
 struct pexpr * expr_calculate_pexpr_y(struct expr *e){
-	if (!e) return NULL;
+	if (!e)
+		return NULL;
 	
 	switch (e->type) {
 	case E_SYMBOL:
@@ -321,6 +332,7 @@ struct pexpr * expr_calculate_pexpr_y(struct expr *e){
 		return expr_calculate_pexpr_y_comp(e);
 	default:
 		perror("Unhandled type - expr_calculate_pexpr_y");
+		return NULL;
 	}
 }
 
@@ -328,7 +340,8 @@ struct pexpr * expr_calculate_pexpr_y(struct expr *e){
  * calculate, when expr will evaluate to mod
  */
 struct pexpr * expr_calculate_pexpr_m(struct expr *e){
-	if (!e) return NULL;
+	if (!e)
+		return NULL;
 	
 	if (!expr_can_evaluate_to_mod(e)) 
 		return pexf(const_false);
@@ -344,6 +357,7 @@ struct pexpr * expr_calculate_pexpr_m(struct expr *e){
 		return expr_calculate_pexpr_m_not(e->left.expr);
 	default:
 		perror("Trying to evaluate to mod.");
+		return NULL;
 	}
 }
 
@@ -448,7 +462,8 @@ struct fexpr * sym_create_nonbool_fexpr(struct symbol *sym, char *value)
 	struct fexpr *e = sym_get_nonbool_fexpr(sym, value);
 	
 	/* fexpr already exists */
-	if (e != NULL) return e;
+	if (e != NULL)
+		return e;
 	
 	e = fexpr_create(sat_variable_nr++, FE_NONBOOL, sym->name);
 	e->sym = sym;
@@ -546,7 +561,8 @@ struct pexpr * expr_calculate_pexpr_y_unequals(struct expr *e)
 
 struct pexpr * expr_calculate_pexpr_y_comp(struct expr *e)
 {
-	if (!e) return pexf(const_false);
+	if (!e)
+		return NULL;
 	
 	switch (e->type) {
 	case E_LTH:
@@ -561,11 +577,11 @@ struct pexpr * expr_calculate_pexpr_y_comp(struct expr *e)
 		if (expr_contains_symbol(e, sym_find("CRAMFS")) && expr_contains_symbol(e, sym_find("MTD")))
 			return expr_eval_unequal_bool(e);
 		
-// 		print_expr("Unhandled", e, 0);
-// 		getchar();
+		// TODO handle NR_CPUS
 		return pexf(const_false);
 	default:
 		perror("Unhandled type - expr_calculate_pexpr_y_comp");
+		return NULL;
 	}
 }
 
@@ -574,32 +590,27 @@ struct pexpr * expr_calculate_pexpr_y_comp(struct expr *e)
  */
 struct pexpr * pexpr_and(struct pexpr *a, struct pexpr *b)
 {
-	// TODO optimise
+	// TODO optimise freeing
 	/* simplifications:
 	 * expr && False -> False
 	 * expr && True  -> expr
 	 * expr && expr  -> expr
 	 */
-	if (a->type == PE_SYMBOL && a->left.fexpr == const_false) {
-// 		pexpr_free(b);
+	if (a->type == PE_SYMBOL && a->left.fexpr == const_false)
 		return a;
-	}
-	if (b->type == PE_SYMBOL && b->left.fexpr == const_false) {
-// 		pexpr_free(a);
-		return b;
-	}
 
-	if (a->type == PE_SYMBOL && a->left.fexpr == const_true) {
+	if (b->type == PE_SYMBOL && b->left.fexpr == const_false)
 		return b;
-	}
-	if (b->type == PE_SYMBOL && b->left.fexpr == const_true) {
+
+	if (a->type == PE_SYMBOL && a->left.fexpr == const_true) 
+		return b;
+
+	if (b->type == PE_SYMBOL && b->left.fexpr == const_true)
 		return a;
-	}
+
 	
-	if (pexpr_eq(a,b)) {
-// 		pexpr_free(b);
+	if (pexpr_eq(a,b))
 		return a;
-	}
 	
 	struct pexpr *e = xcalloc(1, sizeof(*e));
 	e->type = PE_AND;
@@ -613,38 +624,26 @@ struct pexpr * pexpr_and(struct pexpr *a, struct pexpr *b)
  */
 struct pexpr * pexpr_or(struct pexpr *a, struct pexpr *b)
 {	
-	// TODO optimise
+	// TODO optimise freeing
 	/* simplifications:
 	 * expr || False -> expr
 	 * expr || True  -> True
 	 * expr || expr  -> expr
 	 */
-	if (a->type == PE_SYMBOL && a->left.fexpr == const_false) {
-// 		if (a->type == PE_AND || a->type == PE_OR)
-// 			pexpr_free(a);
+	if (a->type == PE_SYMBOL && a->left.fexpr == const_false)
 		return b;
-	}
-	if (b->type == PE_SYMBOL && b->left.fexpr == const_false) {
-// 		if (b->type ==PE_AND || b->type == PE_OR)
-// 			pexpr_free(b);
-		return a;
-	}
-	
-	if (a->type == PE_SYMBOL && a->left.fexpr == const_true) {
-// 		if (b->type ==PE_AND || b->type == PE_OR)
-// 			pexpr_free(b);
-		return a;
-	}
-	if (b->type == PE_SYMBOL && b->left.fexpr == const_true) {
-// 		if (a->type == PE_AND || a->type == PE_OR)
-// 			pexpr_free(a);
-		return b;
-	}
 
-	if (pexpr_eq(a,b)) {
-// 		pexpr_free(b);
+	if (b->type == PE_SYMBOL && b->left.fexpr == const_false)
 		return a;
-	}
+	
+	if (a->type == PE_SYMBOL && a->left.fexpr == const_true) 
+		return a;
+	
+	if (b->type == PE_SYMBOL && b->left.fexpr == const_true)
+		return b;
+
+	if (pexpr_eq(a,b))
+		return a;
 	
 	struct pexpr *e = xcalloc(1, sizeof(*e));
 	e->type = PE_OR;
@@ -695,7 +694,8 @@ struct pexpr * pexpr_not(struct pexpr *a)
  */
 bool pexpr_is_cnf(struct pexpr *e)
 {
-	if (!e) return false;
+	if (!e)
+		return false;
 	
 	switch (e->type) {
 	case PE_SYMBOL:
@@ -716,7 +716,8 @@ bool pexpr_is_cnf(struct pexpr *e)
  */
 bool pexpr_is_nnf(struct pexpr *e)
 {
-	if (!e) return false;
+	if (!e)
+		return false;
 	
 	switch (e->type) {
 	case PE_SYMBOL:
@@ -801,7 +802,8 @@ void fexpr_add_to_satmap(struct fexpr *e)
  */
 void fexpr_print(char *tag, struct fexpr *e)
 {
-	if (!e) return;
+	if (!e)
+		return;
 	
 	printf("%s: %s\n", tag, str_get(&e->name));
 }
@@ -811,7 +813,8 @@ void fexpr_print(char *tag, struct fexpr *e)
  */
 void fexpr_as_char(struct fexpr *e, struct gstr *s)
 {
-	if (!e) return;
+	if (!e)
+		return;
 	
 	switch (e->type) {
 	case FE_SYMBOL:
@@ -839,7 +842,8 @@ void fexpr_as_char(struct fexpr *e, struct gstr *s)
  */
 void pexpr_as_char_short(struct pexpr *e, struct gstr *s, int parent)
 {
-	if (!e) return;
+	if (!e)
+		return;
 	
 	switch (e->type) {
 	case PE_SYMBOL:
@@ -1140,8 +1144,8 @@ void defm_list_add(struct defm_list *list, struct default_map *map)
  */
 void fexpr_list_delete(struct fexpr_list *list, struct fexpr_node *node)
 {
-	assert(node != NULL);
-	if (list->size == 0) return;
+	if (list->size == 0 || node == NULL)
+		return;
 	
 	if (node == list->head)
 		list->head = node->next;
@@ -1162,8 +1166,8 @@ void fexpr_list_delete(struct fexpr_list *list, struct fexpr_node *node)
  */
 void sfix_list_delete(struct sfix_list *list, struct sfix_node *node)
 {
-	assert(node != NULL);
-	if (list->size == 0) return;
+	if (list->size == 0 || node == NULL)
+		return;
 	
 	if (node == list->head)
 		list->head = node->next;
@@ -1184,8 +1188,8 @@ void sfix_list_delete(struct sfix_list *list, struct sfix_node *node)
  */
 void fexl_list_delete(struct fexl_list *list, struct fexl_node *node)
 {
-	assert(node != NULL);
-	if (list->size == 0) return;
+	if (list->size == 0 || node == NULL)
+		return;
 	
 	if (node == list->head)
 		list->head = node->next;
@@ -1268,7 +1272,6 @@ struct sfix_list * sfix_list_copy(struct sfix_list *list)
 	sfix_list_for_each(node, list)
 		sfix_list_add(ret, node->elem);
 
-	
 	return ret;
 }
 
@@ -1444,7 +1447,8 @@ struct pexpr * pexpr_copy(const struct pexpr *org)
 {
 	struct pexpr *e;
 	
-	if (!org) return NULL;
+	if (!org)
+		return NULL;
 	
 	e = xmalloc(sizeof(*org));
 	memcpy(e, org, sizeof(*org));
@@ -1470,7 +1474,8 @@ struct pexpr * pexpr_copy(const struct pexpr *org)
  */
 void pexpr_free(struct pexpr *e)
 {
-	if (!e) return;
+	if (!e)
+		return;
 	
 	switch (e->type) {
 	case PE_SYMBOL:
@@ -1538,7 +1543,8 @@ static void __pexpr_eliminate_eq(enum pexpr_type type, struct pexpr **ep1, struc
  */
 static void pexpr_eliminate_eq(struct pexpr **ep1, struct pexpr **ep2)
 {	
-	if (!e1 || !e2) return;
+	if (!e1 || !e2)
+		return;
 	
 	switch (e1->type) {
 	case PE_AND:
@@ -1568,7 +1574,8 @@ bool pexpr_eq(struct pexpr *e1, struct pexpr *e2)
 	bool res;
 	int old_count;
 	
-	if (!e1 || !e2) return false;
+	if (!e1 || !e2)
+		return false;
 	
 	if (e1->type != e2->type)
 		return false;
@@ -1600,7 +1607,8 @@ bool pexpr_eq(struct pexpr *e1, struct pexpr *e2)
  */
 static void pexpr_print_util(struct pexpr *e, int prevtoken)
 {
-	if (!e) return;
+	if (!e)
+		return;
 	
 	switch (e->type) {
 	case PE_SYMBOL:
@@ -1688,7 +1696,8 @@ static void pexpr_eliminate_dups1(enum pexpr_type type, struct pexpr **ep1, stru
 	
 	/* e1 and e2 are leaves. Compare them. */
 	
-	if (e1 == e2) return;
+	if (e1 == e2)
+		return;
 	
 	switch (e1->type) {
 	case PE_AND:
@@ -1732,7 +1741,8 @@ static void pexpr_eliminate_dups1(enum pexpr_type type, struct pexpr **ep1, stru
  */
 struct pexpr * pexpr_eliminate_dups(struct pexpr *e)
 {
-	if (!e) return e;
+	if (!e)
+		return e;
 	
 	int oldcount = trans_count;
 	while (true) {

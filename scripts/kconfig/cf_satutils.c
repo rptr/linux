@@ -53,26 +53,17 @@ void construct_cnf_clauses(PicoSAT *p)
 	/* adding unit-clauses for constants */
 	sat_add_clause(2, pico, -(const_false->satval));
 	sat_add_clause(2, pico, const_true->satval);
-	
-// 	printf("\n");
 
 	for_all_symbols(i, sym) {
-		if (sym->type == S_UNKNOWN) continue;
-		
-// 		print_sym_name(sym);
-// 		print_sym_constraint(sym);
+		if (sym->type == S_UNKNOWN)
+			continue;
 		
 		struct pexpr_node *node;
 		pexpr_list_for_each(node, sym->constraints) {
 			if (pexpr_is_cnf(node->elem)) {
-// 				pexpr_print("CNF:", e, -1);
-// 				getchar();
 				unfold_cnf_clause(node->elem);
 			} else {
-// 				pexpr_print("!Not CNF:", e, -1);
-// 				getchar();
 				build_cnf_tseytin(node->elem, create_tmpsatvar());
-// 				return;
 			}
 		}
 	}
@@ -104,7 +95,8 @@ static void unfold_cnf_clause_util(struct pexpr *e)
  */
 static void unfold_cnf_clause(struct pexpr *e)
 {
-	assert(pexpr_is_cnf(e));
+	if (!pexpr_is_cnf(e))
+		return;
 	
 	unfold_cnf_clause_util(e);
 
@@ -116,11 +108,6 @@ static void unfold_cnf_clause(struct pexpr *e)
  */
 static void build_cnf_tseytin(struct pexpr *e, struct fexpr *t)
 {
-// 	pexpr_print("::", e, -1);
-// 	assert(!pexpr_is_cnf(e));
-	
-// 	print_fexpr("e:", e, -1);
-
 	switch (e->type) {
 	case PE_AND:
 		build_cnf_tseytin_and(e, t);
@@ -129,9 +116,8 @@ static void build_cnf_tseytin(struct pexpr *e, struct fexpr *t)
 		build_cnf_tseytin_or(e, t);
 		break;
 	case PE_NOT:
-		pexpr_print("!Not NNF:",e, -1);
+		pexpr_print("!Not NNF:", e, -1);
 		perror("Should ne in NNF.");
-// 		build_cnf_tseytin_not(e);
 		break;
 	default:
 		perror("Expression not a propositional logic formula. root.");
@@ -143,7 +129,10 @@ static void build_cnf_tseytin(struct pexpr *e, struct fexpr *t)
  */
 static int pexpr_satval(struct pexpr *e)
 {
-	assert(pexpr_is_symbol(e));
+	if (!pexpr_is_symbol(e)) {
+		perror("pexpr is not a symbol.");
+		return -1;
+	}
 	
 	switch (e->type) {
 	case PE_SYMBOL:
@@ -172,7 +161,6 @@ static void build_cnf_tseytin_and(struct pexpr *e, struct fexpr *t)
 	} else {
 		t1 = create_tmpsatvar();
 		a = t1->satval;
-// 		sat_add_clause();
 	}
 	
 	/* set right side */
@@ -284,13 +272,14 @@ static void build_cnf_tseytin_not(struct pexpr *e, struct fexpr *t)
  */
 void sat_add_clause(int num, ...)
 {
-	if (num <= 1) return;
+	if (num <= 1)
+		return;
 	
 	va_list valist;
 	int i, *lit;
 	PicoSAT *pico;
 	
-	/* initialize valist for num number of arguments */
+
 	va_start(valist, num);
 	
 	pico = va_arg(valist, PicoSAT *);
@@ -303,7 +292,6 @@ void sat_add_clause(int num, ...)
 	}
 	picosat_add(pico, 0);
 	
-	/* clean memory reserved for valist */
 	va_end(valist);
 }
 
@@ -318,7 +306,8 @@ void picosat_solve(PicoSAT *pico)
 	struct symbol *sym;
 	unsigned int i;
 	for_all_symbols(i, sym) {
-		if (sym->type == S_UNKNOWN) continue;
+		if (sym->type == S_UNKNOWN)
+			continue;
 		
 		sym_add_assumption(pico, sym);
 	}
@@ -336,37 +325,6 @@ void picosat_solve(PicoSAT *pico)
 	if (res == PICOSAT_SATISFIABLE) {
 		printf("===> PROBLEM IS SATISFIABLE <===\n");
 		
-// 		struct symbol *sym;
-// 		bool found = false;
-// 		
-// 		/* check, if a symbol has been selected, but has unmet dependencies */
-// 		for_all_symbols(i, sym) {
-// 			if (sym->dir_dep.tri < sym->rev_dep.tri) {
-// 				found = true;
-// 				sym_warn_unmet_dep(sym);
-// 				add_select_constraints(pico, sym);
-// 				printf("Symbol %s has unmet dependencies.\n", sym->name);
-// 			}
-// 		}
-// 		if (!found) return;
-// 		printf("\n");
-// 		
-// 		/* add assumptions again */
-// 		for_all_symbols(i, sym)
-// 			sym_add_assumption(pico, sym);
-		
-// 		int res = picosat_sat(pico, -1);
-// 		
-// 		/* problem should be unsatisfiable now */
-// 		if (res == PICOSAT_UNSATISFIABLE) {
-// 			run_unsat_problem(pico);
-// 		} else {
-// 			printf("SOMETHING IS A MISS. PROBLEM IS NOT UNSATISFIABLE.\n");
-// 		}
-		
-// 		printf("All CNFs:\n");
-// 		print_all_cnf_clauses( cnf_clauses );
-		
 	} else if (res == PICOSAT_UNSATISFIABLE) {
 		printf("===> PROBLEM IS UNSATISFIABLE <===\n");
 		
@@ -378,13 +336,12 @@ void picosat_solve(PicoSAT *pico)
 				int *index = malloc(sizeof(*index));
 				*index = i;
 				e = &satmap[*index];
-// 				e = g_hash_table_lookup(satmap, index);
 				printf("%s <%d>\n", str_get(&e->name), e->assumption);
 			}
 			
 		}
-// 		printf("\n");
 		
+		// TODO
 		return;
 		printf("\n");
 		run_unsat_problem(pico);
@@ -441,7 +398,8 @@ void sym_add_assumption(PicoSAT *pico, struct symbol *sym)
 			
 			struct fexpr_node *node;
 			fexpr_list_for_each(node, sym->nb_vals) {
-				if (node->prev == NULL) continue;
+				if (node->prev == NULL)
+					continue;
 				
 				picosat_assume(pico, -(node->elem->satval));
 				node->elem->assumption = false;
@@ -460,7 +418,8 @@ void sym_add_assumption(PicoSAT *pico, struct symbol *sym)
 		
 		/* set value for all other fexpr */
 		fexpr_list_for_each(node, sym->nb_vals) {
-			if (node->prev == NULL) continue;
+			if (node->prev == NULL)
+				continue;
 			
 			if (strcmp(str_get(&node->elem->nb_val), string_val) == 0) {
 				picosat_assume(pico, node->elem->satval);
