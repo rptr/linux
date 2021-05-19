@@ -1,0 +1,5 @@
+feature-libelf=1
+feature-libelf-mmap=1
+feature-zlib=1
+feature-bpf=0
+feature-reallocarray=1
