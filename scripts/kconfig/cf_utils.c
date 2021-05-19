@@ -74,10 +74,10 @@ void create_constants(void)
 	printf("Creating constants...");
 	
 	/* create TRUE and FALSE constants */
-	const_false = fexpr_create(sat_variable_nr++, FE_FALSE, "0");
+	const_false = fexpr_create(sat_variable_nr++, FE_FALSE, "False");
 	fexpr_add_to_satmap(const_false);
 
-	const_true = fexpr_create(sat_variable_nr++, FE_TRUE, "1");
+	const_true = fexpr_create(sat_variable_nr++, FE_TRUE, "True");
 	fexpr_add_to_satmap(const_true);
 	
 	/* add fexpr of constants to tristate constants */

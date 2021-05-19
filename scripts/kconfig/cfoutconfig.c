@@ -114,14 +114,9 @@ static void write_constraints_to_file(void)
 
 static void add_comment(FILE *fd, struct fexpr *e)
 {
-// 	printf("%d %s\n", e->satval, str_get(&e->name));
-	
-	if (12 == 11
-// 		e->type == FE_TMPSATVAR || 
-// 		e->type == FE_SELECT ||
-// 		e->type == FE_CHOICE ||
-// 		e->type == FE_FALSE ||
-// 		e->type == FE_TRUE
+	if ( 
+		e->type == FE_SELECT ||
+		e->type == FE_CHOICE
 	) return;
 	
 	fprintf(fd, "c %d %s\n", e->satval, str_get(&e->name));
@@ -132,7 +127,7 @@ static void write_dimacs_to_file(PicoSAT *pico)
 	FILE *fd = fopen(OUTFILE_DIMACS, "w");
 	
 	unsigned int i;
-	for (i = 1; i <= (sat_variable_nr - tmp_variable_nr); i++)
+	for (i = 1; i < sat_variable_nr; i++)
 		add_comment(fd, &satmap[i]);
 
 	picosat_print(pico, fd);
