@@ -114,11 +114,6 @@ static void write_constraints_to_file(void)
 
 static void add_comment(FILE *fd, struct fexpr *e)
 {
-	if ( 
-		e->type == FE_SELECT ||
-		e->type == FE_CHOICE
-	) return;
-	
 	fprintf(fd, "c %d %s\n", e->satval, str_get(&e->name));
 }
 

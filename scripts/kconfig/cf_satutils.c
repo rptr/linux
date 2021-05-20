@@ -17,10 +17,15 @@
 #include "configfix.h"
 
 static void unfold_cnf_clause(struct pexpr *e);
-static void build_cnf_tseytin(struct pexpr *e, struct fexpr *t);
+static void build_cnf_tseytin(struct pexpr *e);
+
+static void build_cnf_tseytin_top_and(struct pexpr *e);
+static void build_cnf_tseytin_top_or(struct pexpr *e);
+
+static void build_cnf_tseytin_tmp(struct pexpr *e, struct fexpr *t);
 static void build_cnf_tseytin_and(struct pexpr *e, struct fexpr *t);
 static void build_cnf_tseytin_or(struct pexpr *e, struct fexpr *t);
-static void build_cnf_tseytin_not(struct pexpr *e, struct fexpr *t);
+static int pexpr_satval(struct pexpr *e);
 
 static void run_unsat_problem(PicoSAT *pico);
 
@@ -63,7 +68,7 @@ void construct_cnf_clauses(PicoSAT *p)
 			if (pexpr_is_cnf(node->elem)) {
 				unfold_cnf_clause(node->elem);
 			} else {
-				build_cnf_tseytin(node->elem, create_tmpsatvar());
+				build_cnf_tseytin(node->elem);
 			}
 		}
 	}
@@ -106,7 +111,82 @@ static void unfold_cnf_clause(struct pexpr *e)
 /*
  * build CNF-clauses for a fexpr not in CNF
  */
-static void build_cnf_tseytin(struct pexpr *e, struct fexpr *t)
+static void build_cnf_tseytin(struct pexpr *e)
+{
+	switch (e->type) {
+	case PE_AND:
+		build_cnf_tseytin_top_and(e);
+		break;
+	case PE_OR:
+		build_cnf_tseytin_top_or(e);
+		break;
+	default:
+		perror("Expression not a propositional logic formula. root.");
+	}
+}
+
+/*
+ * split up a pexpr of type AND as both sides must be satisfied
+ */
+static void build_cnf_tseytin_top_and(struct pexpr *e)
+{
+	if (pexpr_is_cnf(e->left.pexpr))
+		unfold_cnf_clause(e->left.pexpr);
+	else
+		build_cnf_tseytin(e->left.pexpr);
+	
+	if (pexpr_is_cnf(e->right.pexpr))
+		unfold_cnf_clause(e->right.pexpr);
+	else
+		build_cnf_tseytin(e->right.pexpr);
+	
+}
+
+static void build_cnf_tseytin_top_or(struct pexpr *e)
+{
+	struct fexpr *t1 = NULL, *t2 = NULL;
+	int a, b;
+	
+	/* set left side */
+	if (pexpr_is_symbol(e->left.pexpr)) {
+		a = pexpr_satval(e->left.pexpr);
+	} else {
+		t1 = create_tmpsatvar();
+		a = t1->satval;
+	}
+	
+	/* set right side */
+	if (pexpr_is_symbol(e->right.pexpr)) {
+		b = pexpr_satval(e->right.pexpr);
+	} else {
+		t2 = create_tmpsatvar();
+		b = t2->satval;
+	}
+	
+	/* A v B */
+	sat_add_clause(3, pico, a, b);
+	
+	/* traverse down the tree to build more constraints if needed */
+	if (!pexpr_is_symbol(e->left.pexpr)) {
+		if (t1 == NULL)
+			perror("t1 is NULL.");
+		
+		build_cnf_tseytin_tmp(e->left.pexpr, t1);
+		
+	}
+	
+	if (!pexpr_is_symbol(e->right.pexpr)) {
+		if (t2 == NULL)
+			perror("t2 is NULL.");
+
+		build_cnf_tseytin_tmp(e->right.pexpr, t2);
+	}
+}
+
+/*
+ * build the sub-expressions
+ */
+static void build_cnf_tseytin_tmp(struct pexpr *e, struct fexpr *t)
 {
 	switch (e->type) {
 	case PE_AND:
@@ -115,44 +195,17 @@ static void build_cnf_tseytin(struct pexpr *e, struct fexpr *t)
 	case PE_OR:
 		build_cnf_tseytin_or(e, t);
 		break;
-	case PE_NOT:
-		pexpr_print("!Not NNF:", e, -1);
-		perror("Should ne in NNF.");
-		break;
 	default:
 		perror("Expression not a propositional logic formula. root.");
 	}
 }
 
 /*
- * return the SAT-variable for a pexpr that is a symbol
- */
-static int pexpr_satval(struct pexpr *e)
-{
-	if (!pexpr_is_symbol(e)) {
-		perror("pexpr is not a symbol.");
-		return -1;
-	}
-	
-	switch (e->type) {
-	case PE_SYMBOL:
-		return e->left.fexpr->satval;
-	case PE_NOT:
-		return -(e->left.pexpr->left.fexpr->satval);
-	default:
-		perror("Not a symbol.");
-	}
-	
-	return -1;
-}
-
-
-/*
- * build CNF-clauses for a fexpr of type AND
+ * build the Tseytin sub-expressions for a pexpr of type AND
  */
 static void build_cnf_tseytin_and(struct pexpr *e, struct fexpr *t)
 {
-	struct fexpr *t1, *t2;
+	struct fexpr *t1 = NULL, *t2 = NULL;
 	int a, b, c;
 	
 	/* set left side */
@@ -172,10 +225,6 @@ static void build_cnf_tseytin_and(struct pexpr *e, struct fexpr *t)
 	}
 	
 	c = t->satval;
-	
-	/* A ^ B */
-// 	sat_add_clause(2, pico, a);
-// 	sat_add_clause(2, pico, b);
 	
 	/* -A v -B v C */
 	sat_add_clause(4, pico, -a, -b, c);
@@ -186,21 +235,25 @@ static void build_cnf_tseytin_and(struct pexpr *e, struct fexpr *t)
 	
 	/* traverse down the tree to build more constraints if needed */
 	if (!pexpr_is_symbol(e->left.pexpr)) {
-		build_cnf_tseytin(e->left.pexpr, t1);
+		if (t1 == NULL)
+			perror("t1 is NULL.");
+		
+		build_cnf_tseytin_tmp(e->left.pexpr, t1);
 	}
 	if (!pexpr_is_symbol(e->right.pexpr)) {
-		build_cnf_tseytin(e->right.pexpr, t2);
+		if (t2 == NULL)
+			perror("t2 is NULL.");
+		
+		build_cnf_tseytin_tmp(e->right.pexpr, t2);
 	}
 }
 
-
-
 /*
- * build CNF-clauses for a fexpr of type OR
+ * build the Tseytin sub-expressions for a pexpr of type 
  */
 static void build_cnf_tseytin_or(struct pexpr *e, struct fexpr *t)
 {
-	struct fexpr *t1, *t2;
+	struct fexpr *t1 = NULL, *t2 = NULL;
 	int a, b, c;
 	
 	/* set left side */
@@ -221,9 +274,6 @@ static void build_cnf_tseytin_or(struct pexpr *e, struct fexpr *t)
 
 	c = t->satval;
 	
-	/* A v B */
-// 	sat_add_clause(3, pico, a, b);
-	
 	/* A v B v -C */
 	sat_add_clause(4, pico, a, b, -c);
 	/* -A v C */;
@@ -233,37 +283,16 @@ static void build_cnf_tseytin_or(struct pexpr *e, struct fexpr *t)
 	
 	/* traverse down the tree to build more constraints if needed */
 	if (!pexpr_is_symbol(e->left.pexpr)) {
-		build_cnf_tseytin(e->left.pexpr, t1);
+		if (t1 == NULL)
+			perror("t1 is NULL.");
+		
+		build_cnf_tseytin_tmp(e->left.pexpr, t1);
 	}
 	if (!pexpr_is_symbol(e->right.pexpr)) {
-		build_cnf_tseytin(e->right.pexpr, t2);
+		if (t2 == NULL)
+			perror("t2 is NULL.");
+		build_cnf_tseytin_tmp(e->right.pexpr, t2);
 	}
-}
-
-/*
- * build CNF-clauses for a fexpr of type OR
- */
-static void build_cnf_tseytin_not(struct pexpr *e, struct fexpr *t)
-{
-	struct fexpr *t1;
-	int a, c;
-	
-	/* set left side */
-	if (pexpr_is_symbol(e->left.pexpr)) {
-		a = pexpr_satval(e->left.pexpr);
-	} else {
-		t1 = create_tmpsatvar();
-		a = t1->satval;
-	}
-	
-	c = t->satval;
-	
-	/* -A v -C */
-	sat_add_clause(3, pico, -a, -c);
-	/* A v C */
-	sat_add_clause(3, pico, a, c);
-	
-	printf("\nWARNING!!\nCNF-CLAUSE JUST NOT!!\n");
 }
 
 /*
@@ -293,6 +322,28 @@ void sat_add_clause(int num, ...)
 	picosat_add(pico, 0);
 	
 	va_end(valist);
+}
+
+/*
+ * return the SAT-variable for a pexpr that is a symbol
+ */
+static int pexpr_satval(struct pexpr *e)
+{
+	if (!pexpr_is_symbol(e)) {
+		perror("pexpr is not a symbol.");
+		return -1;
+	}
+	
+	switch (e->type) {
+	case PE_SYMBOL:
+		return e->left.fexpr->satval;
+	case PE_NOT:
+		return -(e->left.pexpr->left.fexpr->satval);
+	default:
+		perror("Not a symbol.");
+	}
+	
+	return -1;
 }
 
 /*
@@ -359,7 +410,8 @@ static void run_unsat_problem(PicoSAT *pico)
 	struct sfix_list *fix = choose_fix(diagnoses);
 	
 	/* user chose no action, so exit */
-	if (fix == NULL) return;
+	if (fix == NULL)
+		return;
 	
 	/* apply the fix */ 
 	apply_fix(fix);
