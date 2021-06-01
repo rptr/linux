@@ -413,7 +413,7 @@ void ConfigList::updateSelection(void)
 	if (selectedItems().count() == 0)
 		return;
 
-	emit selectionChanged(selectedItems());
+	emit selectedChanged(selectedItems());
 	ConfigItem* item = (ConfigItem*)selectedItems().first();
 	if (!item)
 		return;
@@ -1104,7 +1104,9 @@ ConflictsView::ConflictsView(QWidget* parent, const char *name)
 void QTableWidget::dropEvent(QDropEvent *event)
 {
 }
-void ConflictsView::changeToNo(){
+
+void ConflictsView::changeToNo()
+{
 	QItemSelectionModel *select = conflictsTable->selectionModel();
 	if (select->hasSelection()){
 		QModelIndexList rows = select->selectedRows();
@@ -1114,7 +1116,8 @@ void ConflictsView::changeToNo(){
 		}
 	}
 }
-void ConflictsView::applyFixButtonClick(){
+void ConflictsView::applyFixButtonClick()
+{
 	signed int solution_number = solutionSelector->currentIndex();
 
 	if (solution_number == -1 || solution_output == NULL) {
@@ -1122,67 +1125,76 @@ void ConflictsView::applyFixButtonClick(){
 	}
 
 	struct sfix_list * selected_solution = select_solution(solution_output, solution_number);
-	apply_fix(selected_solution);
 
+	apply_fix(selected_solution);
 	ConfigView::updateListAll();
 }
-void ConflictsView::changeToYes(){
+
+void ConflictsView::changeToYes()
+{
 	QItemSelectionModel *select = conflictsTable->selectionModel();
-	if (select->hasSelection()){
+
+	if (select->hasSelection()) {
 		QModelIndexList rows = select->selectedRows();
-		for (int i = 0;i < rows.count(); i++)
-		{
+		for (int i = 0;i < rows.count(); i++) {
 			conflictsTable->item(rows[i].row(),1)->setText("YES");
 		}
 	}
 
 }
-void ConflictsView::changeToModule() {
+void ConflictsView::changeToModule()
+{
 	QItemSelectionModel *select = conflictsTable->selectionModel();
 	if (select->hasSelection()){
 		QModelIndexList rows = select->selectedRows();
-		for (int i = 0;i < rows.count(); i++)
-		{
+		for (int i = 0;i < rows.count(); i++) {
 			conflictsTable->item(rows[i].row(),1)->setText("MODULE");
 		}
 	}
 
 }
+
 void ConflictsView::menuChanged1(struct menu * m)
 {
 	currentSelectedMenu = m;
 }
+
 void ConflictsView::addSymbol()
 {
 	addSymbol(currentSelectedMenu);
 }
-void ConflictsView::selectionChanged(QList<QTreeWidgetItem*> selection)
+
+void ConflictsView::selectedChanged(QList<QTreeWidgetItem*> selection)
 {
 	currentSelection = selection;
 
 }
+
 void ConflictsView::addSymbol(struct menu *m)
 {
 	// adds a symbol to the conflict resolver list
-	if (m != nullptr){
-		if (m->sym != nullptr){
+	if (m != nullptr) {
+		if (m->sym != nullptr) {
 			struct symbol* sym = m->sym;
 			tristate currentval = sym_get_tristate_value(sym);
 			//if symbol is not added yet:
 			QAbstractItemModel* tableModel = conflictsTable->model();
 			QModelIndexList matches = tableModel->match(tableModel->index(0,0), Qt::DisplayRole, sym->name );
-			if (matches.isEmpty()){
+
+			if (matches.isEmpty()) {
 				conflictsTable->insertRow(conflictsTable->rowCount());
 				conflictsTable->setItem(conflictsTable->rowCount()-1,0,new QTableWidgetItem(sym->name));
 				conflictsTable->setItem(conflictsTable->rowCount()-1,1,new QTableWidgetItem(tristate_value_to_string(currentval)));
 				conflictsTable->setItem(conflictsTable->rowCount()-1,2,new QTableWidgetItem(tristate_value_to_string(currentval)));
-			}else{
+			} else {
 				conflictsTable->item(matches[0].row(),2)->setText(tristate_value_to_string(currentval));
 			}
 		}
 	}
 }
-void ConflictsView::addSymbolFromContextMenu() {
+
+void ConflictsView::addSymbolFromContextMenu()
+{
 	struct menu *menu;
 
 	if (currentSelection.count() == 0)
@@ -1199,6 +1211,7 @@ void ConflictsView::addSymbolFromContextMenu() {
 		addSymbol(menu);
 	}
 }
+
 void ConflictsView::removeSymbol()
 {
 	QItemSelectionModel *select = conflictsTable->selectionModel();
@@ -1208,6 +1221,7 @@ void ConflictsView::removeSymbol()
 		itemModel->removeRows(rows[0].row(),rows.size());
 	}
 }
+
 void ConflictsView::cellClicked(int row, int column)
 {
 
@@ -1232,25 +1246,26 @@ void ConflictsView::cellClicked(int row, int column)
 	}
 	emit(conflictSelected(men));
 }
-void ConflictsView::changeSolutionTable(int solution_number){
-	if(solution_output == nullptr || solution_number < 0){
+
+void ConflictsView::changeSolutionTable(int solution_number)
+{
+	if(solution_output == nullptr || solution_number < 0) {
 		return;
 	}
+
 	struct sfix_list* selected_solution = select_solution(solution_output, solution_number);
 	current_solution_number = solution_number;
 	solutionTable->setRowCount(0);
-	for (unsigned int i = 0; i <selected_solution->size; i++)
-	{
-		solutionTable->insertRow(solutionTable->rowCount());
-		struct symbol_fix* cur_symbol = select_symbol(selected_solution,i);
 
+	for (unsigned int i = 0; i <selected_solution->size; i++) {
+		solutionTable->insertRow(solutionTable->rowCount());
+
+		struct symbol_fix* cur_symbol = select_symbol(selected_solution,i);
 		QTableWidgetItem* symbol_name = new QTableWidgetItem(cur_symbol->sym->name);
-		auto green = QColor(0,170,0);
-		auto red = QColor(255,0,0);
 
 		solutionTable->setItem(solutionTable->rowCount()-1,0,symbol_name);
 
-		if (cur_symbol->type == symbolfix_type::SF_BOOLEAN){
+		if (cur_symbol->type == symbolfix_type::SF_BOOLEAN) {
 			QTableWidgetItem* symbol_value = new QTableWidgetItem(tristate_value_to_string(cur_symbol->tri));
 			solutionTable->setItem(solutionTable->rowCount()-1,1,symbol_value);
 		} else if(cur_symbol->type == symbolfix_type::SF_NONBOOLEAN){
@@ -1312,8 +1327,7 @@ void ConflictsView::runSatConfAsync()
 
 	struct sdv_list *wanted_symbols = sdv_list_init();
 
-	for (int i = 0; i < conflictsTable->rowCount(); i++)
-	{
+	for (int i = 0; i < conflictsTable->rowCount(); i++) {
 
 		struct symbol_dvalue *tmp = (p+i);
 		auto _symbol = conflictsTable->item(i,0)->text().toUtf8().data();
@@ -1347,31 +1361,29 @@ void ConflictsView::updateResults(void)
 {
 	fixConflictsAction_->setText("Calculate Fixes");
 	// conflictsToolBar->repaint();
-	if (!(solution_output == nullptr || solution_output->size == 0))
-	{
+	if (!(solution_output == nullptr || solution_output->size == 0)) {
 		solutionSelector->clear();
-		for (unsigned int i = 0; i < solution_output->size; i++)
-		{
+		for (unsigned int i = 0; i < solution_output->size; i++) {
 			solutionSelector->addItem(QString::number(i+1));
 		}
 		// populate the solution table from the first solution gotten
 		numSolutionLabel->setText(QString("Solutions: (%1) found").arg(solution_output->size));
 		changeSolutionTable(0);
 	}
-	if (runSatConfAsyncThread->joinable()){
+
+	if (runSatConfAsyncThread->joinable()) {
 		runSatConfAsyncThread->join();
 		delete runSatConfAsyncThread;
 		runSatConfAsyncThread  = nullptr;
 	}
-
 }
+
 void ConflictsView::calculateFixes(void)
 {
 	if(conflictsTable->rowCount() == 0)
 		return;
 
-	if (runSatConfAsyncThread == nullptr)
-	{
+	if (runSatConfAsyncThread == nullptr) {
 		// fire away asynchronous call
 		std::unique_lock<std::mutex> lk{satconf_mutex};
 
@@ -1380,7 +1392,7 @@ void ConflictsView::calculateFixes(void)
 		solutionTable->setRowCount(0);
 		satconf_cancelled = false;
 		runSatConfAsyncThread = new std::thread(&ConflictsView::runSatConfAsync,this);
-	}else{
+	} else {
 		interrupt_rangefix();
 		std::unique_lock<std::mutex> lk{satconf_mutex};
 		satconf_cancellation_cv.wait(lk,[this] {return satconf_cancelled == true;});
@@ -2019,8 +2031,8 @@ ConfigMainWindow::ConfigMainWindow(void)
 	//pass the list of selected items in configList to conflictsView so that
 	//when right click 'add symbols to conflict' is clicked it will be added
 	//to the list
-	connect(configList, SIGNAL(selectionChanged(QList<QTreeWidgetItem*>)),
-		conflictsView, SLOT(selectionChanged(QList<QTreeWidgetItem*>)));
+	connect(configList, SIGNAL(selectedChanged(QList<QTreeWidgetItem*>)),
+		conflictsView, SLOT(selectedChanged(QList<QTreeWidgetItem*>)));
 	connect(configList, SIGNAL(menuChanged(struct menu *)),
 		conflictsView, SLOT(menuChanged1(struct menu *)));
 	connect(configList, SIGNAL(gotFocus(struct menu *)),

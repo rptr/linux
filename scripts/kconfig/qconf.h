@@ -107,7 +107,7 @@ signals:
 	void itemSelected(struct menu *menu);
 	void parentSelected(void);
 	void gotFocus(struct menu *);
-	void selectionChanged(QList<QTreeWidgetItem*> selection);
+	void selectedChanged(QList<QTreeWidgetItem*> selection);
 	void UpdateConflictsViewColorization();
 
 public:
@@ -267,7 +267,7 @@ public slots:
 	void changeToNo();
 	void changeToYes();
 	void changeToModule();
-	void selectionChanged(QList<QTreeWidgetItem*> selection);
+	void selectedChanged(QList<QTreeWidgetItem*> selection);
 
 
 	void applyFixButtonClick();
