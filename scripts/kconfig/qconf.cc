@@ -68,7 +68,7 @@ QList<int> ConfigSettings::readSizes(const QString& key, bool *ok)
 		*ok = false;
 
 	return result;
-
+}
 
 /**
  * Writes a list of integer values to the application settings.
