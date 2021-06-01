@@ -28,13 +28,11 @@ int main(int argc, char *argv[])
 {
 	clock_t start, end;
 	double time;
-	
-// 	printf("\nHello configfix!\n\n");
-	
+
 	printf("\nInit...");
 	/* measure time for constructing constraints and clauses */
 	start = clock();
-	
+
 	/* parse Kconfig-file and read .config */
 	init_config(argv[1]);
 
@@ -52,24 +50,24 @@ int main(int argc, char *argv[])
 
 	end = clock();
 	time = ((double) (end - start)) / CLOCKS_PER_SEC;
-	
+
 	printf("done. (%.6f secs.)\n", time);
-	
+
 	/* start PicoSAT */
 	PicoSAT *pico = picosat_init();
 	picosat_enable_trace_generation(pico);
 	printf("Building CNF-clauses...");
 	start = clock();
-	
+
 	/* construct the CNF clauses */
 	construct_cnf_clauses(pico);
-	
+
 	end = clock();
 	time = ((double) (end - start)) / CLOCKS_PER_SEC;
 	printf("done. (%.6f secs.)\n", time);
-	
+
 	printf("\n");
-	
+
 	/* write constraints into file */
 	start = clock();
 	printf("Writing constraints...");
@@ -77,7 +75,7 @@ int main(int argc, char *argv[])
 	end = clock();
 	time = ((double) (end - start)) / CLOCKS_PER_SEC;
 	printf("done. (%.6f secs.)\n", time);
-	
+
 	/* write SAT problem in DIMACS into file */
 	start = clock();
 	printf("Writing SAT problem in DIMACS...");
@@ -85,10 +83,10 @@ int main(int argc, char *argv[])
 	end = clock();
 	time = ((double) (end - start)) / CLOCKS_PER_SEC;
 	printf("done. (%.6f secs.)\n", time);
-	
+
 	printf("\nConstraints have been written into %s\n", OUTFILE_CONSTRAINTS);
 	printf("SAT problem has been written in %s\n", OUTFILE_DIMACS);
-	
+
 	return 0;
 }
 
@@ -97,10 +95,10 @@ static void write_constraints_to_file(void)
 	FILE *fd = fopen(OUTFILE_CONSTRAINTS, "w");
 	unsigned int i;
 	struct symbol *sym;
-	
+
 	for_all_symbols(i, sym) {
 		if (sym->type == S_UNKNOWN) continue;
-		
+
 		struct pexpr_node *node;
 		pexpr_list_for_each(node, sym->constraints) {
 			struct gstr s = str_new();
@@ -120,7 +118,7 @@ static void add_comment(FILE *fd, struct fexpr *e)
 static void write_dimacs_to_file(PicoSAT *pico)
 {
 	FILE *fd = fopen(OUTFILE_DIMACS, "w");
-	
+
 	unsigned int i;
 	for (i = 1; i < sat_variable_nr; i++)
 		add_comment(fd, &satmap[i]);
