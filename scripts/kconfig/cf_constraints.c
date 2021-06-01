@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: GPL-2.0 */
+// SPDX-License-Identifier: GPL-2.0
 /*
  * Copyright (C) 2020 Patrick Franz <patfra71@gmail.com>
  */
@@ -73,8 +73,7 @@ void get_constraints_bool(void)
 {
 	unsigned int i;
 	struct symbol *sym;
-	for_all_symbols(i, sym)
-	{
+	for_all_symbols(i, sym) {
 		if (!sym_is_boolean(sym))
 			continue;
 
@@ -83,7 +82,8 @@ void get_constraints_bool(void)
 			build_tristate_constraint_clause(sym);
 
 		/* build constraints for select statements
-		 * need to treat choice symbols seperately */
+		 * need to treat choice symbols seperately
+		 */
 		if (!KCR_CMP) {
 			add_selects(sym);
 		} else {
@@ -119,15 +119,15 @@ void get_constraints_bool(void)
 }
 
 /* 
-* build the constraints for select-variables
-* skip non-Booleans, choice symbols/options och symbols without rev_dir
-*/
+ * build the constraints for select-variables
+ * skip non-Booleans, choice symbols/options och symbols without rev_dir
+ */
 void get_constraints_select(void)
 {
 	unsigned int i;
 	struct symbol *sym;
-	for_all_symbols(i, sym)
-	{
+
+	for_all_symbols(i, sym) {
 		if (KCR_CMP)
 			continue;
 
@@ -175,8 +175,7 @@ void get_constraints_nonbool(void)
 	struct symbol *sym;
 
 	/* these constraints might add "known values" */
-	for_all_symbols(i, sym)
-	{
+	for_all_symbols(i, sym) {
 		if (!sym_is_nonboolean(sym))
 			continue;
 
@@ -196,14 +195,15 @@ void get_constraints_nonbool(void)
 		/* add current value to possible values */
 		if (!sym->flags || !(sym->flags & SYMBOL_VALID))
 			sym_calc_value(sym);
+
 		const char *curr = sym_get_string_value(sym);
+
 		if (strcmp(curr, "") != 0)
 			sym_create_nonbool_fexpr(sym, (char *)curr);
 	}
 
 	/* the following constraints will not add any "known values" */
-	for_all_symbols(i, sym)
-	{
+	for_all_symbols(i, sym) {
 		if (!sym_is_nonboolean(sym))
 			continue;
 
@@ -253,10 +253,12 @@ static void add_selects_kcr(struct symbol *sym)
 {
 	struct pexpr *rdep_y = expr_calculate_pexpr_y(sym->rev_dep.expr);
 	struct pexpr *c1 = pexpr_implies(rdep_y, pexf(sym->fexpr_y));
+
 	sym_add_constraint(sym, c1);
 
 	struct pexpr *rdep_both = expr_calculate_pexpr_both(sym->rev_dep.expr);
 	struct pexpr *c2 = pexpr_implies(rdep_both, sym_get_fexpr_both(sym));
+
 	sym_add_constraint(sym, c2);
 }
 
@@ -270,8 +272,8 @@ static void add_selects(struct symbol *sym)
 		return;
 
 	struct property *p;
-	for_all_properties(sym, p, P_SELECT)
-	{
+
+	for_all_properties(sym, p, P_SELECT) {
 		struct symbol *selected = p->expr->left.sym;
 
 		if (selected->type == S_UNKNOWN)
@@ -415,8 +417,7 @@ static void add_dependencies_nonbool(struct symbol *sym)
 	struct pexpr *nb_vals = pexf(const_false);
 	struct fexpr_node *node;
 	/* can skip the first non-boolean value, since this is 'n' */
-	fexpr_list_for_each(node, sym->nb_vals)
-	{
+	fexpr_list_for_each(node, sym->nb_vals) {
 		if (node->prev == NULL)
 			continue;
 
@@ -515,11 +516,9 @@ static void add_choice_constraints(struct symbol *sym)
 	struct sym_list *promptItems = sym_list_init();
 
 	struct property *prop;
-	for_all_choices(sym, prop)
-	{
+	for_all_choices(sym, prop) {
 		struct expr *expr;
-		expr_list_for_each_sym(prop->expr, expr, choice)
-		{
+		expr_list_for_each_sym(prop->expr, expr, choice) {
 			sym_list_add(items, choice);
 			if (sym_get_prompt(choice) != NULL)
 				sym_list_add(promptItems, choice);
@@ -528,8 +527,7 @@ static void add_choice_constraints(struct symbol *sym)
 
 	/* if the choice is set to yes, at least one child must be set to yes */
 	struct pexpr *c1 = NULL;
-	sym_list_for_each(node, promptItems)
-	{
+	sym_list_for_each(node, promptItems) {
 		choice = node->elem;
 		c1 = node->prev == NULL ? pexf(choice->fexpr_y) :
 						pexpr_or(c1, pexf(choice->fexpr_y));
@@ -540,8 +538,7 @@ static void add_choice_constraints(struct symbol *sym)
 	}
 
 	/* every choice option (even those without a prompt) implies the choice */
-	sym_list_for_each(node, items)
-	{
+	sym_list_for_each(node, items) {
 		choice = node->elem;
 		c1 = pexpr_implies(sym_get_fexpr_both(choice),
 				   sym_get_fexpr_both(sym));
@@ -550,8 +547,7 @@ static void add_choice_constraints(struct symbol *sym)
 
 	/* choice options can only select mod, if the entire choice is mod */
 	if (sym->type == S_TRISTATE) {
-		sym_list_for_each(node, items)
-		{
+		sym_list_for_each(node, items) {
 			choice = node->elem;
 			if (choice->type == S_TRISTATE) {
 				c1 = pexpr_implies(pexf(choice->fexpr_m),
@@ -563,8 +559,7 @@ static void add_choice_constraints(struct symbol *sym)
 
 	/* tristate options cannot be m, if the choice symbol is boolean */
 	if (sym->type == S_BOOLEAN) {
-		sym_list_for_each(node, items)
-		{
+		sym_list_for_each(node, items) {
 			choice = node->elem;
 			if (choice->type == S_TRISTATE)
 				sym_add_constraint(
@@ -573,8 +568,7 @@ static void add_choice_constraints(struct symbol *sym)
 	}
 
 	/* all choice options are mutually exclusive for yes */
-	sym_list_for_each(node, promptItems)
-	{
+	sym_list_for_each(node, promptItems) {
 		choice = node->elem;
 		for (node2 = node->next; node2 != NULL; node2 = node2->next) {
 			choice2 = node2->elem;
@@ -587,8 +581,7 @@ static void add_choice_constraints(struct symbol *sym)
 	/* if one choice option with a prompt is set to yes,
 	 * then no other option may be set to mod */
 	if (sym->type == S_TRISTATE) {
-		sym_list_for_each(node, promptItems)
-		{
+		sym_list_for_each(node, promptItems) {
 			choice = node->elem;
 
 			struct sym_list *tmp = sym_list_init();
@@ -601,8 +594,7 @@ static void add_choice_constraints(struct symbol *sym)
 			if (tmp->size == 0)
 				continue;
 
-			sym_list_for_each(node2, tmp)
-			{
+			sym_list_for_each(node2, tmp) {
 				choice2 = node2->elem;
 				if (node2->prev == NULL)
 					c1 = pexpr_not(pexf(choice2->fexpr_m));
@@ -769,8 +761,7 @@ SKIP_PREV_CONSTRAINT:
 static void sym_add_nonbool_values_from_ranges(struct symbol *sym)
 {
 	struct property *prop;
-	for_all_properties(sym, prop, P_RANGE)
-	{
+	for_all_properties(sym, prop, P_RANGE) {
 		if (prop == NULL)
 			continue;
 
@@ -788,8 +779,7 @@ static void sym_add_range_constraints(struct symbol *sym)
 	struct property *prop;
 	struct pexpr *prevs, *propCond;
 	struct pexpr_list *prevCond = pexpr_list_init();
-	for_all_properties(sym, prop, P_RANGE)
-	{
+	for_all_properties(sym, prop, P_RANGE) {
 		if (prop == NULL)
 			continue;
 
@@ -826,8 +816,7 @@ static void sym_add_range_constraints(struct symbol *sym)
 
 		/* can skip the first non-boolean value, since this is 'n' */
 		struct fexpr_node *node;
-		fexpr_list_for_each(node, sym->nb_vals)
-		{
+		fexpr_list_for_each(node, sym->nb_vals) {
 			tmp = strtoll(str_get(&node->elem->nb_val), NULL, base);
 
 			/* known value is in range, nothing to do here */
@@ -860,8 +849,7 @@ static void sym_nonbool_at_least_1(struct symbol *sym)
 
 	struct pexpr *e = NULL;
 	struct fexpr_node *node;
-	fexpr_list_for_each(node, sym->nb_vals)
-	{
+	fexpr_list_for_each(node, sym->nb_vals) {
 		if (node->prev == NULL)
 			e = pexf(node->elem);
 		else
@@ -880,8 +868,7 @@ static void sym_nonbool_at_most_1(struct symbol *sym)
 
 	struct pexpr *e1, *e2;
 	struct fexpr_node *node1, *node2;
-	fexpr_list_for_each(node1, sym->nb_vals)
-	{
+	fexpr_list_for_each(node1, sym->nb_vals) {
 		e1 = pexf(node1->elem);
 		for (node2 = node1->next; node2 != NULL; node2 = node2->next) {
 			e2 = pexf(node2->elem);
@@ -963,8 +950,7 @@ static struct defm_list *get_defaults(struct symbol *sym)
 	struct pexpr *expr_mod;
 	struct pexpr *expr_both;
 
-	for_all_defaults(sym, p)
-	{
+	for_all_defaults(sym, p) {
 		if (p->visible.expr) {
 			vis_cond = p->visible.expr;
 			expr_yes = expr_calculate_pexpr_y(vis_cond);
@@ -1064,8 +1050,7 @@ static struct pexpr *get_default_y(struct defm_list *list)
 	struct default_map *entry;
 	struct defm_node *node;
 
-	defm_list_for_each(node, list)
-	{
+	defm_list_for_each(node, list) {
 		entry = node->elem;
 		if (entry->val->type == FE_SYMBOL &&
 		    entry->val->sym == &symbol_yes)
@@ -1083,8 +1068,7 @@ static struct pexpr *get_default_m(struct defm_list *list)
 	struct default_map *entry;
 	struct defm_node *node;
 
-	defm_list_for_each(node, list)
-	{
+	defm_list_for_each(node, list) {
 		entry = node->elem;
 		if (entry->val->type == FE_SYMBOL &&
 		    entry->val->sym == &symbol_mod)
@@ -1120,8 +1104,7 @@ unsigned int count_counstraints(void)
 {
 	unsigned int i, c = 0;
 	struct symbol *sym;
-	for_all_symbols(i, sym)
-	{
+	for_all_symbols(i, sym) {
 		if (sym->type == S_UNKNOWN)
 			continue;
 
@@ -1179,8 +1162,7 @@ void sym_add_constraint_eq(struct symbol *sym, struct pexpr *constraint)
 
 	/* check the constraints for the same symbol */
 	struct pexpr_node *node;
-	pexpr_list_for_each(node, sym->constraints)
-	{
+	pexpr_list_for_each(node, sym->constraints) {
 		no_cmp++;
 		if (pexpr_eq(constraint, node->elem)) {
 			no_eq++;
