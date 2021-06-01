@@ -7,11 +7,10 @@
 #define CF_UTILS_H
 
 /* parse Kconfig-file and read .config */
-void init_config (const char *Kconfig_file);
+void init_config(const char *Kconfig_file);
 
 /* initialize satmap and cnf_clauses */
 void init_data(void);
-
 
 /* assign SAT-variables to all fexpr and create the sat_map */
 void assign_sat_variables(void);
@@ -20,19 +19,19 @@ void assign_sat_variables(void);
 void create_constants(void);
 
 /* create a temporary SAT-variable */
-struct fexpr * create_tmpsatvar(void);
+struct fexpr *create_tmpsatvar(void);
 
 /* return a temporary SAT variable as string */
-char * get_tmp_var_as_char(int i);
+char *get_tmp_var_as_char(int i);
 
 /* return a tristate value as a char * */
-char * tristate_get_char(tristate val);
+char *tristate_get_char(tristate val);
 
 /* check whether an expr can evaluate to mod */
 bool expr_can_evaluate_to_mod(struct expr *e);
 
 /* parse an expr as a pexpr */
-struct pexpr * expr_parse_to_pexpr(struct expr *e);
+struct pexpr *expr_parse_to_pexpr(struct expr *e);
 
 /* print an expr */
 void print_expr(char *tag, struct expr *e, int prevtoken);
@@ -53,13 +52,13 @@ bool sym_is_nonboolean(struct symbol *sym);
 bool sym_has_prompt(struct symbol *sym);
 
 /* return the prompt of the symbol, if there is one */
-struct property * sym_get_prompt(struct symbol *sym);
+struct property *sym_get_prompt(struct symbol *sym);
 
 /* return the condition for the property, True if there is none */
-struct pexpr * prop_get_condition(struct property *prop);
+struct pexpr *prop_get_condition(struct property *prop);
 
 /* return the name of the symbol */
-char * sym_get_name(struct symbol *sym);
+char *sym_get_name(struct symbol *sym);
 
 /* check whether symbol is to be changed */
 bool sym_is_sdv(struct sdv_list *list, struct symbol *sym);
