@@ -1064,7 +1064,7 @@ ConflictsView::ConflictsView(QWidget* parent, const char *name)
 	// no longer used anymore for now.
 	connect(fixConflictsAction_, SIGNAL(triggered(bool)), SLOT(calculateFixes()));
 
-	conflictsTable = (QTableWidget*) new dropAbleView(this);
+	conflictsTable = (QTableWidget*) new droppableView(this);
 	conflictsTable->setRowCount(0);
 	conflictsTable->setColumnCount(3);
 	conflictsTable->setSelectionBehavior(QAbstractItemView::SelectRows);
@@ -2446,13 +2446,9 @@ int main(int ac, char** av)
 	return 0;
 }
 
-dropAbleView::dropAbleView(QWidget *parent) :
-    QTableWidget(parent) {}
-
-dropAbleView::~dropAbleView() {}
-void dropAbleView::dropEvent(QDropEvent *event)
+void droppableView::dropEvent(QDropEvent *event)
 {
-   event->acceptProposedAction();
+	event->acceptProposedAction();
 }
 
 QString tristate_value_to_string(tristate val)

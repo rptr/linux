@@ -50,15 +50,14 @@ enum optionMode {
 };
 
 enum symbolStatus {
-	UNSATISFIED,
-	SATISFIED
+	UNSATISFIED, SATISFIED
 };
 
 typedef struct {
 	QString symbol;
 	QString change_needed;
 	enum symbolStatus status;
-	tristate req; // change requested
+	tristate change_requested;
 } Constraint;
 
 QString tristate_value_to_string(tristate val);
@@ -256,11 +255,9 @@ public:
 	int current_solution_number = -1;
 
 public slots:
-    void cellClicked(int, int);
+	void cellClicked(int, int);
 	void changeAll();
-	//triggerd by Qactions on the tool bar that adds/remove symbol
 	void addSymbol();
-	//triggered from config list right click -> add symbols
 	void addSymbolFromContextMenu();
 	void removeSymbol();
 	void menuChanged1(struct menu *);
@@ -268,59 +265,35 @@ public slots:
 	void changeToYes();
 	void changeToModule();
 	void selectedChanged(QList<QTreeWidgetItem*> selection);
-
-
 	void applyFixButtonClick();
 	void UpdateConflictsViewColorization();
 	void updateResults();
-
-
-
-  // switches the solution table with selected solution index from  solution_output
-  void changeSolutionTable(int solution_number);
-
-  // calls satconfig to solve to get wanted value to current value
-  void calculateFixes();
+	void changeSolutionTable(int solution_number);
+	void calculateFixes();
 signals:
 	void showNameChanged(bool);
 	void showRangeChanged(bool);
 	void showDataChanged(bool);
-    void conflictSelected(struct menu *);
+	void conflictSelected(struct menu *);
 	void refreshMenu();
 	void resultsReady();
 public:
 	QTableWidget* conflictsTable;
 	QList<Constraint> constraints;
-
-  // the comobox on the right hand side. used to select a solutio after
-  // getting solution from satconfig
-  QComboBox* solutionSelector{nullptr};
-
-  // the table which shows the selected solution showing variable = New value changes
+	QComboBox* solutionSelector{nullptr};
 	QTableWidget* solutionTable{nullptr};
-
-  // Apply fixes button on the solution view
 	QPushButton* applyFixButton{nullptr};
-
-    struct sfl_list * solution_output{nullptr};
-
+	struct sfl_list * solution_output{nullptr};
 	QToolBar *conflictsToolBar;
 	struct menu * currentSelectedMenu ;
 	QLabel* numSolutionLabel{nullptr};
-	//currently selected config items in configlist.
 	QList<QTreeWidgetItem*> currentSelection;
 	QAction *fixConflictsAction_{nullptr};
 	void runSatConfAsync();
 	std::thread* runSatConfAsyncThread{nullptr};
-
 	std::mutex satconf_mutex;
 	std::condition_variable satconf_cancellation_cv;
 	bool satconf_cancelled{false};
-
-	//colorize the symbols
-	// void ColorizeSolutionTable();
-
-
 };
 
 class ConfigInfoView : public QTextBrowser {
@@ -414,7 +387,7 @@ protected:
 	ConfigView *configView;
 	ConfigList *configList;
 	ConfigInfoView *helpText;
-    ConflictsView *conflictsView;
+	ConflictsView *conflictsView;
 	QToolBar *toolBar;
 	QToolBar *conflictsToolBar;
 	QAction *backAction;
@@ -426,12 +399,10 @@ protected:
 	QSplitter *split3;
 };
 
-class dropAbleView : public QTableWidget
+class droppableView : public QTableWidget
 {
 public:
-    dropAbleView(QWidget *parent = nullptr);
-    ~dropAbleView();
-
+	droppableView(QWidget *parent = nullptr) {}
 protected:
-    void dropEvent(QDropEvent *event);
+	void dropEvent(QDropEvent *event);
 };
