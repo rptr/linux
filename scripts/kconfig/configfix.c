@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: GPL-2.0 */
+// SPDX-License-Identifier: GPL-2.0
 /*
  * Copyright (C) 2020 Patrick Franz <patfra71@gmail.com>
  */
@@ -22,7 +22,7 @@ unsigned int tmp_variable_nr = 1;
 struct fexpr *satmap;
 size_t satmap_size;
 
-struct sdv_list * sdv_symbols; /* array with conflict-symbols */
+struct sdv_list *sdv_symbols; /* array with conflict-symbols */
 
 bool stop_rangefix = false;
 
@@ -66,25 +66,18 @@ int run_satconf_cli(const char *Kconfig_file)
 		get_constraints();
 
 		/* print all symbols and its constraints */
-// 		print_all_symbols();
+		// 		print_all_symbols();
 
 		end = clock();
-		time = ((double) (end - start)) / CLOCKS_PER_SEC;
+		time = ((double)(end - start)) / CLOCKS_PER_SEC;
 
 		printf("done. (%.6f secs.)\n", time);
 
 		init_done = true;
 	}
 
-// 	return EXIT_SUCCESS;
-
 	/* print all symbols and its constraints */
-// 	print_all_symbols();
-
-//  	return EXIT_SUCCESS;
-
-	/* print the satmap */
-// 	g_hash_table_foreach(satmap, print_satmap, NULL);
+	// 	print_all_symbols();
 
 	/* start PicoSAT */
 	PicoSAT *pico = initialize_picosat();
@@ -95,10 +88,9 @@ int run_satconf_cli(const char *Kconfig_file)
 	construct_cnf_clauses(pico);
 
 	end = clock();
-	time = ((double) (end - start)) / CLOCKS_PER_SEC;
+	time = ((double)(end - start)) / CLOCKS_PER_SEC;
 
 	printf("done. (%.6f secs.)\n", time);
-// 	picosat_add_clauses(pico);
 
 	/* add assumptions for all other symbols */
 	printf("Adding assumptions...");
@@ -107,16 +99,16 @@ int run_satconf_cli(const char *Kconfig_file)
 	unsigned int i;
 	struct symbol *sym;
 	for_all_symbols(i, sym) {
-		if (sym->type == S_UNKNOWN) continue;
+		if (sym->type == S_UNKNOWN)
+			continue;
 
 		sym_add_assumption(pico, sym);
 	}
 
 	end = clock();
-	time = ((double) (end - start)) / CLOCKS_PER_SEC;
+	time = ((double)(end - start)) / CLOCKS_PER_SEC;
 
 	printf("done. (%.6f secs.)\n", time);
-
 
 	picosat_solve(pico);
 
@@ -133,7 +125,7 @@ int run_satconf_cli(const char *Kconfig_file)
 /*
  * called from satdvconfig
  */
-struct sfl_list * run_satconf(struct sdv_list *symbols)
+struct sfl_list *run_satconf(struct sdv_list *symbols)
 {
 	clock_t start, end;
 	double time;
@@ -164,7 +156,7 @@ struct sfl_list * run_satconf(struct sdv_list *symbols)
 		get_constraints();
 
 		end = clock();
-		time = ((double) (end - start)) / CLOCKS_PER_SEC;
+		time = ((double)(end - start)) / CLOCKS_PER_SEC;
 
 		printf("done. (%.6f secs.)\n", time);
 
@@ -177,16 +169,15 @@ struct sfl_list * run_satconf(struct sdv_list *symbols)
 		construct_cnf_clauses(pico);
 
 		end = clock();
-		time = ((double) (end - start)) / CLOCKS_PER_SEC;
+		time = ((double)(end - start)) / CLOCKS_PER_SEC;
 
 		printf("done. (%.6f secs.)\n", time);
 
-		printf("CNF-clauses added: %d\n", picosat_added_original_clauses(pico));
+		printf("CNF-clauses added: %d\n",
+		       picosat_added_original_clauses(pico));
 
 		init_done = true;
 	}
-
-// 	return EXIT_SUCCESS;
 
 	/* copy array with symbols to change */
 	sdv_symbols = sdv_list_copy(symbols);
@@ -198,7 +189,8 @@ struct sfl_list * run_satconf(struct sdv_list *symbols)
 	struct symbol *sym;
 	unsigned int i;
 	for_all_symbols(i, sym) {
-		if (sym->type == S_UNKNOWN) continue;
+		if (sym->type == S_UNKNOWN)
+			continue;
 
 		if (!sym_is_sdv(sdv_symbols, sym))
 			sym_add_assumption(pico, sym);
@@ -216,7 +208,7 @@ struct sfl_list * run_satconf(struct sdv_list *symbols)
 	int res = picosat_sat(pico, -1);
 
 	end = clock();
-	time = ((double) (end - start)) / CLOCKS_PER_SEC;
+	time = ((double)(end - start)) / CLOCKS_PER_SEC;
 	printf("done. (%.6f secs.)\n\n", time);
 
 	struct sfl_list *ret;
@@ -230,8 +222,7 @@ struct sfl_list * run_satconf(struct sdv_list *symbols)
 		printf("\n");
 
 		ret = rangefix_run(pico);
-	}
-	else {
+	} else {
 		printf("Unknown if satisfiable.\n");
 
 		ret = sfl_list_init();
@@ -248,9 +239,8 @@ struct sfl_list * run_satconf(struct sdv_list *symbols)
 static bool sym_is_conflict_sym(struct symbol *sym)
 {
 	struct sym_node *node;
-	sym_list_for_each(node, conflict_syms)
-		if (sym == node->elem)
-			return true;
+	sym_list_for_each(node,
+			  conflict_syms) if (sym == node->elem) return true;
 
 	return false;
 }
@@ -262,17 +252,19 @@ static bool syms_have_target_value(struct sfix_list *list)
 {
 	struct symbol_fix *fix;
 	struct sfix_node *node;
+
 	sfix_list_for_each(node, list) {
 		fix = node->elem;
 
-		if (!sym_is_conflict_sym(fix->sym)) continue;
+		if (!sym_is_conflict_sym(fix->sym))
+			continue;
 
 		if (sym_is_boolean(fix->sym)) {
 			if (fix->tri != sym_get_tristate_value(fix->sym))
 				return false;
-		}
-		else {
-			if (strcmp(str_get(&fix->nb_val), sym_get_string_value(fix->sym)) != 0)
+		} else {
+			if (strcmp(str_get(&fix->nb_val),
+				   sym_get_string_value(fix->sym)) != 0)
 				return false;
 		}
 	}
@@ -284,10 +276,9 @@ static bool syms_have_target_value(struct sfix_list *list)
  *
  * apply the fixes from a diagnosis
  */
-// int apply_fix(GArray* diag)
 int apply_fix(struct sfix_list *fix)
 {
-	struct symbol_fix * sfix;
+	struct symbol_fix *sfix;
 	struct sfix_node *node, *next;
 	unsigned int no_symbols_set = 0, iterations = 0, manually_changed = 0;
 
@@ -295,17 +286,13 @@ int apply_fix(struct sfix_list *fix)
 
 	printf("Trying to apply fixes now...\n");
 
-
 	while (no_symbols_set < fix->size && !syms_have_target_value(fix)) {
-// 	while (!syms_have_target_value(diag)) {
 		if (iterations > fix->size * 2) {
 			printf("\nCould not apply all values :-(.\n");
 			return manually_changed;
 		}
 
-// 		sfix_list_for_each(node, tmp) {
 		for (node = tmp->head; node != NULL;) {
-// 		for (i = 0; i < tmp->len; i++) {
 			sfix = node->elem;
 
 			/* update symbol's current value */
@@ -321,7 +308,8 @@ int apply_fix(struct sfix_list *fix)
 					continue;
 				}
 			} else if (sfix->type == SF_NONBOOLEAN) {
-				if (strcmp(str_get(&sfix->nb_val),sym_get_string_value(sfix->sym)) == 0) {
+				if (strcmp(str_get(&sfix->nb_val),
+					   sym_get_string_value(sfix->sym)) == 0) {
 					next = node->next;
 					sfix_list_delete(tmp, node);
 					node = next;
@@ -332,15 +320,17 @@ int apply_fix(struct sfix_list *fix)
 				perror("Error applying fix. Value set for disallowed.");
 			}
 
-
 			/* could not set value, try next */
 			if (sfix->type == SF_BOOLEAN) {
-				if (!sym_set_tristate_value(sfix->sym, sfix->tri)) {
+				if (!sym_set_tristate_value(sfix->sym,
+							    sfix->tri)) {
 					node = node->next;
 					continue;
 				}
 			} else if (sfix->type == SF_NONBOOLEAN) {
-				if (!sym_set_string_value(sfix->sym, str_get(&sfix->nb_val))) {
+				if (!sym_set_string_value(
+					    sfix->sym,
+					    str_get(&sfix->nb_val))) {
 					node = node->next;
 					continue;
 				}
@@ -348,13 +338,16 @@ int apply_fix(struct sfix_list *fix)
 				perror("Error applying fix. Value set for disallowed.");
 			}
 
-
 			/* could set value, remove from tmp */
 			manually_changed++;
 			if (sfix->type == SF_BOOLEAN) {
-				printf("%s set to %s.\n", sym_get_name(sfix->sym), tristate_get_char(sfix->tri));
+				printf("%s set to %s.\n",
+				       sym_get_name(sfix->sym),
+				       tristate_get_char(sfix->tri));
 			} else if (sfix->type == SF_NONBOOLEAN) {
-				printf("%s set to %s.\n", sym_get_name(sfix->sym), str_get(&sfix->nb_val));
+				printf("%s set to %s.\n",
+				       sym_get_name(sfix->sym),
+				       str_get(&sfix->nb_val));
 			}
 
 			next = node->next;
@@ -378,7 +371,6 @@ void interrupt_rangefix(void)
 	stop_rangefix = true;
 }
 
-
 /*
  * check whether all symbols are already within range
  */
@@ -392,7 +384,8 @@ static bool sdv_within_range(struct sdv_list *symbols)
 
 		assert(sym_is_boolean(sdv->sym));
 
-		if (sdv->tri == sym_get_tristate_value(sdv->sym)) continue;
+		if (sdv->tri == sym_get_tristate_value(sdv->sym))
+			continue;
 
 		if (!sym_tristate_within_range(sdv->sym, sdv->tri))
 			return false;
@@ -401,21 +394,22 @@ static bool sdv_within_range(struct sdv_list *symbols)
 	return true;
 }
 
-struct sfix_list * select_solution(struct sfl_list* solutions,int index){
+struct sfix_list *select_solution(struct sfl_list *solutions, int index)
+{
 	struct sfl_node *node = solutions->head;
 	unsigned int counter;
 	for (counter = 0; counter < index; counter++)
 		node = node->next;
 
 	return node->elem;
-
 }
-struct symbol_fix * select_symbol(struct sfix_list* solution,int index){
+
+struct symbol_fix *select_symbol(struct sfix_list *solution, int index)
+{
 	struct sfix_node *node = solution->head;
 	unsigned int counter;
 	for (counter = 0; counter < index; counter++)
 		node = node->next;
 
 	return node->elem;
-
 }
