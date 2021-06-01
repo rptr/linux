@@ -18,12 +18,12 @@
 #include <QList>
 #include <QComboBox>
 #include <QLabel>
+#include <qstring.h>
 #include <thread>
 #include <condition_variable>
 
 #include "expr.h"
 
-#include "conflict_resolver.h"
 #include "configfix.h"
 
 class ConfigView;
@@ -48,6 +48,21 @@ enum listMode {
 enum optionMode {
 	normalOpt = 0, allOpt, promptOpt
 };
+
+enum symbolStatus {
+	UNSATISFIED,
+	SATISFIED
+};
+
+typedef struct {
+	QString symbol;
+	QString change_needed;
+	enum symbolStatus status;
+	tristate req; // change requested
+} Constraint;
+
+QString tristate_value_to_string(tristate val);
+tristate string_value_to_tristate(QString s);
 
 class ConfigList : public QTreeWidget {
 	Q_OBJECT

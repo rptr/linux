@@ -30,7 +30,6 @@
 #include "images.h"
 #include <iostream>
 
-#include "conflict_resolver.h"
 #include <QAbstractItemView>
 #include <QMimeData>
 #include <QBrush>
@@ -2442,4 +2441,29 @@ dropAbleView::~dropAbleView() {}
 void dropAbleView::dropEvent(QDropEvent *event)
 {
    event->acceptProposedAction();
+}
+
+QString tristate_value_to_string(tristate val)
+{
+	switch (val) {
+	case yes:
+		return QString::fromStdString("YES");
+	case mod:
+		return QString::fromStdString("MODULE");
+	case no:
+		return QString::fromStdString("NO");
+	default:
+		return QString::fromStdString("");
+	}
+}
+tristate string_value_to_tristate(QString s)
+{
+	if (s == "YES")
+		return tristate::yes;
+	else if (s == "MODULE")
+		return tristate::mod;
+	else if (s == "NO")
+		return tristate::no;
+	else
+		return tristate::no;
 }

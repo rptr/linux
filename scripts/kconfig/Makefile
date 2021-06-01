@@ -194,13 +194,11 @@ HOSTCFLAGS_picosat.o = -DTRACE -Wno-missing-prototypes -Wno-pointer-compare
 
 # qconf: Used for the xconfig target based on Qt
 hostprogs	+= qconf
-qconf-cxxobjs	:= qconf.o qconf-moc.o conflict_resolver.o
+qconf-cxxobjs	:= qconf.o qconf-moc.o
 qconf-objs	:= images.o $(common-objs) $(cfconf-objs)
 
 HOSTLDLIBS_qconf	= $(shell . $(obj)/qconf-cfg && echo $$libs && echo -lpthread)
-HOSTLDLIBS_conflict_resolver    = $(shell . $(obj)/qconf-cfg && echo $$libs)
 HOSTCXXFLAGS_qconf.o	= $(shell . $(obj)/qconf-cfg && echo $$cflags)
-HOSTCXXFLAGS_conflict_resolver.o       = $(shell . $(obj)/qconf-cfg && echo $$cflags)
 HOSTCXXFLAGS_qconf-moc.o = $(shell . $(obj)/qconf-cfg && echo $$cflags)
 
 $(obj)/qconf.o: $(obj)/qconf-cfg
