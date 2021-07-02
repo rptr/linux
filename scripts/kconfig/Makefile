@@ -36,7 +36,6 @@ nconfig-prog	 := nconf
 gconfig-prog	 := gconf
 xconfig-prog	 := qconf
 cfconfig-prog    := cfconfig
-cfcliconfig-prog := cfcliconfig
 cfoutconfig-prog := cfoutconfig
 
 define config_rule
@@ -48,7 +47,7 @@ PHONY += build_$(1)
 build_$(1): $(obj)/$($(1)-prog)
 endef
 
-$(foreach c, config menuconfig nconfig gconfig xconfig cfconfig cfcliconfig \
+$(foreach c, config menuconfig nconfig gconfig xconfig cfconfig \
 cfoutconfig, $(eval $(call config_rule,$(c))))
 
 PHONY += localmodconfig localyesconfig
@@ -144,9 +143,8 @@ help:
 	@echo  '                    default value without prompting'
 	@echo  '  tinyconfig	  - Configure the tiniest possible kernel'
 	@echo  '  testconfig	  - Run Kconfig unit tests (requires python3 and pytest)'
-	@echo  '  cfconfig        - TODO Describe what it does
-	@echo  '  cfcliconfig     - TODO Describe what it does
-	@echo  '  cfoutconfig     - TODO Describe what it does
+	@echo  '  cfconfig        - CLI tool for debugging ConfigFix'
+	@echo  '  cfoutconfig     - Print constraints and DIMACS-output into files'
 
 # ===========================================================================
 # object files used by all kconfig flavours
@@ -183,11 +181,10 @@ $(foreach f, mconf.o $(lxdialog), \
 
 $(addprefix $(obj)/, mconf.o $(lxdialog)): $(obj)/mconf-cfg
 
-# configfix: TODO explanation
-hostprogs        += cfconfig cfcliconfig cfoutconfig
+# configfix: Used for the xconfig target as well as for its debugging tools
+hostprogs        += cfconfig cfoutconfig
 cfconf-objs      := configfix.o cf_constraints.o cf_expr.o cf_rangefix.o cf_satutils.o cf_utils.o picosat.o
 cfconfig-objs    := cfconfig.o $(cfconf-objs) $(common-objs)
-cfcliconfig-objs := cfcliconfig.o $(cfconf-objs) $(common-objs)
 cfoutconfig-objs := cfoutconfig.o $(cfconf-objs) $(common-objs)
 
 HOSTCFLAGS_picosat.o = -DTRACE -Wno-missing-prototypes -Wno-pointer-compare

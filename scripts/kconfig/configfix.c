@@ -24,6 +24,7 @@ size_t satmap_size;
 
 struct sdv_list *sdv_symbols; /* array with conflict-symbols */
 
+bool CFDEBUG = false;
 bool stop_rangefix = false;
 
 struct fexpr *const_false; /* constant False */
@@ -46,7 +47,7 @@ int run_satconf_cli(const char *Kconfig_file)
 	double time;
 
 	if (!init_done) {
-		printf("Init...");
+		printd("Init...");
 		/* measure time for constructing constraints and clauses */
 		start = clock();
 
@@ -71,17 +72,14 @@ int run_satconf_cli(const char *Kconfig_file)
 		end = clock();
 		time = ((double)(end - start)) / CLOCKS_PER_SEC;
 
-		printf("done. (%.6f secs.)\n", time);
+		printd("done. (%.6f secs.)\n", time);
 
 		init_done = true;
 	}
 
-	/* print all symbols and its constraints */
-	// 	print_all_symbols();
-
 	/* start PicoSAT */
 	PicoSAT *pico = initialize_picosat();
-	printf("Building CNF-clauses...");
+	printd("Building CNF-clauses...");
 	start = clock();
 
 	/* construct the CNF clauses */
@@ -90,10 +88,10 @@ int run_satconf_cli(const char *Kconfig_file)
 	end = clock();
 	time = ((double)(end - start)) / CLOCKS_PER_SEC;
 
-	printf("done. (%.6f secs.)\n", time);
+	printd("done. (%.6f secs.)\n", time);
 
 	/* add assumptions for all other symbols */
-	printf("Adding assumptions...");
+	printd("Adding assumptions...");
 	start = clock();
 
 	unsigned int i;
@@ -102,22 +100,26 @@ int run_satconf_cli(const char *Kconfig_file)
 		if (sym->type == S_UNKNOWN)
 			continue;
 
+		if (!sym->name || !sym_has_prompt(sym))
+			continue;
+
 		sym_add_assumption(pico, sym);
+
 	}
 
 	end = clock();
 	time = ((double)(end - start)) / CLOCKS_PER_SEC;
 
-	printf("done. (%.6f secs.)\n", time);
+	printd("done. (%.6f secs.)\n", time);
 
 	picosat_solve(pico);
 
-	printf("\n===> STATISTICS <===\n");
-	printf("Constraints  : %d\n", count_counstraints());
-	printf("CNF-clauses  : %d\n", picosat_added_original_clauses(pico));
-	printf("SAT-variables: %d\n", picosat_variables(pico));
-	printf("Temp vars    : %d\n", tmp_variable_nr - 1);
-	printf("PicoSAT time : %.6f secs.\n", picosat_seconds(pico));
+	printd("\n===> STATISTICS <===\n");
+	printd("Constraints  : %d\n", count_counstraints());
+	printd("CNF-clauses  : %d\n", picosat_added_original_clauses(pico));
+	printd("SAT-variables: %d\n", picosat_variables(pico));
+	printd("Temp vars    : %d\n", tmp_variable_nr - 1);
+	printd("PicoSAT time : %.6f secs.\n", picosat_seconds(pico));
 
 	return EXIT_SUCCESS;
 }
@@ -132,13 +134,13 @@ struct sfl_list *run_satconf(struct sdv_list *symbols)
 
 	/* check whether all values can be applied -> no need to run */
 	if (sdv_within_range(symbols)) {
-		printf("\nAll symbols are already within range.\n\n");
-		return 0;
+		printd("\nAll symbols are already within range.\n\n");
+		return sfl_list_init();
 	}
 
 	if (!init_done) {
-		printf("\n");
-		printf("Init...");
+		printd("\n");
+		printd("Init...");
 
 		/* measure time for constructing constraints and clauses */
 		start = clock();
@@ -158,11 +160,11 @@ struct sfl_list *run_satconf(struct sdv_list *symbols)
 		end = clock();
 		time = ((double)(end - start)) / CLOCKS_PER_SEC;
 
-		printf("done. (%.6f secs.)\n", time);
+		printd("done. (%.6f secs.)\n", time);
 
 		/* start PicoSAT */
 		pico = initialize_picosat();
-		printf("Building CNF-clauses...");
+		printd("Building CNF-clauses...");
 		start = clock();
 
 		/* construct the CNF clauses */
@@ -171,9 +173,9 @@ struct sfl_list *run_satconf(struct sdv_list *symbols)
 		end = clock();
 		time = ((double)(end - start)) / CLOCKS_PER_SEC;
 
-		printf("done. (%.6f secs.)\n", time);
+		printd("done. (%.6f secs.)\n", time);
 
-		printf("CNF-clauses added: %d\n",
+		printd("CNF-clauses added: %d\n",
 		       picosat_added_original_clauses(pico));
 
 		init_done = true;
@@ -202,28 +204,28 @@ struct sfl_list *run_satconf(struct sdv_list *symbols)
 	sdv_list_for_each(node, sdv_symbols)
 		sym_list_add(conflict_syms, node->elem->sym);
 
-	printf("Solving SAT-problem...");
+	printd("Solving SAT-problem...");
 	start = clock();
 
 	int res = picosat_sat(pico, -1);
 
 	end = clock();
 	time = ((double)(end - start)) / CLOCKS_PER_SEC;
-	printf("done. (%.6f secs.)\n\n", time);
+	printd("done. (%.6f secs.)\n\n", time);
 
 	struct sfl_list *ret;
 	if (res == PICOSAT_SATISFIABLE) {
-		printf("===> PROBLEM IS SATISFIABLE <===\n");
+		printd("===> PROBLEM IS SATISFIABLE <===\n");
 
 		ret = sfl_list_init();
 
 	} else if (res == PICOSAT_UNSATISFIABLE) {
-		printf("===> PROBLEM IS UNSATISFIABLE <===\n");
-		printf("\n");
+		printd("===> PROBLEM IS UNSATISFIABLE <===\n");
+		printd("\n");
 
 		ret = rangefix_run(pico);
 	} else {
-		printf("Unknown if satisfiable.\n");
+		printd("Unknown if satisfiable.\n");
 
 		ret = sfl_list_init();
 	}
@@ -284,11 +286,11 @@ int apply_fix(struct sfix_list *fix)
 
 	struct sfix_list *tmp = sfix_list_copy(fix);
 
-	printf("Trying to apply fixes now...\n");
+	printd("Trying to apply fixes now...\n");
 
 	while (no_symbols_set < fix->size && !syms_have_target_value(fix)) {
 		if (iterations > fix->size * 2) {
-			printf("\nCould not apply all values :-(.\n");
+			printd("\nCould not apply all values :-(.\n");
 			return manually_changed;
 		}
 
@@ -341,11 +343,11 @@ int apply_fix(struct sfix_list *fix)
 			/* could set value, remove from tmp */
 			manually_changed++;
 			if (sfix->type == SF_BOOLEAN) {
-				printf("%s set to %s.\n",
+				printd("%s set to %s.\n",
 				       sym_get_name(sfix->sym),
 				       tristate_get_char(sfix->tri));
 			} else if (sfix->type == SF_NONBOOLEAN) {
-				printf("%s set to %s.\n",
+				printd("%s set to %s.\n",
 				       sym_get_name(sfix->sym),
 				       str_get(&sfix->nb_val));
 			}
@@ -358,7 +360,7 @@ int apply_fix(struct sfix_list *fix)
 		iterations++;
 	}
 
-	printf("Fixes successfully applied.\n");
+	printd("Fixes successfully applied.\n");
 
 	return manually_changed;
 }

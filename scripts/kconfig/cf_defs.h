@@ -13,12 +13,15 @@ extern struct fexpr *satmap; // map SAT variables to fexpr
 extern size_t satmap_size;
 
 extern struct sdv_list *sdv_symbols; /* array with conflict-symbols */
+extern bool CFDEBUG;
 extern bool stop_rangefix;
 extern struct fexpr *const_false;
 extern struct fexpr *const_true;
 extern struct fexpr *symbol_yes_fexpr;
 extern struct fexpr *symbol_mod_fexpr;
 extern struct fexpr *symbol_no_fexpr;
+
+#define printd(fmt...) if (CFDEBUG) printf(fmt)
 
 /* different types for f_expr */
 enum fexpr_type {
@@ -29,26 +32,26 @@ enum fexpr_type {
 	FE_NONBOOL,  /* for all non-(boolean/tristate) known values */
 	FE_CHOICE, /* symbols of type choice */
 	FE_SELECT, /* auxiliary variable for selected symbols */
-	FE_TMPSATVAR /* temporary sat-variable (Tseytin) */ 
+	FE_TMPSATVAR /* temporary sat-variable (Tseytin) */
 };
 
 /* struct for a propositional logic formula */
 struct fexpr {
 	/* name of the feature expr */
 	struct gstr name;
-	
+
 	/* associated symbol */
 	struct symbol *sym;
-	
+
 	/* integer value for the SAT solver */
 	int satval;
-	
+
 	/* assumption in the last call to PicoSAT */
 	bool assumption;
-	
+
 	/* type of the fexpr */
 	enum fexpr_type type;
-	
+
 	union {
 		/* symbol */
 		struct {
@@ -69,7 +72,7 @@ struct fexpr {
 			struct gstr nb_val;
 		};
 	};
-	
+
 };
 
 struct fexpr_list {
@@ -121,7 +124,7 @@ struct pexpr_node {
 
 struct default_map {
 	struct fexpr *val;
-	
+
 	struct pexpr *e;
 };
 
@@ -142,13 +145,13 @@ enum symboldv_type {
 
 struct symbol_dvalue {
 	struct symbol *sym;
-	
+
 	enum symboldv_type type;
-	
+
 	union {
 		/* boolean/tristate */
 		tristate tri;
-		
+
 		/* string/int/hex */
 		struct gstr nb_val;
 	};
@@ -172,16 +175,16 @@ enum symbolfix_type {
 
 struct symbol_fix {
 	struct symbol *sym;
-	
+
 	enum symbolfix_type type;
-	
+
 	union {
 		/* boolean/tristate */
 		tristate tri;
-		
+
 		/* string/int/hex */
 		struct gstr nb_val;
-		
+
 		/* disallowed non-boolean values */
 		struct gstr disallowed;
 	};
@@ -215,6 +218,16 @@ struct sym_list {
 struct sym_node {
 	struct symbol *elem;
 	struct sym_node *next, *prev;
+};
+
+struct prop_list {
+	struct prop_node *head, *tail;
+	unsigned int size;
+};
+
+struct prop_node {
+	struct property *elem;
+	struct prop_node *next, *prev;
 };
 
 #endif

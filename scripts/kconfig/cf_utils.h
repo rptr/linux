@@ -12,7 +12,6 @@ void init_config (const char *Kconfig_file);
 /* initialize satmap and cnf_clauses */
 void init_data(void);
 
-
 /* assign SAT-variables to all fexpr and create the sat_map */
 void assign_sat_variables(void);
 
@@ -58,6 +57,12 @@ struct property * sym_get_prompt(struct symbol *sym);
 /* return the condition for the property, True if there is none */
 struct pexpr * prop_get_condition(struct property *prop);
 
+/* return the default property, NULL if none exists or can be satisfied */
+struct property *sym_get_default_prop(struct symbol *sym);
+
+/* check whether a non-boolean symbol has a value set */
+bool sym_nonbool_has_value_set(struct symbol *sym);
+
 /* return the name of the symbol */
 char * sym_get_name(struct symbol *sym);
 
@@ -72,5 +77,11 @@ void print_sym_constraint(struct symbol *sym);
 
 /* print a default map */
 void print_default_map(struct defm_list *map);
+
+/* check whether a string is a number */
+bool string_is_number(char *s);
+
+/* check whether a string is a hexadecimal number */
+bool string_is_hex(char *s);
 
 #endif

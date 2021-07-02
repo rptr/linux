@@ -17,11 +17,11 @@
 #include "configfix.h"
 
 #define MAX_DIAGNOSES 3
-#define MAX_SECONDS 10
+#define MAX_SECONDS 300
 #define PRINT_UNSAT_CORE true
 #define PRINT_DIAGNOSES false
 #define PRINT_DIAGNOSIS_FOUND true
-#define MINIMISE_DIAGNOSES true
+#define MINIMISE_DIAGNOSES false
 #define MINIMISE_UNSAT_CORE true
 
 static struct fexl_list *diagnoses;
@@ -63,8 +63,8 @@ static unsigned int nr_of_assumptions = 0, nr_of_assumptions_true = 0;
 
 struct sfl_list * rangefix_run(PicoSAT *pico)
 {
-	printf("Starting RangeFix...\n");
-	printf("Generating diagnoses...");
+	printd("Starting RangeFix...\n");
+	printd("Generating diagnoses...");
 	clock_t start, end;
 	double time;
 	start = clock();
@@ -74,12 +74,12 @@ struct sfl_list * rangefix_run(PicoSAT *pico)
 
 	end = clock();
 	time = ((double) (end - start)) / CLOCKS_PER_SEC;
-	printf("Generating diagnoses...done. (%.6f secs.)\n", time);
+	printd("Generating diagnoses...done. (%.6f secs.)\n", time);
 
 	if (PRINT_DIAGNOSES) {
-		printf("Diagnoses (only for debugging):\n");
+		printd("Diagnoses (only for debugging):\n");
 		print_diagnoses(diagnoses);
-		printf("\n");
+		printd("\n");
 	}
 
 	/* convert diagnoses of fexpr to diagnoses of symbols */
@@ -88,7 +88,7 @@ struct sfl_list * rangefix_run(PicoSAT *pico)
 	else
 		diagnoses_symbol = convert_diagnoses(diagnoses);
 
-	printf("\n");
+	printd("\n");
 
 	return diagnoses_symbol;
 }
@@ -108,7 +108,7 @@ static struct fexl_list * generate_diagnoses(PicoSAT *pico)
 	add_fexpr_to_constraint_set(C);
 
 	if (PRINT_UNSAT_CORE)
-		printf("\n");
+		printd("\n");
 
 	/* init E with an empty diagnosis */
 	struct fexpr_list *empty_diagnosis = fexpr_list_init();
@@ -134,7 +134,7 @@ static struct fexl_list * generate_diagnoses(PicoSAT *pico)
 		int res = picosat_sat(pico, -1);
 
 		if (res == PICOSAT_SATISFIABLE) {
-			if (PRINT_DIAGNOSIS_FOUND)
+			if (PRINT_DIAGNOSIS_FOUND && CFDEBUG)
 				fexpr_list_print("DIAGNOSIS FOUND", E0);
 
 			fexl_list_delete(E, E->head);
@@ -153,7 +153,7 @@ static struct fexl_list * generate_diagnoses(PicoSAT *pico)
 		} else if (res == PICOSAT_UNSATISFIABLE) {
 
 		} else if (res == PICOSAT_UNKNOWN) {
-			printf("UNKNOWN\n");
+			printd("UNKNOWN\n");
 		} else {
 			perror("Doh.");
 		}
@@ -372,8 +372,7 @@ static void fexpr_add_assumption(PicoSAT *pico, struct fexpr *e, int satval)
 	struct symbol *sym = e->sym;
 
 	if (sym->type == S_BOOLEAN) {
-		int tri_val = sym->def[S_DEF_USER].tri;
-		tri_val = sym_get_tristate_value(sym);
+		int tri_val = sym_get_tristate_value(sym);
 
 		if (tri_val == yes) {
 			picosat_assume(pico, satval);
@@ -387,8 +386,7 @@ static void fexpr_add_assumption(PicoSAT *pico, struct fexpr *e, int satval)
 	}
 
 	if (sym->type == S_TRISTATE) {
-		int tri_val = sym->def[S_DEF_USER].tri;
-		tri_val = sym_get_tristate_value(sym);
+		int tri_val = sym_get_tristate_value(sym);
 
 		if (e->tri == yes) {
 			if (tri_val == yes) {
@@ -414,21 +412,27 @@ static void fexpr_add_assumption(PicoSAT *pico, struct fexpr *e, int satval)
 
 	if (sym->type == S_INT || sym->type == S_HEX || sym->type == S_STRING) {
 
+		char *string_val = (char *) sym_get_string_value(sym);
+
+		if (sym->type == S_STRING && !strcmp(string_val, ""))
+			return;
+
 		/* check, if e symbolises the no-value-set fexpr */
 		if (fexpr_is_novalue(e)) {
-			if (sym_has_value(e->sym)) {
-				picosat_assume(pico, -satval);
-				e->assumption = false;
-			} else {
+			if (!sym_nonbool_has_value_set(sym)) {
 				picosat_assume(pico, satval);
 				e->assumption = true;
 				nr_of_assumptions_true++;
+			} else {
+				picosat_assume(pico, -satval);
+				e->assumption = false;
+
 			}
 			nr_of_assumptions++;
 			return;
 		}
 
-		if (sym_has_value(e->sym) && strcmp(str_get(&e->nb_val), sym_get_string_value(sym)) == 0) {
+		if (!strcmp(str_get(&e->nb_val), string_val)) {
 			picosat_assume(pico, satval);
 			e->assumption = true;
 			nr_of_assumptions_true++;
@@ -474,9 +478,12 @@ static struct fexpr_list * minimise_unsat_core(PicoSAT *pico, struct fexpr_list 
 		return C;
 
 	struct fexpr_list *c_set;
-	struct fexpr_node *node;
+	struct fexpr_node *node, *tmp;
 
-	fexpr_list_for_each(node, C) {
+	for (node = C->head; node != NULL;) {
+		if (C->size == 1)
+			return C;
+
 		/* create C\c */
 		c_set = fexpr_list_init();
 		fexpr_list_add(c_set, node->elem);
@@ -487,8 +494,12 @@ static struct fexpr_list * minimise_unsat_core(PicoSAT *pico, struct fexpr_list 
 
 		int res = picosat_sat(pico, -1);
 
+		tmp = node->next;
+
 		if (res == PICOSAT_UNSATISFIABLE)
 			fexpr_list_delete(C, node);
+
+		node = tmp;
 
 		fexpr_list_free(c_set);
 		fexpr_list_free(t);
@@ -613,16 +624,16 @@ static bool is_subset_of(struct fexpr_list *A, struct fexpr_list *B)
 static void print_unsat_core(struct fexpr_list *list)
 {
 	struct fexpr_node *node;
-	printf("Unsat core: [");
+	printd("Unsat core: [");
 
 	fexpr_list_for_each(node, list) {
-		printf("%s", str_get(&node->elem->name));
-		printf(" <%s>", node->elem->assumption ? "T" : "F");
+		printd("%s", str_get(&node->elem->name));
+		printd(" <%s>", node->elem->assumption ? "T" : "F");
 		if (node->next != NULL)
-			printf(", ");
+			printd(", ");
 	}
 
-	printf("]\n");
+	printd("]\n");
 }
 
 
@@ -663,15 +674,15 @@ static void print_diagnoses(struct fexl_list *diag)
 	unsigned int i = 1;
 
 	fexl_list_for_each(lnode, diag) {
-		printf("%d: [", i++);
+		printd("%d: [", i++);
 		struct fexpr_node *node;
 		fexpr_list_for_each(node, lnode->elem) {
 			char *new_val = node->elem->assumption ? "false" : "true";
-			printf("%s => %s", str_get(&node->elem->name), new_val);
+			printd("%s => %s", str_get(&node->elem->name), new_val);
 			if (node->next != NULL)
-				printf(", ");
+				printd(", ");
 		}
-		printf("]\n");
+		printd("]\n");
 	}
 }
 
@@ -683,22 +694,23 @@ void print_diagnosis_symbol(struct sfix_list *diag_sym)
 	struct symbol_fix *fix;
 	struct sfix_node *node;
 
-	printf("[");
+	printd("[");
 
 	sfix_list_for_each(node, diag_sym) {
 		fix = node->elem;
 
-		if (fix->type == SF_BOOLEAN)
-			printf("%s => %s", fix->sym->name, tristate_get_char(fix->tri));
-		else if (fix->type == SF_NONBOOLEAN)
-			printf("%s => %s", fix->sym->name, str_get(&fix->nb_val));
-		else
+		if (fix->type == SF_BOOLEAN) {
+			printd("%s => %s", fix->sym->name, tristate_get_char(fix->tri));
+		} else if (fix->type == SF_NONBOOLEAN) {
+			printd("%s => %s", fix->sym->name, str_get(&fix->nb_val));
+		} else {
 			perror("NB not yet implemented.");
+		}
 
 		if (node->next != NULL)
-			printf(", ");
+			printd(", ");
 	}
-	printf("]\n");
+	printd("]\n");
 }
 
 /*
@@ -710,7 +722,7 @@ static void print_diagnoses_symbol(struct sfl_list *diag_sym)
 	unsigned int i = 1;
 
 	sfl_list_for_each(arr, diag_sym) {
-		printf("%d: ", i++);
+		printd("%d: ", i++);
 		print_diagnosis_symbol(arr->elem);
 	}
 }
@@ -811,7 +823,7 @@ static struct sfl_list * minimise_diagnoses(PicoSAT *pico, struct fexl_list *dia
 	clock_t start, end;
 	double time;
 
-	printf("Minimising diagnoses...");
+	printd("Minimising diagnoses...");
 
 	start = clock();
 
@@ -882,7 +894,7 @@ static struct sfl_list * minimise_diagnoses(PicoSAT *pico, struct fexl_list *dia
 	end = clock();
 	time = ((double) (end - start)) / CLOCKS_PER_SEC;
 
-	printf("done. (%.6f secs.)\n", time);
+	printd("done. (%.6f secs.)\n", time);
 
 	return diagnoses_symbol;
 }
@@ -892,12 +904,12 @@ static struct sfl_list * minimise_diagnoses(PicoSAT *pico, struct fexl_list *dia
  */
 struct sfix_list * choose_fix(struct sfl_list *diag)
 {
-	printf("=== GENERATED DIAGNOSES ===\n");
-	printf("0: No changes wanted\n");
+	printd("=== GENERATED DIAGNOSES ===\n");
+	printd("0: No changes wanted\n");
 	print_diagnoses_symbol(diag);
 
 	int choice;
-	printf("\n> Choose option: ");
+	printd("\n> Choose option: ");
 	scanf("%d", &choice);
 
 	/* no changes wanted */

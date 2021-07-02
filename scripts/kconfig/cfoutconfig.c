@@ -29,7 +29,7 @@ int main(int argc, char *argv[])
 	clock_t start, end;
 	double time;
 
-	printf("\nInit...");
+	printf("\nCreating constraints and CNF clauses...");
 	/* measure time for constructing constraints and clauses */
 	start = clock();
 
@@ -51,12 +51,12 @@ int main(int argc, char *argv[])
 	end = clock();
 	time = ((double) (end - start)) / CLOCKS_PER_SEC;
 
-	printf("done. (%.6f secs.)\n", time);
+	printd("done. (%.6f secs.)\n", time);
 
 	/* start PicoSAT */
 	PicoSAT *pico = picosat_init();
 	picosat_enable_trace_generation(pico);
-	printf("Building CNF-clauses...");
+	printd("Building CNF-clauses...");
 	start = clock();
 
 	/* construct the CNF clauses */
@@ -85,7 +85,7 @@ int main(int argc, char *argv[])
 	printf("done. (%.6f secs.)\n", time);
 
 	printf("\nConstraints have been written into %s\n", OUTFILE_CONSTRAINTS);
-	printf("SAT problem has been written in %s\n", OUTFILE_DIMACS);
+	printf("DIMACS-output has been written into %s\n", OUTFILE_DIMACS);
 
 	return 0;
 }
@@ -102,7 +102,7 @@ static void write_constraints_to_file(void)
 		struct pexpr_node *node;
 		pexpr_list_for_each(node, sym->constraints) {
 			struct gstr s = str_new();
-			pexpr_as_char_short(node->elem, &s, -1);
+			pexpr_as_char(node->elem, &s, 0);
 			fprintf(fd, "%s\n", str_get(&s));
 			str_free(&s);
 		}

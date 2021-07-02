@@ -1275,7 +1275,7 @@ void ConflictsView::changeSolutionTable(int solution_number)
 			      1,
 			      symbol_value);
 		} else if (cur_symbol->type == symbolfix_type::SF_NONBOOLEAN) {
-			QTableWidgetItem* symbol_value = 
+			QTableWidgetItem* symbol_value =
 			   new QTableWidgetItem(cur_symbol->nb_val.s);
 			solutionTable->setItem(
 			      solutionTable->rowCount() - 1,
@@ -1360,15 +1360,6 @@ void ConflictsView::runSatConfAsync()
 	fixConflictsAction_->setText("Cancel");
 	struct sfl_list *ret = run_satconf(wanted_symbols);
 	solution_output = ret;
-	struct sfl_node *node1;
-
-	sfl_list_for_each(node1, ret) {
-		struct sfix_node *node2;
-
-		sfix_list_for_each(node2, node1->elem) {
-			printf("%s - %d\n", node2->elem->sym->name, node2->elem->tri);
-		}
-	}
 
 	free(p);
 

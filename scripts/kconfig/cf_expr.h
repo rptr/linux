@@ -8,7 +8,7 @@
 
 #define fexpr_list_for_each(node, list) \
 	for (node = list->head; node != NULL; node = node->next)
-	
+
 #define fexl_list_for_each(node, list) \
 	fexpr_list_for_each(node, list)
 
@@ -17,17 +17,20 @@
 
 #define sdv_list_for_each(node, list) \
 	fexpr_list_for_each(node, list)
-	
+
 #define sfix_list_for_each(node, list) \
 	fexpr_list_for_each(node, list)
-	
+
 #define sfl_list_for_each(node, list) \
 	fexpr_list_for_each(node, list)
-	
+
 #define sym_list_for_each(node, list) \
 	fexpr_list_for_each(node, list)
 
 #define defm_list_for_each(node, list) \
+	fexpr_list_for_each(node, list)
+
+#define prop_list_for_each(node, list) \
 	fexpr_list_for_each(node, list)
 
 /* create a fexpr */
@@ -87,7 +90,7 @@ struct fexpr * sym_get_or_create_nonbool_fexpr(struct symbol *sym, char *value);
 /* macro to construct a pexpr for "A implies B" */
 struct pexpr * pexpr_implies(struct pexpr *a, struct pexpr *b);
 
-/* check, if the fexpr is a symbol, a True/False-constant, a literal symbolizing a non-boolean or a choice symbol */
+/* check, if the fexpr is a symbol, a True/False-constant, a literal symbolising a non-boolean or a choice symbol */
 bool fexpr_is_symbol(struct fexpr *e);
 
 /* check whether a pexpr is a symbol or a negated symbol */
@@ -107,6 +110,12 @@ void fexpr_as_char(struct fexpr *e, struct gstr *s);
 
 /* write pn pexpr into a string */
 void pexpr_as_char_short(struct pexpr *e, struct gstr *s, int parent);
+
+/* write an fexpr into a string (format needed for testing) */
+void pexpr_as_char(struct pexpr *e, struct gstr *s, int parent);
+
+/* check whether a pexpr contains a specific fexpr */
+bool pexpr_contains_fexpr(struct pexpr *e, struct fexpr *fe);
 
 /* init list of fexpr */
 struct fexpr_list * fexpr_list_init(void);
@@ -132,6 +141,9 @@ struct sym_list * sym_list_init(void);
 /* init list of default_maps */
 struct defm_list * defm_list_init(void);
 
+/* init list of properties */
+struct prop_list *prop_list_init(void);
+
 /* add element to tail of a fexpr_list */
 void fexpr_list_add(struct fexpr_list *list, struct fexpr *fe);
 
@@ -156,6 +168,9 @@ void sym_list_add(struct sym_list *list, struct symbol *sym);
 /* add element to tail of a defm_list */
 void defm_list_add(struct defm_list *list, struct default_map *map);
 
+/* add element to tail of a prop_list */
+void prop_list_add(struct prop_list *list, struct property *prop);
+
 /* delete an element from a fexpr_list */
 void fexpr_list_delete(struct fexpr_list *list, struct fexpr_node *node);
 
@@ -164,6 +179,9 @@ void fexl_list_delete(struct fexl_list *list, struct fexl_node *node);
 
 /* delete the first occurence of elem in an fexl_list */
 void fexl_list_delete_elem(struct fexl_list *list, struct fexpr_list *elem);
+
+/* delete an element from a pexpr_list */
+void pexpr_list_delete(struct pexpr_list *list, struct pexpr_node *node);
 
 /* delete an element from a sfix_list */
 void sfix_list_delete(struct sfix_list *list, struct sfix_node *node);
@@ -185,6 +203,9 @@ void fexpr_list_print(char *title, struct fexpr_list *list);
 
 /* print a fexl_list */
 void fexl_list_print(char *title, struct fexl_list *list);
+
+/* print a pexpr_list */
+void pexpr_list_print(char *title, struct pexpr_list *list);
 
 /* free an fexpr_list */
 void fexpr_list_free(struct fexpr_list *list);
