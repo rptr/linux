@@ -705,12 +705,6 @@ struct pexpr * pexpr_and(struct pexpr *a, struct pexpr *b)
 	if (size == l->size)
 		return e;
 
-// 	struct pexpr_list *tmp_list = pexpr_list_init();
-// 	pexpr_flatten_and(tmp_list, e);
-// 	pexpr_list_print("--> ::", tmp_list);
-// 	pexpr_list_print("dups::", l);
-
-
 	free(e);
 	struct pexpr *tmp = l->head->elem;
 	struct pexpr_node *node;
@@ -721,7 +715,6 @@ struct pexpr * pexpr_and(struct pexpr *a, struct pexpr *b)
 		tmp->left.pexpr = e;
 		tmp->right.pexpr = node->elem;
 	}
-// 	pexpr_print("----> dups::", tmp, -1);
 	return tmp;
 }
 
@@ -766,12 +759,6 @@ struct pexpr * pexpr_or(struct pexpr *a, struct pexpr *b)
 
 	if (size == l->size)
 		return e;
-
-// 	struct pexpr_list *tmp_list = pexpr_list_init();
-// 	pexpr_flatten_or(tmp_list, e);
-// 	pexpr_list_print("::", tmp_list);
-// 	pexpr_list_print("dups::", l);
-
 
 	free(e);
 	e = l->head->elem;

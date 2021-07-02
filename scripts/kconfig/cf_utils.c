@@ -364,19 +364,6 @@ bool sym_nonbool_has_value_set(struct symbol *sym)
 		return false;
 
 	return true;
-	/* no default value, so no value set */
-// 	if (prop == NULL)
-// 		return false;
-
-	/* default value must hence be "" */
-	struct symbol *ds = prop_get_symbol(prop);
-	const char *def_val = (const char *)ds->curr.val;
-	if (!strcmp(string_val, def_val)) {
-		return true;
-	} else {
-		perror("Default value should be \"\"");
-		return false;
-	}
 }
 
 /*
