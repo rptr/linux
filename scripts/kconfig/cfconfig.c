@@ -23,7 +23,7 @@ static struct symbol_dvalue * sym_create_sdv(struct symbol *sym, char *input);
 
 int main(int argc, char *argv[])
 {
-// 	CFDEBUG = true;
+	CFDEBUG = true;
 
 	if (argc > 1 && !strcmp(argv[1], "-s")) {
 		printd("\nHello configfix!\n\n");
