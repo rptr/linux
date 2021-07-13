@@ -663,10 +663,12 @@ static void add_invisible_constraints(struct symbol *sym)
 			e1 = pexpr_and(e1, pexpr_not(pexf(node->elem)));
 
 		struct pexpr *e2 = pexpr_implies(pexpr_not(default_any), e1);
-
 		struct pexpr *e3 = pexpr_implies(npc, e2);
 
 		// TODO
+		if (sym->name && !strcmp(sym->name, "CFG80211_EXTRA_REGDB_KEYDIR"))
+			goto SKIP_PREV_CONSTRAINT;
+
 		sym_add_constraint(sym, e3);
 	}
 
@@ -700,7 +702,6 @@ SKIP_PREV_CONSTRAINT:
 			f = node->elem->val;
 			cond = node->elem->e;
 			c = pexpr_implies(npc, pexpr_implies(cond, pexf(f)));
-			// TODO
 			sym_add_constraint(sym, c);
 		}
 	}
@@ -886,20 +887,6 @@ static struct pexpr * findDefaultEntry(struct fexpr *val, struct defm_list *defa
  * return all defaults for a symbol
  */
 static struct pexpr *covered;
-static bool is_nonbool_constant(struct property *p)
-{
-	if (p->expr->type != E_SYMBOL)
-		return false;
-	if (p->expr->left.sym->type != S_UNKNOWN)
-		return false;
-
-	if (p->expr->left.sym->flags & SYMBOL_CONST)
-		return true;
-
-	char *name = p->expr->left.sym->name;
-
-	return string_is_number(name) || string_is_hex(name);
-}
 static bool is_tri_as_num(struct symbol *sym) {
 	if (!sym->name)
 		return false;
@@ -1000,7 +987,7 @@ static void add_defaults(struct prop_list *defaults, struct expr *ctx, struct de
 			updateDefaultList(s, expr_calculate_pexpr_both(expr), result, sym);
 		}
 		/* if def.value = non-boolean constant */
-		else if (is_nonbool_constant(p)) {
+		else if (expr_is_nonbool_constant(p->expr)) {
 			struct fexpr *s = sym_get_or_create_nonbool_fexpr(sym, p->expr->left.sym->name);
 			updateDefaultList(s, expr_calculate_pexpr_both(expr), result, sym);
 		}
@@ -1177,9 +1164,6 @@ void sym_add_constraint_eq(struct symbol *sym, struct pexpr *constraint)
 	/* this should never happen */
 	if (constraint->type == PE_SYMBOL && constraint->left.fexpr == const_false)
 		perror("Adding const_false.");
-
-	if (!pexpr_is_nnf(constraint))
-		pexpr_print("Not NNF:", constraint, -1);
 
 	/* check the constraints for the same symbol */
 	struct pexpr_node *node;

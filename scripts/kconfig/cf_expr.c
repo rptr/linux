@@ -555,12 +555,16 @@ struct fexpr * sym_get_or_create_nonbool_fexpr(struct symbol *sym, char *value)
 struct pexpr * expr_calculate_pexpr_y_equals(struct expr *e)
 {
 	/* comparing 2 tristate constants */
-	if (sym_is_tristate_constant(e->left.sym) && sym_is_tristate_constant(e->right.sym))
+	if (sym_is_tristate_constant(e->left.sym) && sym_is_tristate_constant(e->right.sym)) {
 		return e->left.sym == e->right.sym ? pexf(const_true) : pexf(const_false);
+	}
+
 
 	/* comparing 2 nonboolean constants */
-	if (e->left.sym->type == S_UNKNOWN && e->right.sym->type == S_UNKNOWN)
+	if (sym_is_nonbool_constant(e->left.sym) && sym_is_nonbool_constant(e->right.sym)) {
 		return strcmp(e->left.sym->name, e->right.sym->name) == 0 ? pexf(const_true) : pexf(const_false);
+	}
+
 
 	/* comparing 2 boolean/tristate incl. yes/mod/no constants */
 	if (sym_is_bool_or_triconst(e->left.sym) && sym_is_bool_or_triconst(e->right.sym)) {
@@ -571,24 +575,68 @@ struct pexpr * expr_calculate_pexpr_y_equals(struct expr *e)
 	}
 
 	/* comparing nonboolean with a constant */
-	if (sym_is_nonboolean(e->left.sym) && e->right.sym->type == S_UNKNOWN) {
+	if (sym_is_nonboolean(e->left.sym) && sym_is_nonbool_constant(e->right.sym)) {
 		return pexf(sym_get_or_create_nonbool_fexpr(e->left.sym, e->right.sym->name));
 	}
-	if (e->left.sym->type == S_UNKNOWN && sym_is_nonboolean(e->right.sym)) {
+	if (sym_is_nonbool_constant(e->left.sym) && sym_is_nonboolean(e->right.sym)) {
+
+// 		TODO
+// 		print_expr(":", e, 0);
+// 		print_sym_name(e->left.sym);
+// 		print_sym_name(e->right.sym);
+
+// 		pexpr_print("return ", pexf(sym_get_or_create_nonbool_fexpr(e->left.sym, e->right.sym->name)), -1);
+
 		return pexf(sym_get_or_create_nonbool_fexpr(e->right.sym, e->left.sym->name));
 	}
 
 	/* comparing nonboolean with tristate constant, will never be true */
-	if (sym_is_nonboolean(e->left.sym) && sym_is_tristate_constant(e->right.sym))
+	if (sym_is_nonboolean(e->left.sym) && sym_is_tristate_constant(e->right.sym)) {
 		return pexf(const_false);
-	if (sym_is_tristate_constant(e->left.sym) && sym_is_nonboolean(e->right.sym))
+	}
+
+	if (sym_is_tristate_constant(e->left.sym) && sym_is_nonboolean(e->right.sym)) {
+
+// 		TODO
+// 		print_expr(":", e, 0);
+// 		print_sym_name(e->left.sym);
+// 		print_sym_name(e->right.sym);
+
 		return pexf(const_false);
+	}
+
 
 	/* comparing 2 nonboolean symbols */
 	// TODO
+	if (sym_is_nonboolean(e->left.sym) && sym_is_nonboolean(e->right.sym)) {
+// 		TODO
+// 		print_expr(":", e, 0);
+// 		print_sym_name(e->left.sym);
+// 		print_sym_name(e->right.sym);
+
+// 		return pexf(sym_get_or_create_nonbool_fexpr(e->left.sym, e->right.sym->name));
+	}
 
 	/* comparing boolean item with nonboolean constant, will never be true */
-	// TODO
+	if (sym_is_tristate_constant(e->left.sym) && sym_is_nonbool_constant(e->right.sym)) {
+		return pexf(const_false);
+	}
+	if (sym_is_nonbool_constant(e->left.sym) && sym_is_tristate_constant(e->right.sym)) {
+		return pexf(const_false);
+	}
+
+	/* comparing symbol of type unknown with tristate constant */
+	if (e->left.sym->type == S_UNKNOWN && sym_is_tristate_constant(e->right.sym)) {
+		return pexf(const_false);
+	}
+	if (sym_is_tristate_constant(e->left.sym) && e->right.sym->type == S_UNKNOWN) {
+		return pexf(const_false);
+	}
+
+	perror("Unsupported equality.");
+	print_expr(":", e, 0);
+	print_sym_name(e->left.sym);
+	print_sym_name(e->right.sym);
 
 	return pexf(const_false);
 }
@@ -668,7 +716,6 @@ static void pexpr_list_eliminate_dups(struct pexpr_list *l)
 }
 struct pexpr * pexpr_and(struct pexpr *a, struct pexpr *b)
 {
-	// TODO optimise freeing
 	/* simplifications:
 	 * expr && False -> False
 	 * expr && True  -> expr
@@ -723,7 +770,6 @@ struct pexpr * pexpr_and(struct pexpr *a, struct pexpr *b)
  */
 struct pexpr * pexpr_or(struct pexpr *a, struct pexpr *b)
 {
-	// TODO optimise freeing
 	/* simplifications:
 	 * expr || False -> expr
 	 * expr || True  -> True
@@ -779,7 +825,6 @@ struct pexpr * pexpr_or(struct pexpr *a, struct pexpr *b)
  */
 struct pexpr * pexpr_not(struct pexpr *a)
 {
-	// TODO optimise
 	if (a->type == PE_SYMBOL && a->left.fexpr == const_false)
 		return pexf(const_true);
 	if (a->type == PE_SYMBOL && a->left.fexpr == const_true)

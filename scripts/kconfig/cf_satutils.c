@@ -404,11 +404,36 @@ void sym_add_assumption(PicoSAT *pico, struct symbol *sym)
 
 		const char *string_val = sym_get_string_value(sym);
 
-		if (sym->type == S_STRING && !strcmp(string_val, ""))
-			return;
+// 		if (sym->type == S_STRING && !strcmp(string_val, ""))
+// 			return;
+
+// 		if (sym->name && strcmp(sym->name, "EXTRA_FIRMWARE") == 0)
+// 			return;
+//
+// 		if (sym->name && strcmp(sym->name, "SYSTEM_TRUSTED_KEYS") == 0)
+// 			return;
+//
+// 		if (sym->name && strcmp(sym->name, "DRM_I915_FORCE_PROBE") == 0)
+// 			return;
+
+// 		if (sym->name && strcmp(sym->name, "UEVENT_HELPER_PATH") == 0)
+// 			return;
+
+		int satval = sym->nb_vals->head->elem->satval;
+		int cmpnr = 4378;
+
+// 		if (satval == cmpnr) {
+// 			print_sym_name(sym);
+// 			printf("has value set: %d\n", sym_nonbool_has_value_set(sym));
+// 		}
 
 		/* symbol does not have a value */
 		if (!sym_nonbool_has_value_set(sym)) {
+
+// 			if (satval == cmpnr) {
+// 				printf("symbol does not have a value\n");
+// 			}
+
 			/* set value for sym=n */
 			picosat_assume(pico, e->satval);
 			e->assumption = true;
@@ -423,6 +448,10 @@ void sym_add_assumption(PicoSAT *pico, struct symbol *sym)
 		}
 
 		/* symbol does have a value set */
+// 		if (satval == cmpnr) {
+// 			printf("symbol does have a value\n");
+// 			printf("adding false for %d\n", e->satval);
+// 		}
 
 		/* set value for sym=n */
 		picosat_assume(pico, -(e->satval));
@@ -436,6 +465,11 @@ void sym_add_assumption(PicoSAT *pico, struct symbol *sym)
 			if (strcmp(str_get(&node->elem->nb_val), string_val) == 0) {
 				picosat_assume(pico, node->elem->satval);
 				node->elem->assumption = true;
+/*
+				if (satval == cmpnr) {
+					printf("symbol has value: %s\n", str_get(&node->elem->nb_val));
+					printf("adding true for %d\n", node->elem->satval);
+				}*/
 			} else {
 				picosat_assume(pico, -(node->elem->satval));
 				node->elem->assumption = false;

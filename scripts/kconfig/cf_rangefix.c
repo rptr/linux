@@ -414,8 +414,8 @@ static void fexpr_add_assumption(PicoSAT *pico, struct fexpr *e, int satval)
 
 		char *string_val = (char *) sym_get_string_value(sym);
 
-		if (sym->type == S_STRING && !strcmp(string_val, ""))
-			return;
+// 		if (sym->type == S_STRING && !strcmp(string_val, ""))
+// 			return;
 
 		/* check, if e symbolises the no-value-set fexpr */
 		if (fexpr_is_novalue(e)) {
@@ -423,22 +423,49 @@ static void fexpr_add_assumption(PicoSAT *pico, struct fexpr *e, int satval)
 				picosat_assume(pico, satval);
 				e->assumption = true;
 				nr_of_assumptions_true++;
+// 				if (satval == 131) {
+// 					printf("novalue, true\n");
+// 				}
 			} else {
 				picosat_assume(pico, -satval);
 				e->assumption = false;
-
+// 				if (satval == 131) {
+// 					printf("novalue, false\n");
+// 				}
 			}
-			nr_of_assumptions++;
-			return;
 		}
-
-		if (!strcmp(str_get(&e->nb_val), string_val)) {
-			picosat_assume(pico, satval);
-			e->assumption = true;
-			nr_of_assumptions_true++;
-		} else {
-			picosat_assume(pico, -satval);
-			e->assumption = false;
+		/* check whena string-symbol has value "" */
+		else if (sym->type == S_STRING && !strcmp(string_val, "")) {
+			if (sym_nonbool_has_value_set(sym)) {
+				picosat_assume(pico, satval);
+				e->assumption = true;
+				nr_of_assumptions_true++;
+// 				if (satval == 132) {
+// 					printf("emptyvalue, true\n");
+// 				}
+			} else {
+				picosat_assume(pico, -satval);
+				e->assumption = false;
+// 				if (satval == 132) {
+// 					printf("emptyvalue, false\n");
+// 				}
+			}
+		}
+		else {
+			if (!strcmp(str_get(&e->nb_val), string_val)) {
+				picosat_assume(pico, satval);
+				e->assumption = true;
+				nr_of_assumptions_true++;
+// 				if (satval == 133) {
+// 					printf("nonvalue, true\n");
+// 				}
+			} else {
+				picosat_assume(pico, -satval);
+				e->assumption = false;
+// 				if (satval == 133) {
+// 					printf("nonvalue, false\n");
+// 				}
+			}
 		}
 		nr_of_assumptions++;
 	}
@@ -628,7 +655,7 @@ static void print_unsat_core(struct fexpr_list *list)
 
 	fexpr_list_for_each(node, list) {
 		printd("%s", str_get(&node->elem->name));
-		printd(" <%s>", node->elem->assumption ? "T" : "F");
+		printd(" <%s>", node->elem->assumption == true ? "T" : "F");
 		if (node->next != NULL)
 			printd(", ");
 	}

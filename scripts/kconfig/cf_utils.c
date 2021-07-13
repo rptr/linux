@@ -168,6 +168,36 @@ bool expr_can_evaluate_to_mod(struct expr *e)
 }
 
 /*
+ * check whether an expr is a non-Boolean constant
+ */
+bool expr_is_nonbool_constant(struct expr *e)
+{
+	if (e->type != E_SYMBOL)
+		return false;
+	if (e->left.sym->type != S_UNKNOWN)
+		return false;
+
+	if (e->left.sym->flags & SYMBOL_CONST)
+		return true;
+
+	return string_is_number(e->left.sym->name) || string_is_hex(e->left.sym->name);
+}
+
+/*
+ * check whether a symbol is a non-Boolean constant
+ */
+bool sym_is_nonbool_constant(struct symbol *sym)
+{
+	if (sym->type != S_UNKNOWN)
+		return false;
+
+	if (sym->flags & SYMBOL_CONST)
+		return true;
+
+	return string_is_number(sym->name) || string_is_hex(sym->name);
+}
+
+/*
  * print an expr
  */
 static void print_expr_util(struct expr *e, int prevtoken)
@@ -353,10 +383,15 @@ bool sym_nonbool_has_value_set(struct symbol *sym)
 	if (sym->type == S_HEX || sym->type == S_INT)
 		return false;
 
-	return true;
+// 	return true;
+
+// 	return sym->dir_dep.tri != no;
+
 	/* cannot have a value dependencies not satisfied */
 	if (sym->dir_dep.tri == no)
 		return false;
+	else
+		return true;
 
 	struct property *prop = sym_get_default_prop(sym);
 
