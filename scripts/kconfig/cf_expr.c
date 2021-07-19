@@ -550,21 +550,16 @@ struct fexpr * sym_get_or_create_nonbool_fexpr(struct symbol *sym, char *value)
 
 /*
  * calculate, when expr of type EQUAL will evaluate to yes
- * (A=B) && (A_m=B_m)
  */
 struct pexpr * expr_calculate_pexpr_y_equals(struct expr *e)
 {
 	/* comparing 2 tristate constants */
-	if (sym_is_tristate_constant(e->left.sym) && sym_is_tristate_constant(e->right.sym)) {
+	if (sym_is_tristate_constant(e->left.sym) && sym_is_tristate_constant(e->right.sym))
 		return e->left.sym == e->right.sym ? pexf(const_true) : pexf(const_false);
-	}
-
 
 	/* comparing 2 nonboolean constants */
-	if (sym_is_nonbool_constant(e->left.sym) && sym_is_nonbool_constant(e->right.sym)) {
+	if (sym_is_nonbool_constant(e->left.sym) && sym_is_nonbool_constant(e->right.sym))
 		return strcmp(e->left.sym->name, e->right.sym->name) == 0 ? pexf(const_true) : pexf(const_false);
-	}
-
 
 	/* comparing 2 boolean/tristate incl. yes/mod/no constants */
 	if (sym_is_bool_or_triconst(e->left.sym) && sym_is_bool_or_triconst(e->right.sym)) {
@@ -578,65 +573,48 @@ struct pexpr * expr_calculate_pexpr_y_equals(struct expr *e)
 	if (sym_is_nonboolean(e->left.sym) && sym_is_nonbool_constant(e->right.sym)) {
 		return pexf(sym_get_or_create_nonbool_fexpr(e->left.sym, e->right.sym->name));
 	}
-	if (sym_is_nonbool_constant(e->left.sym) && sym_is_nonboolean(e->right.sym)) {
-
-// 		TODO
-// 		print_expr(":", e, 0);
-// 		print_sym_name(e->left.sym);
-// 		print_sym_name(e->right.sym);
-
-// 		pexpr_print("return ", pexf(sym_get_or_create_nonbool_fexpr(e->left.sym, e->right.sym->name)), -1);
-
+	if (sym_is_nonbool_constant(e->left.sym) && sym_is_nonboolean(e->right.sym))
 		return pexf(sym_get_or_create_nonbool_fexpr(e->right.sym, e->left.sym->name));
-	}
 
 	/* comparing nonboolean with tristate constant, will never be true */
-	if (sym_is_nonboolean(e->left.sym) && sym_is_tristate_constant(e->right.sym)) {
+	if (sym_is_nonboolean(e->left.sym) && sym_is_tristate_constant(e->right.sym))
 		return pexf(const_false);
-	}
-
-	if (sym_is_tristate_constant(e->left.sym) && sym_is_nonboolean(e->right.sym)) {
-
-// 		TODO
-// 		print_expr(":", e, 0);
-// 		print_sym_name(e->left.sym);
-// 		print_sym_name(e->right.sym);
-
+	if (sym_is_tristate_constant(e->left.sym) && sym_is_nonboolean(e->right.sym))
 		return pexf(const_false);
-	}
-
 
 	/* comparing 2 nonboolean symbols */
-	// TODO
 	if (sym_is_nonboolean(e->left.sym) && sym_is_nonboolean(e->right.sym)) {
-// 		TODO
-// 		print_expr(":", e, 0);
-// 		print_sym_name(e->left.sym);
-// 		print_sym_name(e->right.sym);
-
-// 		return pexf(sym_get_or_create_nonbool_fexpr(e->left.sym, e->right.sym->name));
+		struct pexpr *c = pexf(const_false);
+		struct fexpr_node *node1, *node2;
+		struct fexpr *e1, *e2;
+		for (node1 = e->left.sym->nb_vals->head->next; node1 != NULL; node1 = node1->next) {
+			e1 = node1->elem;
+			for (node2 = e->right.sym->nb_vals->head->next; node2 != NULL; node2 = node2->next) {
+				e2 = node2->elem;
+				if (!strcmp(str_get(&e1->nb_val), str_get(&e2->nb_val))) {
+					c = pexpr_or(c, pexpr_and(pexf(e1), pexf(e2)));
+					break;
+				}
+			}
+		}
+		return c;
 	}
 
 	/* comparing boolean item with nonboolean constant, will never be true */
-	if (sym_is_tristate_constant(e->left.sym) && sym_is_nonbool_constant(e->right.sym)) {
+	if (sym_is_tristate_constant(e->left.sym) && sym_is_nonbool_constant(e->right.sym))
 		return pexf(const_false);
-	}
-	if (sym_is_nonbool_constant(e->left.sym) && sym_is_tristate_constant(e->right.sym)) {
+	if (sym_is_nonbool_constant(e->left.sym) && sym_is_tristate_constant(e->right.sym))
 		return pexf(const_false);
-	}
 
 	/* comparing symbol of type unknown with tristate constant */
-	if (e->left.sym->type == S_UNKNOWN && sym_is_tristate_constant(e->right.sym)) {
+	if (e->left.sym->type == S_UNKNOWN && sym_is_tristate_constant(e->right.sym))
 		return pexf(const_false);
-	}
-	if (sym_is_tristate_constant(e->left.sym) && e->right.sym->type == S_UNKNOWN) {
+	if (sym_is_tristate_constant(e->left.sym) && e->right.sym->type == S_UNKNOWN)
 		return pexf(const_false);
-	}
 
-	perror("Unsupported equality.");
-	print_expr(":", e, 0);
-	print_sym_name(e->left.sym);
-	print_sym_name(e->right.sym);
+	/* any other comparison is not supported and should not be executed */
+// 	perror("Unsupported equality.");
+// 	print_expr(":", e, 0);
 
 	return pexf(const_false);
 }

@@ -20,6 +20,7 @@
 #define KCR_CMP false
 #define NPC_OPTIMISATION true
 
+static void init_constraints(void);
 static void get_constraints_bool(void);
 static void get_constraints_select(void);
 static void get_constraints_nonbool(void);
@@ -59,15 +60,71 @@ void get_constraints(void)
 {
 	printd("Building constraints...");
 
+	init_constraints();
 	get_constraints_bool();
 	get_constraints_select();
 	get_constraints_nonbool();
 }
 
 /*
+ * need to go through the constraints once to find all "known values"
+ * for the non-Boolean symbols
+ */
+static void init_constraints(void)
+{
+	unsigned int i;
+	struct symbol *sym;
+	struct property *p;
+	for_all_symbols(i, sym) {
+		if (sym->type == S_UNKNOWN)
+			continue;
+
+		if (sym_is_boolean(sym)) {
+			for_all_properties(sym, p, P_SELECT)
+				expr_calculate_pexpr_both(p->visible.expr);
+
+			for_all_properties(sym, p, P_IMPLY)
+				expr_calculate_pexpr_both(p->visible.expr);
+		}
+
+		if (sym->dir_dep.expr)
+			expr_calculate_pexpr_both(sym->dir_dep.expr);
+
+		struct property *prompt = sym_get_prompt(sym);
+		if (prompt != NULL && prompt->visible.expr) {
+			expr_calculate_pexpr_both(prompt->visible.expr);
+			get_defaults(sym);
+		}
+
+		if (sym_is_nonboolean(sym)) {
+			for_all_defaults(sym, p) {
+				if (p == NULL)
+					continue;
+
+				sym_create_nonbool_fexpr(sym, p->expr->left.sym->name);
+			}
+			for_all_properties(sym, p, P_RANGE) {
+				if (p == NULL)
+					continue;
+
+				sym_create_nonbool_fexpr(sym, p->expr->left.sym->name);
+				sym_create_nonbool_fexpr(sym, p->expr->right.sym->name);
+			}
+			const char *curr = sym_get_string_value(sym);
+			if (strcmp(curr, "") != 0)
+				sym_create_nonbool_fexpr(sym, (char *) curr);
+		}
+
+		if (sym->type == S_HEX || sym->type == S_INT)
+			sym_add_nonbool_values_from_default_range(sym);
+	}
+}
+
+
+/*
  *  build constraints for boolean symbols
  */
-void get_constraints_bool(void)
+static void get_constraints_bool(void)
 {
 	unsigned int i;
 	struct symbol *sym;
@@ -119,7 +176,7 @@ void get_constraints_bool(void)
 * build the constraints for select-variables
 * skip non-Booleans, choice symbols/options och symbols without rev_dir
 */
-void get_constraints_select(void)
+static void get_constraints_select(void)
 {
 	unsigned int i;
 	struct symbol *sym;
@@ -160,33 +217,10 @@ void get_constraints_select(void)
 /*
  * build constraints for non-booleans
  */
-void get_constraints_nonbool(void)
+static void get_constraints_nonbool(void)
 {
 	unsigned int i;
 	struct symbol *sym;
-
-	/* these constraints might add "known values" */
-	for_all_symbols(i, sym) {
-
-		if (!sym_is_nonboolean(sym))
-			continue;
-
-		/* add known values from the range-attributes */
-		if (sym->type == S_HEX || sym->type == S_INT)
-			sym_add_nonbool_values_from_default_range(sym);
-
-		/* build invisible constraints */
-		add_invisible_constraints(sym);
-
-		/* add current value to possible values */
-		if (!sym->flags || !(sym->flags & SYMBOL_VALID))
-			sym_calc_value(sym);
-		const char *curr = sym_get_string_value(sym);
-		if (strcmp(curr, "") != 0)
-			sym_create_nonbool_fexpr(sym, (char *) curr);
-	}
-
-	/* the following constraints will not add any "known values" */
 	for_all_symbols(i, sym) {
 
 		if (!sym_is_nonboolean(sym))
@@ -204,12 +238,14 @@ void get_constraints_nonbool(void)
 		if (sym->dir_dep.expr)
 			add_dependencies_nonbool(sym);
 
+		/* build invisible constraints */
+		add_invisible_constraints(sym);
+
 		/* exactly one of the symbols must be true */
 		sym_nonbool_at_least_1(sym);
 		sym_nonbool_at_most_1(sym);
 	}
 }
-
 
 /*
  * enforce tristate constraints
@@ -219,9 +255,9 @@ static void build_tristate_constraint_clause(struct symbol *sym)
 	if (sym->type != S_TRISTATE)
 		return;
 
-	/* -X v -X_m */
 	struct pexpr *X = pexf(sym->fexpr_y), *X_m = pexf(sym->fexpr_m), *modules = pexf(modules_sym->fexpr_y);
 
+	/* -X v -X_m */
 	struct pexpr *c = pexpr_or(pexpr_not(X), pexpr_not(X_m));
 	sym_add_constraint(sym, c);
 

@@ -383,21 +383,6 @@ bool sym_nonbool_has_value_set(struct symbol *sym)
 	if (sym->type == S_HEX || sym->type == S_INT)
 		return false;
 
-// 	return true;
-
-// 	return sym->dir_dep.tri != no;
-
-	/* cannot have a value dependencies not satisfied */
-	if (sym->dir_dep.tri == no)
-		return false;
-	else
-		return true;
-
-	struct property *prop = sym_get_default_prop(sym);
-
-	if (sym->dir_dep.expr && prop == NULL)
-		return false;
-
 	return true;
 }
 

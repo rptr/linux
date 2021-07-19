@@ -414,8 +414,8 @@ static void fexpr_add_assumption(PicoSAT *pico, struct fexpr *e, int satval)
 
 		char *string_val = (char *) sym_get_string_value(sym);
 
-// 		if (sym->type == S_STRING && !strcmp(string_val, ""))
-// 			return;
+		if (sym->type == S_STRING && !strcmp(string_val, ""))
+			return;
 
 		/* check, if e symbolises the no-value-set fexpr */
 		if (fexpr_is_novalue(e)) {
@@ -423,15 +423,9 @@ static void fexpr_add_assumption(PicoSAT *pico, struct fexpr *e, int satval)
 				picosat_assume(pico, satval);
 				e->assumption = true;
 				nr_of_assumptions_true++;
-// 				if (satval == 131) {
-// 					printf("novalue, true\n");
-// 				}
 			} else {
 				picosat_assume(pico, -satval);
 				e->assumption = false;
-// 				if (satval == 131) {
-// 					printf("novalue, false\n");
-// 				}
 			}
 		}
 		/* check whena string-symbol has value "" */
@@ -440,15 +434,9 @@ static void fexpr_add_assumption(PicoSAT *pico, struct fexpr *e, int satval)
 				picosat_assume(pico, satval);
 				e->assumption = true;
 				nr_of_assumptions_true++;
-// 				if (satval == 132) {
-// 					printf("emptyvalue, true\n");
-// 				}
 			} else {
 				picosat_assume(pico, -satval);
 				e->assumption = false;
-// 				if (satval == 132) {
-// 					printf("emptyvalue, false\n");
-// 				}
 			}
 		}
 		else {
@@ -456,15 +444,9 @@ static void fexpr_add_assumption(PicoSAT *pico, struct fexpr *e, int satval)
 				picosat_assume(pico, satval);
 				e->assumption = true;
 				nr_of_assumptions_true++;
-// 				if (satval == 133) {
-// 					printf("nonvalue, true\n");
-// 				}
 			} else {
 				picosat_assume(pico, -satval);
 				e->assumption = false;
-// 				if (satval == 133) {
-// 					printf("nonvalue, false\n");
-// 				}
 			}
 		}
 		nr_of_assumptions++;
