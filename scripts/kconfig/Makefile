@@ -37,6 +37,7 @@ gconfig-prog	 := gconf
 xconfig-prog	 := qconf
 cfconfig-prog    := cfconfig
 cfoutconfig-prog := cfoutconfig
+cftestconfig-prog := qconf
 
 define config_rule
 PHONY += $(1)
@@ -48,7 +49,7 @@ build_$(1): $(obj)/$($(1)-prog)
 endef
 
 $(foreach c, config menuconfig nconfig gconfig xconfig cfconfig \
-cfoutconfig, $(eval $(call config_rule,$(c))))
+cfoutconfig cftestconfig, $(eval $(call config_rule,$(c))))
 
 PHONY += localmodconfig localyesconfig
 localyesconfig localmodconfig: $(obj)/conf
@@ -145,6 +146,7 @@ help:
 	@echo  '  testconfig	  - Run Kconfig unit tests (requires python3 and pytest)'
 	@echo  '  cfconfig        - CLI tool for debugging ConfigFix'
 	@echo  '  cfoutconfig     - Print constraints and DIMACS-output into files'
+	@echo  '  cftestconfig    - xconfig with added features for testing ConfigFix'
 
 # ===========================================================================
 # object files used by all kconfig flavours
@@ -207,6 +209,12 @@ $(obj)/qconf-moc.cc: $(src)/qconf.h $(obj)/qconf-cfg FORCE
 	$(call if_changed,moc)
 
 targets += qconf-moc.cc
+
+# cftestconfig: Add ConfigFix testing features to xconfig
+cftestconfig: HOSTCXXFLAGS_qconf.o	    += -DCONFIGFIX_TEST -ggdb
+cftestconfig: HOSTCFLAGS_cf_rangefix.o	+= -DCONFIGFIX_TEST -ggdb
+cftestconfig: HOSTCFLAGS_lexer.lex.o	+= -DCONFIGFIX_TEST -ggdb
+cftestconfig: HOSTCFLAGS_parser.tab.o	+= -DCONFIGFIX_TEST -ggdb
 
 # gconf: Used for the gconfig target based on GTK+
 hostprogs	+= gconf
