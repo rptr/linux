@@ -712,9 +712,14 @@ static void add_invisible_constraints(struct symbol *sym)
 		struct pexpr *e2 = pexpr_implies(pexpr_not(default_any), e1);
 		struct pexpr *e3 = pexpr_implies(npc, e2);
 
+		// TODO
+		if (sym->name && !strcmp(sym->name, "CFG80211_EXTRA_REGDB_KEYDIR"))
+			goto SKIP_PREVIOUS_CONSTRAINT;
+
 		sym_add_constraint(sym, e3);
 	}
 
+SKIP_PREVIOUS_CONSTRAINT:
 	/* if invisible and on by default, then a symbol can only be deactivated by its dependencies */
 	if (sym->type == S_TRISTATE) {
 		if (defaults->size == 0)

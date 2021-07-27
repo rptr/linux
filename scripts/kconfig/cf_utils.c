@@ -19,8 +19,6 @@
 
 #define SATMAP_INIT_SIZE 2
 
-static void print_expr_util(struct expr *e, int prevtoken);
-
 /*
  * parse Kconfig-file and read .config
  */
@@ -381,6 +379,9 @@ bool sym_nonbool_has_value_set(struct symbol *sym)
 
 	/* a HEX/INT symbol cannot have value "" */
 	if (sym->type == S_HEX || sym->type == S_INT)
+		return false;
+
+	if (sym->dir_dep.expr && sym->dir_dep.tri == no)
 		return false;
 
 	return true;
