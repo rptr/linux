@@ -244,6 +244,7 @@ public:
 	static QAction *showPromptAction;
 	static QAction *addSymbolsFromContextMenu;
 };
+
 class ConflictsView : public QWidget {
 	ConfigLineEdit* lineEdit;
 	Q_OBJECT
@@ -268,6 +269,15 @@ public slots:
 	void updateResults();
 	void changeSolutionTable(int solution_number);
 	void calculateFixes();
+// FIXME - make work with #ifdef
+// #ifdef CONFIGFIX_TEST
+    // void switchTestingMode();
+	// void testRandomConflict();
+	// void generateConflict(std::uniform_int_distribution<int> dist);
+	// void saveConflict();
+	// void verifyDiagnoses(const char *result_prefix);
+// #endif
+
 signals:
 	void showNameChanged(bool);
 	void showRangeChanged(bool);
@@ -292,6 +302,15 @@ public:
 	std::mutex satconf_mutex;
 	std::condition_variable satconf_cancellation_cv;
 	bool satconf_cancelled{false};
+
+#ifdef CONFIGFIX_TEST
+	// pointer to the menu list
+	ConfigList* configList;
+	// conflict candidate counter
+	int candidate_symbols;
+	// "Test random conflict" | "Verify fixes" button
+	// QAction *testConflictAction;
+#endif
 };
 
 class ConfigInfoView : public QTextBrowser {
@@ -357,6 +376,14 @@ class ConfigMainWindow : public QMainWindow {
 	static void conf_changed(void);
 public:
 	ConfigMainWindow(void);
+#ifdef CONFIGFIX_TEST
+	ConfigView* getConfigView(void) const { 
+		return configView;
+	}
+	ConflictsView* getConflictsView(void) const {
+		return conflictsView;
+	}
+#endif
 public slots:
 	void changeMenu(struct menu *);
 	void changeItens(struct menu *);

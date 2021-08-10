@@ -37,10 +37,137 @@
 #include <future>
 #include <memory>
 
+/* ----- start cf_testing.h ----- */
+#ifdef CONFIGFIX_TEST
+
+#include <algorithm>    // std::next_permutation
+#include <random>
+#include <QTextStream>
+#include <QTimer>
+#include <dirent.h>
+#include <time.h>
+
+#include "configfix.h"
+#include "cf_utils.h"
+
+// iterate fixes in a diagnosis with and without index
+#define for_all_fixes(diag, fix) \
+	int fix_idx; for (fix_idx = 0; fix_idx < diag->len; fix_idx++) for (fix = g_array_index(diag, struct symbol_fix *, fix_idx);fix;fix=NULL)
+#define for_every_fix(diag, i, fix) \
+	for (i = 0; i < diag->len; i++) for (fix = g_array_index(diag, struct symbol_fix *, i);fix;fix=NULL)
+
+// testing modes
+#define RANDOM_TESTING 1
+#define MANUAL_TESTING 2
+static int testing_mode = RANDOM_TESTING;
+
+/* Total number of generated conflicts = (MAX_CONFLICT_SIZE - MIN_CONFLICT_SIZE + 1) x NO_CONFLICTS */
+// minimum no. symbols in a random conflict
+#define MIN_CONFLICT_SIZE 4 //4
+// maximum no. symbols in a random conflict
+#define MAX_CONFLICT_SIZE 5 //10
+// number of random conflicts of each size
+#define NO_CONFLICTS 1 //5
+
+#define BASE_CONFIG ".config.base"
+#define RESULTS_FILE "results.csv"
+
+/* Persistent configuration statistics */
+static int sym_count = 0;
+// tristates in configuration space
+static bool tristates = false;
+// no. symbols with the value YES or MOD
+static int no_enabled_symbols = 0;
+// no. symbols that conflict with current config
+static int no_conflict_candidates = 0;
+
+// default conflict size
+static int conflict_size = 1;
+// directory where generated conflict is saved
+static char *conflict_dir;
+// result string to be written to RESULTS_FILE
+static gstr result_string = str_new(); // TODO remove call?
+
+
+// Mersenne Twister random number generator, initialised once
+static auto seed = std::random_device{}();
+static std::mt19937 rng(seed);
+
+
+// Print test environment details
+static void print_setup(const char *name);
+// static void print_config_stats(ConfigList *list);
+static void print_sample_stats();
+
+
+// Backup, compare, and reset configuration options
+// hash table element
+typedef struct sym_hash_elem {
+	// symbol name
+	char *name;
+	// its value as string
+	char *value;
+	// chain elements in case of hash collisions
+	struct sym_hash_elem *next;
+} SymHash;
+
+// hash table size
+#define HASHSIZE 20000
+
+// backups of the base config and the given configuration sample
+static SymHash *base_config[HASHSIZE], *initial_config[HASHSIZE];
+
+static SymHash *config_backup(void);
+static void config_backup_base(void);
+static void config_backup_initial(void);
+
+// static int config_compare(GHashTable *backup);
+static void config_reset(void);
+
+// static void append_result(char *str);
+// static void output_result();
+
+// Symbol properties
+static bool sym_has_conflict(struct symbol *sym);
+static int sym_has_blocked_values(struct symbol *sym);
+// static bool sym_enabled_in_base_config(struct symbol *sym);
+// static ConfigItem* get_conflict_item(int index, ConfigList *configList);
+// static /*struct*/ symbol* get_conflict_sym(int index);
+// static tristate random_blocked_value(struct symbol *sym);
+static const char* sym_get_type_name(struct symbol *sym);
+// static symbol_fix* get_symbol_fix(struct symbol *sym, GArray *diag);
+// static const char* sym_fix_get_string_value(struct symbol_fix *sym_fix);
+// static bool diag_dependencies_met(GArray *diag);
+// static bool symbol_has_changed(struct symbol *sym, GHashTable *backup);
+// static GArray* rearrange_diagnosis(GArray *diag, int fix_idxs[]);
+// static void save_diagnosis(GArray *diag, char* file_prefix, bool valid_diag);
+// static bool verify_diagnosis(int i, const char *result_prefix, GArray *diag, QTableWidget* conflictsTable);
+// static bool verify_fix_target_values(GArray *diag);
+// static bool verify_resolution(QTableWidget* conflictsTable);
+// static bool verify_changed_symbols(GArray *diag);
+
+// Filenames
+static char *get_config_dir(void);
+static char *get_conflict_dir(void);
+static char *get_results_file(void);
+
+// static GArray* rearrange_diagnosis_(GArray *diag);
+// // determines diagnosis order in the above function
+// static bool reverse_diag_order = false;
+
+#endif
+/* ----- end cf_testing.h ----- */
+
 static QApplication *configApp;
 static ConfigSettings *configSettings;
 
 QAction *ConfigMainWindow::saveAction;
+
+// TODO is this needed?
+static inline QString qgettext(const char* str)
+{
+	return QString::fromLocal8Bit(str);
+}
 
 ConfigSettings::ConfigSettings()
 	: QSettings("kernel.org", "qconf")
@@ -107,7 +234,7 @@ void ConfigItem::okRename(int col)
 void ConfigItem::updateMenu(void)
 {
 	ConfigList* list;
-	struct symbol* sym;
+	struct symbol *sym;
 	struct property *prop;
 	QString prompt;
 	int type;
@@ -476,7 +603,7 @@ update:
 
 void ConfigList::setValue(ConfigItem* item, tristate val)
 {
-	struct symbol* sym;
+	struct symbol *sym;
 	int type;
 	tristate oldval;
 
@@ -501,8 +628,8 @@ void ConfigList::setValue(ConfigItem* item, tristate val)
 
 void ConfigList::changeValue(ConfigItem* item)
 {
-	struct symbol* sym;
-	struct menu* menu;
+	struct symbol *sym;
+	struct menu *menu;
 	int type, oldexpr, newexpr;
 
 	menu = item->menu;
@@ -1041,6 +1168,9 @@ ConflictsView::ConflictsView(QWidget* parent, const char *name)
 	QAction *setConfigSymbolAsYes = new QAction("Y");
 	fixConflictsAction_ = new QAction("Calculate Fixes");
 	QAction *removeSymbol = new QAction("Remove Symbol");
+#ifdef CONFIGFIX_TEST
+	QAction *testConflictAction = new QAction("Test Random Conflict");
+#endif
 
 	// If you change the order of buttons here, change the code where
 	// module button was disabled if symbol is boolean, selecting module
@@ -1052,7 +1182,9 @@ ConflictsView::ConflictsView(QWidget* parent, const char *name)
 	conflictsToolBar->addAction(setConfigSymbolAsYes);
 	conflictsToolBar->addAction(fixConflictsAction_);
 	conflictsToolBar->addAction(removeSymbol);
-
+#ifdef CONFIGFIX_TEST
+	conflictsToolBar->addAction(testConflictAction);
+#endif
 	verticalLayout->addWidget(conflictsToolBar);
 
 	connect(addSymbol, SIGNAL(triggered(bool)), SLOT(addSymbol()));
@@ -1064,6 +1196,10 @@ ConflictsView::ConflictsView(QWidget* parent, const char *name)
 	// connect clicking 'calculate fixes' to 'change all symbol values to fix all conflicts'
 	// no longer used anymore for now.
 	connect(fixConflictsAction_, SIGNAL(triggered(bool)), SLOT(calculateFixes()));
+#ifdef CONFIGFIX_TEST
+	connect(fixConflictsAction_, SIGNAL(triggered(bool)), SLOT(switchTestingMode()));
+	connect(testConflictAction, SIGNAL(triggered(bool)), SLOT(testRandomConflict()));
+#endif
 
 	conflictsTable = (QTableWidget*) new droppableView(this);
 	conflictsTable->setRowCount(0);
@@ -1194,6 +1330,7 @@ void ConflictsView::addSymbol(struct menu *m)
 			} else {
 				conflictsTable->item(matches[0].row(),2)->setText(tristate_value_to_string(currentval));
 			}
+			conflictsTable->resizeColumnsToContents();
 		}
 	}
 }
@@ -1233,7 +1370,7 @@ void ConflictsView::cellClicked(int row, int column)
 	auto itemText = conflictsTable->item(row,0)->text().toUtf8().data();
 
 
-	struct symbol* sym = sym_find(itemText);
+	struct symbol *sym = sym_find(itemText);
 	if (sym == NULL) {
 		return;
 	}
@@ -1250,7 +1387,7 @@ void ConflictsView::cellClicked(int row, int column)
 
 void ConflictsView::changeSolutionTable(int solution_number)
 {
-	if(solution_output == nullptr || solution_number < 0) {
+	if (solution_output == nullptr || solution_number < 0) {
 		return;
 	}
 
@@ -1290,6 +1427,7 @@ void ConflictsView::changeSolutionTable(int solution_number)
 			      symbol_value);
 		}
 	}
+	solutionTable->resizeColumnsToContents();
 	UpdateConflictsViewColorization();
 }
 
@@ -1492,7 +1630,7 @@ void ConfigInfoView::symbolInfo(void)
 
 void ConfigInfoView::menuInfo(void)
 {
-	struct symbol* sym;
+	struct symbol *sym;
 	QString info;
 	QTextStream stream(&info);
 
@@ -1814,7 +1952,11 @@ ConfigMainWindow::ConfigMainWindow(void)
 	QDesktopWidget *d = configApp->desktop();
 	snprintf(title, sizeof(title), "%s%s",
 		rootmenu.prompt->text,
+	#ifdef CONFIGFIX_TEST
+		" (ConfigFix testing)"
+	#else
 		""
+	#endif
 		);
 	setWindowTitle(title);
 
@@ -1876,6 +2018,9 @@ ConfigMainWindow::ConfigMainWindow(void)
 	setTabOrder(configList, helpText);
 
 	configList->setFocus();
+#ifdef CONFIGFIX_TEST
+	conflictsView->configList = configList;
+#endif
 
 	// menu = menuBar();
 	toolBar = new QToolBar("Tools", this);
@@ -2409,6 +2554,11 @@ int main(int ac, char** av)
 
 	conf_parse(name);
 	fixup_rootmenu(&rootmenu);
+#ifdef CONFIGFIX_TEST
+	// backup base configuration
+	conf_read(BASE_CONFIG);
+	config_backup_base();
+#endif
 	conf_read(NULL);
 	//zconfdump(stdout);
 
@@ -2420,6 +2570,25 @@ int main(int ac, char** av)
 	configApp->connect(configApp, SIGNAL(lastWindowClosed()), SLOT(quit()));
 	configApp->connect(configApp, SIGNAL(aboutToQuit()), v, SLOT(saveSettings()));
 	v->show();
+#ifdef CONFIGFIX_TEST
+	
+	// show detailed information in config view by default
+	v->showFullView(); 
+	ConfigView *configView = v->getConfigView();
+	configView->setShowName(true);
+	configView->setShowRange(true);
+	configView->setShowData(true);
+	// show prompt options
+	configView->list->setOptionMode(configView->list->showPromptAction);
+	configView->list->showPromptAction->setChecked(true);
+	// auto-resize columns in conflicts view 
+	ConflictsView *conflictsView = v->getConflictsView();
+	conflictsView->conflictsTable->resizeColumnsToContents();
+
+	conflict_dir = get_conflict_dir();
+	print_setup(name);
+	// print_config_stats(configView->list);
+#endif
 	configApp->exec();
 
 	configSettings->endGroup();
@@ -2448,6 +2617,7 @@ QString tristate_value_to_string(tristate val)
 		return QString::fromStdString("");
 	}
 }
+
 tristate string_value_to_tristate(QString s)
 {
 	if (s == "YES")
@@ -2459,3 +2629,570 @@ tristate string_value_to_tristate(QString s)
 	else
 		return tristate::no;
 }
+
+
+/* ----- cf_testing.c ----- */
+#ifdef CONFIGFIX_TEST
+
+/*
+ * Prints the environment variables and parameters 
+ * that affect ConfigFix testing
+ */
+static void print_setup(const char* name)
+{
+	printf("\nConfigfix testing enabled:\n");
+	printf("---------------------------\n");
+	printf("%-27s %s\n", "Working directory:", getenv("PWD"));
+	printf("%-27s %s\n", "$CC:", getenv("CC"));
+	printf("%-27s %s\n", "$CC_VERSION_TEXT:", getenv("CC_VERSION_TEXT"));
+	printf("%-27s %s\n", "$KERNELVERSION:", getenv("KERNELVERSION"));
+	printf("%-27s %s\n", "$ARCH:", getenv("ARCH"));
+	printf("%-27s %s\n", "$SRCARCH:", getenv("SRCARCH"));
+	printf("%-27s %s\n", "$srctree:", getenv("srctree"));
+	printf("%-27s %s\n", "Kconfig file:", name);
+	if (rootmenu.prompt)
+		printf("%-27s %s\n\n", "Root menu prompt:", rootmenu.prompt->text);
+	
+	printf("%-27s %s\n", 
+		"CONFIGFIX_PATH:", getenv("CONFIGFIX_PATH"));	
+	printf("%-27s %s\n", 
+		"CONFIGFIX_TEST_PATH:", getenv("CONFIGFIX_TEST_PATH"));
+	printf("%-27s %s\n", "Results file:", get_results_file());
+	printf("%-27s %s\n", 
+		"CONFIGFIX_TEST_CONFIG_DIR:", getenv("CONFIGFIX_TEST_CONFIG_DIR"));
+	printf("%-27s %s\n", "Configuration sample:", conf_get_configname());
+	printf("%-27s %s\n", 
+		"CONFIGFIX_TEST_PROBABILITY:", getenv("CONFIGFIX_TEST_PROBABILITY"));
+		// conflict_dir = get_conflict_dir();
+	printf("%-27s %s\n", 
+		"Conflict directory:", conflict_dir);
+	printf("%-27s %d\n", "Conflict size:", conflict_size);
+}
+
+/*
+ * Prints ConfigItem and symbol statistics for given ConfigList.
+ */
+// static void print_config_stats(ConfigList *list) 
+// {
+// 	printf("\nConfiguration statistics:\n");
+// 	printf("---------------------------\n");
+
+// 	// iterate menus
+// 	QTreeWidgetItemIterator it(list);
+// 	ConfigItem* item;
+// 	struct symbol *sym;
+
+// 	// collect statistics
+// 	int count=0, menuless=0, invisible=0, unknown=0,
+// 		symbolless=0, nonchangeable=0, promptless=0,
+// 		conf_item_candidates=0;
+
+// 	while (*it) {
+// 		item = (ConfigItem*)(*it);
+// 		count++;
+// 		if (!item->menu) {
+// 			menuless++;
+// 			++it;
+// 			continue;
+// 		}
+
+// 		if (!menu_has_prompt(item->menu))
+// 			promptless++;
+
+// 		if (!menu_is_visible(item->menu))
+// 			invisible++;
+		
+// 		sym = item->menu->sym;
+// 		if (!sym) {
+// 			symbolless++;
+// 			++it;
+// 			continue;
+// 		}
+
+// 		if (sym_get_type(sym) == S_UNKNOWN)
+// 			unknown++;
+
+// 		if (!sym_is_changeable(sym))
+// 			nonchangeable++;
+		
+// 		if (sym_has_conflict(sym)) //(sym_has_prompt(sym) && !sym_is_changeable(sym))
+// 			// conflictsView->candidate_symbols++;
+// 			conf_item_candidates++;
+
+// 		//DEBUG - print choices
+// 		// if (sym_is_choice(sym)) {
+// 		// 	printf("Choice %s = %s", 
+// 		// 		sym_get_name(sym), sym_has_value(sym) ? sym_get_string_value(sym) : "no value");
+// 		// 	if (sym_has_value(sym) && sym->curr.val) {
+// 		// 		printf(" (value is %s)", sym_get_name((struct symbol*)sym->curr.val));
+// 		// 	}
+// 		// 	printf("\n");
+// 		// }
+// 		// if (sym_is_choice_value(sym))
+// 		// 	printf("Choice value %s = %s\n", 
+// 		// 		sym_get_name(sym), sym_get_string_value(sym));
+// 		//DEBUG
+// 		++it;
+// 	}
+
+// 	printf("%i ConfigItems: %i menu-less, %i prompt-less, %i invisible, %i symbol-less, %i unknown type, %i non-changeable\n", 
+// 		count, menuless, promptless, invisible, symbolless, unknown, nonchangeable);
+	
+
+// 	// alternative counts by iterating symbols
+// 	int i, sym_candidates=0, promptless_unchangeable=0;
+// 	count=0, invisible=0, unknown=0, nonchangeable=0, promptless=0;
+// 	//DEBUG
+// 	int dep_mod=0, blocked_1=0, blocked_2=0, blocked_3=0, blocked_4=0;
+// 	//DEBUG 
+
+// 	for_all_symbols(i, sym) {
+// 		count++;
+
+// 		if (!sym_has_prompt(sym))
+// 			promptless++;
+// 		if (sym->visible == no)
+// 			invisible++;
+// 		if (!sym_is_changeable(sym))
+// 			nonchangeable++;
+// 		if (sym_get_type(sym) == S_UNKNOWN)
+// 			unknown++;
+// 		if (sym_has_conflict(sym)) 
+// 			sym_candidates++;
+// 		if (!sym_is_changeable(sym) && !sym_has_prompt(sym))
+// 			promptless_unchangeable++;
+// 		//DEBUG
+// 		if (expr_contains_symbol(sym->dir_dep.expr, &symbol_mod))
+// 			dep_mod++;
+// 		if (sym_has_blocked_values(sym) == 1)
+// 			blocked_1++;
+// 		if (sym_has_blocked_values(sym) == 2)
+// 			blocked_2++;
+// 		if (sym_has_blocked_values(sym) == 3)
+// 			blocked_3++;
+
+// 		/* // print symbol details
+// 		if (!sym_is_choice(sym) &&
+// 			// sym_is_changeable(sym) &&
+// 			sym_has_conflict(sym) &&
+// 			sym_has_blocked_values(sym)) {
+// 		//DEBUG SYMBOL
+// 			printf("\t%s%s %s (visible: %s, changeable: %s, flags: %#x):\n\tcurr = %s, def[S_DEF_USER] = %s\n", 
+// 				sym_type_name(sym->type), sym_is_choice(sym) ? " choice" : "",
+// 				sym_get_name(sym), 
+// 				sym->visible == no ? "n" : (sym->visible == mod ? "m" : "y"), 
+// 				sym_is_changeable(sym) ? "true" : "false", sym->flags, 
+// 				sym_get_string_value(sym), 
+// 				sym->def[S_DEF_USER].tri == no ? "n" : (sym->def[S_DEF_USER].tri == mod ? "m" : "y")); 
+// 			printf("\tconflict candidate: %s\n", 
+// 				sym_has_conflict(sym) ? "true" : "false");
+// 			printf("\tdepends on 'mod': %s\n",
+// 				expr_depends_symbol(sym->dir_dep.expr, &symbol_mod) ?
+// 					"true" : "false");
+// 			printf("\tdeps contain 'mod': %s\n",
+// 				expr_contains_symbol(sym->dir_dep.expr, &symbol_mod) ? 
+// 					"true" : "false");
+// 			printf("\t%i blocked: no: %s, mod: %s, yes: %s\n",
+// 				sym_has_blocked_values(sym),
+// 				sym_tristate_within_range(sym, no) ? "false" : "true",
+// 				sym_get_type(sym) == S_BOOLEAN ? 
+// 					"-" : sym_tristate_within_range(sym, mod) ? "false" : "true",
+// 				expr_contains_symbol(sym->dir_dep.expr, &symbol_mod) ?
+// 					"-" : (sym_tristate_within_range(sym, yes) ? "false" : "true"));
+// 			// getchar();
+// 			//DEBUG SYMBOL
+// 		}
+// 		if (sym_has_blocked_values(sym) > 3)
+// 			printf("%s: > 3 blocked values!\n", sym_get_name(sym));
+// 		//DEBUG */
+// 	}
+
+// 	printf("%i symbols: %i prompt-less, %i invisible, %i unknown type, %i non-changeable, %i prompt-less & unchangeable\n", 
+// 		count, promptless, invisible, unknown, nonchangeable, promptless_unchangeable);
+	
+// 	printf("Conflict candidates: %i config items (%i symbols)\n", 
+// 		conf_item_candidates, sym_candidates);
+	
+// 	// set static variables
+// 	sym_count = count;
+// 	no_conflict_candidates = sym_candidates;
+
+// 	//DEBUG
+// 	printf("Depend on 'mod': %i\n", dep_mod);
+// 	printf("Blocked values: 1 - %i, 2 - %i, 3 - %i, total - %i\n", 
+// 		blocked_1, blocked_2, blocked_3, 
+// 		(blocked_1 + blocked_2 + blocked_3));
+// 	//DEBUG
+// }
+
+/*
+ * FNV32 string hash, copied from symbol.c
+ */
+static unsigned strhash(const char *s)
+{
+	/* fnv32 hash */
+	unsigned hash = 2166136261U;
+	for (; *s; s++)
+		hash = (hash ^ *s) * 0x01000193;
+	return hash % HASHSIZE;
+}
+
+/*
+ * Saves the current configuration into a hash table, 
+ * where keys are symbol names, and values are symbol values.
+ */
+// static SymHash *config_backup(void)
+// {
+// 	SymHash *backup[HASHSIZE];//(SymHash*) malloc(HASHSIZE * sizeof(SymHash*));
+// 	// GHashTable *backup = g_hash_table_new_full(
+// 	// 		g_str_hash,
+// 	// 		g_str_equal,
+// 	// 		NULL,
+// 	// 		free
+//   	// );
+
+// 	printf("\nBacking up configuration...\n");
+
+// 	int i, count = 0, insert_count = 0, unknowns = 0;
+// 	struct symbol *sym;
+// 	char* val;
+// 	SymHash *entry;
+// 	for_all_symbols(i, sym) {
+
+// 		count++;
+
+// 		if (sym_get_type(sym) == S_UNKNOWN) {
+// 			unknowns++;
+// 			continue;
+// 		}
+
+// 		// val = (char*) g_hash_table_lookup(backup, sym_get_name(sym));
+// 		// if (val != NULL) {
+// 		// 	printf("\tDuplicate key: %s %s/%s\n", 
+// 		// 		sym_get_type_name(sym), sym_get_name(sym), sym->name);
+// 		// 	//print_symbol(sym);
+// 		// 	if (strcmp(val, sym_get_string_value(sym)))
+// 		// 		printf("\t\tvalue has changed: %s -> %s", 
+// 		// 			val, sym_get_string_value(sym));
+// 		// }
+
+// 		//FIXME free pointer to prevent memleak
+// 		// g_hash_table_insert(backup, strdup(sym_get_name(sym)), strdup(sym_get_string_value(sym)));
+// 		entry = (SymHash*) malloc(sizeof(*entry));
+// 		unsigned hashval = strhash(sym_get_name(sym));
+// 		backup[hashval] = entry;
+// 		backup[hashval]->name  = strdup(sym_get_name(sym));
+// 		backup[hashval]->value = strdup(sym_get_string_value(sym));
+// 		insert_count++;
+// 	}
+
+// 	printf("Done: iterated %i symbols, %i symbols in backup table, %i UNKNOWNs ignored \n\n", 
+// 		count, insert_count, unknowns);
+// 	return backup;
+// }
+
+/*
+ * Looks up symbol in the base config backup.
+ */ 
+static SymHash *lookup_base(char *sym_name)
+{
+	SymHash *elem;
+
+	for (elem = base_config[strhash(sym_name)]; elem != NULL; elem = elem->next) {
+		if (strcmp(sym_name, elem->name) == 0)
+			return elem;
+	}
+
+	return NULL;
+}
+
+/*
+ * Looks up symbol in the initial config backup.
+ */ 
+static SymHash *lookup_initial(char *sym_name)
+{
+	SymHash *elem;
+
+	for (elem = initial_config[strhash(sym_name)]; elem != NULL; elem = elem->next) {
+		if (strcmp(sym_name, elem->name) == 0)
+			return elem;
+	}
+	
+	return NULL;
+}
+
+/*
+ * Puts (sym_name, sym_val) into the base config backup.
+ */
+static SymHash *insert_base(char *sym_name, char *sym_val)
+{
+	fprintf(stderr, "\tinsert_base(%s, %s)\n", sym_name, sym_val);
+	SymHash *elem;
+	unsigned hashval;
+
+	// key not found
+	if ((elem = lookup_base(sym_name)) == NULL) {
+		elem = (SymHash*) malloc(sizeof(*elem));
+		if (elem == NULL || (elem->name = strdup(sym_name)) == NULL)
+			return NULL;
+		hashval = strhash(sym_name);
+		elem->next = base_config[hashval];
+		base_config[hashval] = elem;
+	}
+	// key already present 
+	else 
+		// free previous value
+		free((void*) elem->value);
+	if ((elem->value = strdup(sym_val)) == NULL)
+		return NULL;
+	return elem;
+}
+
+/*
+ * Backs up the base configuration
+ */
+static void config_backup_base(void)
+{
+//DEBUG
+fprintf(stderr, "config_backup_base\n");
+getchar();
+//DEBUG
+// GHashTable *backup = g_hash_table_new_full(
+// 			g_str_hash,
+// 			g_str_equal,
+// 			NULL,
+// 			free
+//   	);
+
+	printf("\nBacking up configuration...\n");
+
+	int i, count = 0, duplicates = 0, unknowns = 0;
+	struct symbol *sym;
+	char* val;
+	SymHash *entry;
+	for_all_symbols(i, sym) {
+
+		count++;
+
+		if (sym_get_type(sym) == S_UNKNOWN) {
+			unknowns++;
+			continue;
+		}
+		fprintf(stderr, "Symbol: %s\n", sym_get_name(sym));
+		//val = (char*) g_hash_table_lookup(backup, sym_get_name(sym));
+		entry = lookup_base(sym_get_name(sym));
+		if (entry != NULL) {
+			printf("\tDuplicate key: %s %s/%s\n", 
+				sym_get_type_name(sym), sym_get_name(sym), sym->name);
+			//print_symbol(sym);
+			val = entry->value;
+			if (strcmp(val, sym_get_string_value(sym)))
+				printf("\t\tvalue has changed: %s -> %s", 
+					val, sym_get_string_value(sym));
+		}
+
+		//FIXME free pointer to prevent memleak
+		// g_hash_table_insert(backup, strdup(sym_get_name(sym)), strdup(sym_get_string_value(sym)));
+		//DEBUG SYMBOL
+		printf("\t%s %s (visible: %s, flags: %#x): curr = %s, def[S_DEF_USER] = %s\n", 
+			sym_type_name(sym->type), sym->name, 
+			sym->visible == no ? "n" : (sym->visible == mod ? "m" : "y"), 
+			sym->flags, 
+			sym_get_string_value(sym), 
+			sym->def[S_DEF_USER].tri == no ? "n" : (sym->def[S_DEF_USER].tri == mod ? "m" : "y")); 
+		//DEBUG SYMBOL
+		insert_base(strdup(sym_get_name(sym)), strdup(sym_get_string_value(sym)));
+	}
+
+	// printf("Done: iterated %i symbols, %i symbols in backup table, %i UNKNOWNs ignored \n\n", 
+		// count, g_hash_table_size(backup), unknowns);
+	printf("Done\n");
+	// return backup;
+}
+
+/*
+ * Backs up the initial configuration.
+ */
+static void config_backup_initial(void)
+{
+//static SymHash *base_config[HASHSIZE], *initial_config[HASHSIZE];
+
+}
+
+/*
+ * Reset configuration to the initial one, which was read upon program start.
+ * Initial configuration filename is specified by the KCONFIG_CONFIG variable,
+ * and defaults to '.config' if the variable is not set.
+ */
+static void config_reset(void)
+{
+	conf_read(conf_get_configname());
+}
+
+/*
+ * Returns a path for saving a next conflict 
+ * for the current configuration sample.
+ * The result is dynamically allocated and must be freed.
+ */
+static char* get_conflict_dir()
+{
+  
+    // open the configuration sample directory  
+	struct dirent *de;
+    DIR *dr = opendir(get_config_dir()); 
+  
+    if (dr == NULL) { 
+        printf("Could not open directory\n"); 
+        return NULL; 
+    } 
+  
+	int next_conflict_num = 1;
+
+    // iterate it
+    while ((de = readdir(dr)) != NULL) 
+		// look for subdirectories 
+		if (de->d_type == DT_DIR
+			// whose name start with 'conflict.'
+			&& strncmp("conflict.", de->d_name, strlen("conflict.")) == 0) 
+			{
+				char *num_string = strtok(de->d_name, "conflict.");
+				if (num_string) {
+					int current_conflict_num = atoi(num_string);
+					if (current_conflict_num >= next_conflict_num)
+						next_conflict_num = current_conflict_num + 1;
+				}
+			}
+  
+    closedir(dr);
+	
+	// construct path e.g. /path/to/config/sample/conflict.05/
+	// gstr pathname = str_new();
+	// str_append(&pathname, get_config_dir());
+	// str_printf(&pathname, "/conflict.%.2d/", next_conflict_num);
+
+	char *conflict_dir = (char*) malloc(
+		sizeof(char) * (strlen(get_config_dir()) + strlen("/conflict.XXX/") + 1));
+	sprintf(conflict_dir, "%s/conflict.%.3d/", get_config_dir(), next_conflict_num);
+	return conflict_dir; 
+}
+
+/*
+ * Returns the path to the used configuration sample
+ * stored in CONFIGFIX_TEST_CONFIG_DIR env. variable;
+ * returns "." if this variable is not defined.
+ */
+static char* get_config_dir(void)
+{
+	// char *config_dir = (char*) conf_get_configname();
+	// // if config filename is a path
+	// if (strrchr(config_dir, '/')) {
+	// 	// drop its contents past the last slash
+	// 	strrchr(config_dir, '/')[1] = 0;
+	// 	return config_dir;
+	if (getenv("CONFIGFIX_TEST_CONFIG_DIR"))
+		return getenv("CONFIGFIX_TEST_CONFIG_DIR");
+	else
+		return ".";
+}
+
+/*
+ * Constructs the path to the RESULTS_FILE
+ */
+static char* get_results_file(void)
+{
+	gstr filename = str_new();
+
+	if (getenv("CONFIGFIX_TEST_PATH")) {
+		str_append(&filename, getenv("CONFIGFIX_TEST_PATH"));
+		str_append(&filename, "/");
+	}
+
+	str_append(&filename, RESULTS_FILE);
+
+	return (char*) str_get(&filename);
+}
+
+// /*
+//  * Returns 'true' if the symbol conflicts with the current
+//  * configuration, 'false' otherwise.
+//  */
+// static bool sym_has_conflict(struct symbol *sym)
+// {
+// 	// symbol is conflicting if it
+// 	return (
+// 		// has prompt (visible to user)
+// 		sym_has_prompt(sym) && 
+// 		// is bool or tristate
+// 		sym_is_boolean(sym) &&
+// 		// is not 'choice' (choice values should be used instead)
+// 		!sym_is_choice(sym)) &&
+// 		// cannot be changed
+// 		//!sym_is_changeable(sym)
+// 		// has at least 1 blocked value 
+// 		sym_has_blocked_values(sym);
+// }
+
+// /**
+//  * For a visible boolean or tristate symbol, returns the number of 
+//  * its possible values that cannot be set (not within range).
+//  * Otherwise, returns 0 (including other symbol types).
+//  */
+// static int sym_has_blocked_values(struct symbol *sym)
+// {
+// 	if (!sym_is_boolean(sym))
+// 		return 0;
+
+// 	// ignore symbols disabled in the base config
+// 	if (!sym_enabled_in_base_config(sym))
+// 		return 0;
+
+// 	int result = 0;
+
+// 	if (!sym_tristate_within_range(sym, no))
+// 		result++;
+	
+// 	if (sym_get_type(sym) == S_TRISTATE && 
+// 		!sym_tristate_within_range(sym, mod))
+// 		result++;
+
+// 	/* some tristates depend on 'mod', can never be set to 'yes */
+// 	if (!expr_contains_symbol(sym->dir_dep.expr, &symbol_mod) &&
+// 		!sym_tristate_within_range(sym, yes))
+// 		result++;
+
+// 	return result;
+// }
+
+// /**
+//  * Returns 'true' if a bool/tristate symbol has a value 'yes' or 'mod'
+//  * in the base configuration, 'false' otherwise.
+//  */
+// static bool sym_enabled_in_base_config(struct symbol *sym)
+// {
+// 	// FIXME replace GLib
+// 	char *base_val  = (char*) g_hash_table_lookup(base_config, sym_get_name(sym));
+// 	if (base_val == NULL) {
+// 		printf("ERROR: symbol missing in base config");
+// 		return false;
+// 	}
+
+// 	if (strcmp(base_val, "y") == 0 || strcmp(base_val, "m") == 0)
+// 		return true;
+		
+// 	return false;
+// }
+
+/*
+ * Return the string representation of the given symbol's type
+ */
+static const char* sym_get_type_name(struct symbol *sym) 
+{ 
+	/*
+	 * This is different from sym_type_name(sym->type),
+	 * because sym_get_type() covers some special cases
+	 * related to choice values and MODULES.
+	 */
+	return sym_type_name(sym_get_type(sym));
+}
+
+#endif
