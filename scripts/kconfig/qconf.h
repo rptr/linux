@@ -26,6 +26,10 @@
 
 #include "configfix.h"
 
+#ifdef CONFIGFIX_TEST
+#include <glib.h>
+#endif
+
 class ConfigView;
 class ConfigList;
 class ConfigItem;
@@ -271,11 +275,11 @@ public slots:
 	void calculateFixes();
 // FIXME - make work with #ifdef
 // #ifdef CONFIGFIX_TEST
-    // void switchTestingMode();
-	// void testRandomConflict();
-	// void generateConflict(std::uniform_int_distribution<int> dist);
-	// void saveConflict();
-	// void verifyDiagnoses(const char *result_prefix);
+    void switchTestingMode();
+	void testRandomConflict();
+	void generateConflict(std::uniform_int_distribution<int> dist);
+	void saveConflict();
+	void verifyDiagnoses(const char *result_prefix);
 // #endif
 
 signals:
@@ -291,9 +295,10 @@ public:
 	QComboBox* solutionSelector{nullptr};
 	QTableWidget* solutionTable{nullptr};
 	QPushButton* applyFixButton{nullptr};
-	struct sfl_list * solution_output{nullptr};
+	struct sfl_list *solution_output{nullptr};
+	// WAS 	GArray* solution_output{nullptr};
 	QToolBar *conflictsToolBar;
-	struct menu * currentSelectedMenu ;
+	struct menu *currentSelectedMenu ;
 	QLabel* numSolutionLabel{nullptr};
 	QList<QTreeWidgetItem*> currentSelection;
 	QAction *fixConflictsAction_{nullptr};
@@ -309,7 +314,7 @@ public:
 	// conflict candidate counter
 	int candidate_symbols;
 	// "Test random conflict" | "Verify fixes" button
-	// QAction *testConflictAction;
+	QAction *testConflictAction;
 #endif
 };
 
