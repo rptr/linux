@@ -189,6 +189,20 @@ cfconf-objs      := configfix.o cf_constraints.o cf_expr.o cf_rangefix.o cf_satu
 cfconfig-objs    := cfconfig.o $(cfconf-objs) $(common-objs)
 cfoutconfig-objs := cfoutconfig.o $(cfconf-objs) $(common-objs)
 
+HOSTLDLIBS_cfconfig		= $(shell pkg-config --libs glib-2.0)
+HOSTCFLAGS_cfconfig.o		= $(shell pkg-config --cflags glib-2.0)
+HOSTLDLIBS_cfcliconfig		= $(shell pkg-config --libs glib-2.0)
+HOSTCFLAGS_cfcliconfig.o	= $(shell pkg-config --cflags glib-2.0)
+HOSTLDLIBS_cfoutconfig		= $(shell pkg-config --libs glib-2.0)
+HOSTCFLAGS_cfoutconfig.o	= $(shell pkg-config --cflags glib-2.0)
+
+HOSTCFLAGS_configfix.o		= $(shell pkg-config --cflags glib-2.0)
+HOSTCFLAGS_cf_constraints.o	= $(shell pkg-config --cflags glib-2.0)
+HOSTCFLAGS_cf_fexpr.o		= $(shell pkg-config --cflags glib-2.0)
+HOSTCFLAGS_cf_print.o 		= $(shell pkg-config --cflags glib-2.0)
+HOSTCFLAGS_cf_rangefix.o	= $(shell pkg-config --cflags glib-2.0)
+HOSTCFLAGS_cf_satutils.o	= $(shell pkg-config --cflags glib-2.0)
+HOSTCFLAGS_cf_utils.o 		= $(shell pkg-config --cflags glib-2.0)
 HOSTCFLAGS_picosat.o = -DTRACE -Wno-missing-prototypes -Wno-pointer-compare
 
 # qconf: Used for the xconfig target based on Qt
@@ -196,9 +210,9 @@ hostprogs	+= qconf
 qconf-cxxobjs	:= qconf.o qconf-moc.o
 qconf-objs	:= images.o $(common-objs) $(cfconf-objs)
 
-HOSTLDLIBS_qconf	= $(shell . $(obj)/qconf-cfg && echo $$libs && echo -lpthread)
-HOSTCXXFLAGS_qconf.o	= $(shell . $(obj)/qconf-cfg && echo $$cflags)
-HOSTCXXFLAGS_qconf-moc.o = $(shell . $(obj)/qconf-cfg && echo $$cflags)
+HOSTLDLIBS_qconf	= $(shell . $(obj)/qconf-cfg && echo $$libs && echo -lpthread && pkg-config --libs glib-2.0)
+HOSTCXXFLAGS_qconf.o	= $(shell . $(obj)/qconf-cfg && echo $$cflags && pkg-config --cflags glib-2.0)
+HOSTCXXFLAGS_qconf-moc.o = $(shell . $(obj)/qconf-cfg && echo $$cflags && pkg-config --cflags glib-2.0)
 
 $(obj)/qconf.o: $(obj)/qconf-cfg
 
