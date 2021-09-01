@@ -66,9 +66,9 @@ static int testing_mode = RANDOM_TESTING; // default
 // minimum no. symbols in a random conflict
 #define MIN_CONFLICT_SIZE 1 //4
 // maximum no. symbols in a random conflict
-#define MAX_CONFLICT_SIZE 10 //10
+#define MAX_CONFLICT_SIZE 1 //10
 // number of random conflicts of each size
-#define NO_CONFLICTS 5 //5
+#define NO_CONFLICTS 1 //5
 
 #define BASE_CONFIG ".config.base"
 #define RESULTS_FILE "results.csv"
@@ -1513,10 +1513,10 @@ void ConflictsView::runSatConfAsync()
 	time = ((double) (end - start)) / CLOCKS_PER_SEC;
 	printf("Conflict resolution time = %.6f secs.\n\n", time);
 	// result column 10 - Resolution time
-	str_printf(&result_string, "%.6f,", time); 
+	// FIXMEstr_printf(&result_string, "%.6f,", time); 
 #endif
 	solution_output = ret;
-	// sfix_list_free(ret);
+	// FIXME sfix_list_free(ret);
 	free(p);
 
 	emit resultsReady();
@@ -1528,12 +1528,7 @@ void ConflictsView::runSatConfAsync()
 		// result columns 11 - No. diagnoses (non-zero), 12 - Comment
 		str_printf(&result_string, "%i,,", solution_output->size);
 #endif
-	//DEBUG
-	printf("Results ready:\n");
-	sfl_node *node;
-	sfl_list_for_each(node, ret)
-		print_diagnosis_symbol(node->elem);
-	//DEBUG
+
 	{
 		std::lock_guard<std::mutex> lk{satconf_mutex};
 		satconf_cancelled = true;
@@ -1556,6 +1551,14 @@ void ConflictsView::updateResults(void)
 
 		numSolutionLabel->setText(QString("Solutions: (%1) found").arg(solution_output->size));
 		changeSolutionTable(0);
+#ifdef CONFIGFIX_TEST
+		//DEBUG
+		printf("Results ready:\n");
+		sfl_node *node;
+		sfl_list_for_each(node, solution_output)
+			print_diagnosis_symbol(node->elem);
+		//DEBUG
+#endif
 	}
 
 	if (runSatConfAsyncThread->joinable()) {
@@ -1677,6 +1680,10 @@ void ConflictsView::testRandomConflict(void)
 			str_printf(&result_string, "%i,", no_conflict_candidates); 
 
 			// generate conflict & find fixes
+			//DEBUG
+			printf("Will generate new conflict...\n");
+			getchar();
+			//DEBUG
 			generateConflict(dist); //);
 			saveConflict();
 			calculateFixes();
