@@ -1684,7 +1684,7 @@ void ConflictsView::testRandomConflict(void)
 			printf("Will generate new conflict...\n");
 			getchar();
 			//DEBUG
-			generateConflict(dist); //);
+			generateConflict(dist);
 			saveConflict();
 			calculateFixes();
 			// output result and continue if no solution found
@@ -1764,82 +1764,37 @@ void ConflictsView::generateConflict(std::uniform_int_distribution<int> dist) //
 	// clear conflicts table
 	conflictsTable->clearContents();
 	conflictsTable->setRowCount(0);
+	// clear solutions
+	solution_output = nullptr;
+	solutionSelector->clear();
 
+	assert(solution_output == nullptr); 
+
+	//DEBUG
+	// printf("Index parameter = %i\n",index);
+	//DEBUG
 	ConfigItem* item;
 	struct symbol *sym;
-	// // while (conflictsTable->rowCount() < conflict_size) 
-	// // {
-	// // }
-
-	int index = 0; // = no_conflict_candidates / 2;
-	// for (int z=0;z<20;z++) {
-	// index = dist(gen);
-	// sym = get_conflict_sym(index);
-	// printf("Symbol with index %i %s %s conflict\n",
-	// 	index, sym_get_name(sym), 
-	// 	sym_has_conflict(sym) ? "HAS" : "DOES NOT HAVE");
-	// }
-	// getchar();
+ 	int index = 0; 
 
 	while (conflictsTable->rowCount() < conflict_size) 
 	{
-		// // iterate menu items
-		// QTreeWidgetItemIterator it(configList);
-		// ConfigItem* item;
-		// struct symbol *sym;
-
-		// while (*it) 
-		// {
-		// 	item = (ConfigItem*)(*it);
-		// 	// skip items without menus or symbols
-		// 	if (!item->menu) {
-		// 		++it;
-		// 		continue;
-		// 	}
-		// 	sym = item->menu->sym;
-		// 	if (!sym) {
-		// 		++it;
-		// 		continue;
-		// 	}
-
-		// 	// consider only conflicting items
-		// 	if (sym_has_conflict(sym)) { 
-
-
-				// FIXME - "prefectly random selection"
-				// if (rand() < 1000000) {
-
 		index = dist(rng);
 		//DEBUG
 		printf("Random index = %i\n",index);
 		//DEBUG
 		item = get_conflict_item(index, configList);
 		addSymbol(item->menu);
-		//DEBUG
-		// getchar();
-		//DEBUG
-		// set target value (one of the currently blocked)
+		// set target value (select among the currently blocked ones)
 		tristate current = sym_get_tristate_value(item->menu->sym);
-		tristate target = random_blocked_value(item->menu->sym); //current == yes ? no : yes;
+		tristate target = random_blocked_value(item->menu->sym);
 		conflictsTable->setItem(conflictsTable->rowCount()-1, 1, 
 			new QTableWidgetItem(tristate_value_to_string(target)));
-			// 	}
-			// }
-
-			// if (conflictsTable->rowCount() == conflict_size)
-			// 	break;
-			// else
-			// 	++it;
-		// }
 	}
 
 	conflictsTable->resizeColumnsToContents();
 	conflictsTable->repaint();
 
-	//DEBUG
-	// printf("\n");
-	// getchar();
-	//DEBUG
 	if (conflictsTable->rowCount() == 0) {
 		printf("ERROR: No conflict could be generated\n");
 		return;	
@@ -3645,9 +3600,6 @@ static tristate random_blocked_value(struct symbol *sym)
  */
 static ConfigItem* get_conflict_item(int index, ConfigList* configList)
 {
-	//DEBUG
-	// printf("Index parameter = %i\n",index);
-	//DEBUG
 	ConfigItem* item;
 	struct symbol *sym;
 	int cnt = 0;
@@ -3671,13 +3623,6 @@ static ConfigItem* get_conflict_item(int index, ConfigList* configList)
 		// consider only conflicting items
 		if (sym_has_conflict(sym)) {
 			cnt++;
-			//DEBUG
-			// printf("\tcounter = %i\t%s : %s\n", 
-			// 	cnt, sym_get_name(sym), sym_has_conflict(sym) ? "conflict" : "NO conflict");
-			// printf("Symbol with index %i %s %s conflict\n",
-			// index, sym_get_name(sym), 
-			// sym_has_conflict(sym) ? "HAS" : "DOES NOT HAVE");
-			//DEBUG
 		}
 
 		if (cnt == index)
