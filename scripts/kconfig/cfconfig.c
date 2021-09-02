@@ -18,7 +18,7 @@
 
 static struct symbol * read_symbol_from_stdin(void);
 static struct symbol_dvalue * sym_create_sdv(struct symbol *sym, char *input);
-static void print_fixes(struct sfl_list *diag);
+static void handle_fixes(struct sfl_list *diag);
 
 /* -------------------------------------- */
 
@@ -59,7 +59,7 @@ int main(int argc, char *argv[])
 		sdv_list_add(symbols, sdv);
 
 		diagnoses = run_satconf(symbols);
-		print_fixes(diagnoses);
+		handle_fixes(diagnoses);
 	}
 
 	return EXIT_SUCCESS;
@@ -145,7 +145,7 @@ static void apply_all_adiagnoses(struct sfl_list *diag) {
 /*
  * print all void print_fixes()
  */
-static void print_fixes(struct sfl_list *diag)
+static void handle_fixes(struct sfl_list *diag)
 {
 	printd("=== GENERATED DIAGNOSES ===\n");
 	printd("-1: No changes wanted\n");
