@@ -1,0 +1,84 @@
+menuconfig MODULES
+	bool "Enable loadable module support"
+	modules
+	default y
+
+config A
+	bool "A"
+
+config B
+	bool "B"
+
+#config C
+#	tristate "C"
+#	depends on A && B
+#	select E
+
+config D
+	bool "D"
+#	select E
+
+#config E
+#	tristate "E"
+
+config I
+	int "I"
+	depends on D
+	range 5 15
+
+if B
+config I
+	default 12
+endif
+
+if MODULES
+choice
+	prompt "Module compression mode"
+	help
+	  This option allows you to choose the algorithm which will be used to
+	  compress modules when 'make modules_install' is run. (or, you can
+	  choose to not compress modules at all.)
+
+	  External modules will also be compressed in the same way during the
+	  installation.
+
+	  For modules inside an initrd or initramfs, it's more efficient to
+	  compress the whole initrd or initramfs instead.
+
+	  This is fully compatible with signed modules.
+
+	  Please note that the tool used to load modules needs to support the
+	  corresponding algorithm. module-init-tools MAY support gzip, and kmod
+	  MAY support gzip, xz and zstd.
+
+	  Your build system needs to provide the appropriate compression tool
+	  to compress the modules.
+
+	  If in doubt, select 'None'.
+
+config MODULE_COMPRESS_NONE
+	bool "None"
+	help
+	  Do not compress modules. The installed modules are suffixed
+	  with .ko.
+
+config MODULE_COMPRESS_GZIP
+	bool "GZIP"
+	help
+	  Compress modules with GZIP. The installed modules are suffixed
+	  with .ko.gz.
+
+config MODULE_COMPRESS_XZ
+	bool "XZ"
+	help
+	  Compress modules with XZ. The installed modules are suffixed
+	  with .ko.xz.
+
+config MODULE_COMPRESS_ZSTD
+	bool "ZSTD"
+	help
+	  Compress modules with ZSTD. The installed modules are suffixed
+	  with .ko.zst.
+
+endchoice
+endif

@@ -1,0 +1,14 @@
+menuconfig MODULES
+	bool "Enable loadable module support"
+	modules
+	default y
+
+config A
+	bool "A"
+	depends on CRAMFS>=MTD
+
+config CRAMFS
+	tristate "CRAMFS"
+
+menuconfig MTD
+	tristate "MTD"

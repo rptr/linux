@@ -134,7 +134,7 @@ static void apply_all_adiagnoses(struct sfl_list *diag) {
 	unsigned int counter = 1;
 	struct sfl_node *node;
 	sfl_list_for_each(node, diag) {
-		printd("\nDiagnoses %d:\n", counter++);
+		printd("\nDiagnosis %d:\n", counter++);
 		apply_fix(node->elem);
 
 		printd("\nResetting config.\n");
